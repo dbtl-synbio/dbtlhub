@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import sys
 
 REQUIRED = ["requests", "pandas", "openpyxl", "urllib3"]
@@ -14,6 +15,8 @@ if missing:
     print(f"  pip install {' '.join(missing)}")
     sys.exit(1)
 
+=======
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
 import os
 import json
 import requests
@@ -116,7 +119,11 @@ def save_cache():
         json.dump(_ror_cache, f, indent=2)
     print(f"Saved {len(_ror_cache)} ROR lookups to cache.")
 
+<<<<<<< HEAD
 def lookup_ror_country(institution_name: str, timeout=5) -> str:
+=======
+def lookup_ror_country(institution_name: str, timeout=10) -> str:
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     """Query the ROR API to get the country of an institution by name."""
     if not institution_name.strip():
         return ""
@@ -317,6 +324,7 @@ def detect_protein_output(outputs):
 
 def build_dataset(df):
     records = []
+<<<<<<< HEAD
     total = len(df)
 
     for i, (_, tool) in enumerate(df.iterrows(), 1):
@@ -335,6 +343,13 @@ def build_dataset(df):
         # Only use ROR for tools in the DBTL cycle
         in_dbtl = any([dbtl["Design"], dbtl["Build"], dbtl["Test"], dbtl["Learn"]])
 
+=======
+
+    for _, tool in df.iterrows():
+        inputs, input_formats, outputs, output_formats = extract_input_output(tool)
+        dbtl = classify_dbtl(tool)
+
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
         record = {
             "Tool": tool.get("name"),
             "Type": extract_type(tool),
@@ -348,34 +363,57 @@ def build_dataset(df):
             "Build": dbtl["Build"],
             "Test": dbtl["Test"],
             "Learn": dbtl["Learn"],
+<<<<<<< HEAD
             "Country/Node": extract_country(tool, use_ror=in_dbtl),
+=======
+            "Country/Node": extract_country(tool, use_ror=True),
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
             "Sequence (i)": detect_sequence_input(inputs),
             "Protein structure (o)": detect_protein_output(outputs),
         }
         records.append(record)
 
+<<<<<<< HEAD
     print(f"  Processing tool {total}/{total} (100.0%)... done.")
+=======
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df = pd.DataFrame(records)
 
     dbtl_cols = ['Design', 'Build', 'Test', 'Learn']
     result_df['In_DBTL_Cycle'] = result_df[dbtl_cols].any(axis=1).astype(int)
 
+<<<<<<< HEAD
+=======
+    # ── Multi-phase combinations ──────────────────────────────────────────────
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     D = result_df['Design']
     B = result_df['Build']
     T = result_df['Test']
     L = result_df['Learn']
 
+<<<<<<< HEAD
+=======
+    # Pairs
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df['DB']  = (D & B).astype(int)
     result_df['DT']  = (D & T).astype(int)
     result_df['DL']  = (D & L).astype(int)
     result_df['BT']  = (B & T).astype(int)
     result_df['BL']  = (B & L).astype(int)
     result_df['TL']  = (T & L).astype(int)
+<<<<<<< HEAD
+=======
+
+    # Triples
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df['DBT'] = (D & B & T).astype(int)
     result_df['DBL'] = (D & B & L).astype(int)
     result_df['DTL'] = (D & T & L).astype(int)
     result_df['BTL'] = (B & T & L).astype(int)
+<<<<<<< HEAD
     result_df['DBTL'] = (D & B & T & L).astype(int)
+=======
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
 
     return result_df
 
@@ -400,7 +438,11 @@ if __name__ == "__main__":
 
     save_cache()  # persist new ROR lookups so next run is faster
 
+<<<<<<< HEAD
     out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl.csv")
+=======
+    out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl_6.csv")
+>>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     print(f"Saving to {out_file}...")
     df_final.to_csv(out_file, index=False)
 
