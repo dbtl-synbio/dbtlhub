@@ -104,7 +104,7 @@ Output files are saved in the **same directory as the script**:
 
 ## Project context
 
-Developed in the context of **Systems Biology and Synthetic Biology research** at the University of Minho, as part of the DBTLHub.
+Developed in the context of **Systems Biology and Synthetic Biology research** as part of the DBTLHub.
 
 The goal is to provide a structured, reproducible, and automatically updatable directory of bioinformatics tools relevant to DBTL-based workflows, with a focus on **interoperability** — identifying tools that share standard data formats and can therefore be chained into integrated pipelines.
 
