@@ -115,7 +115,3 @@ The goal is to provide a structured, reproducible, and automatically updatable d
 - [bio.tools](https://bio.tools) — ELIXIR's registry of bioinformatics tools
 - [EDAM Ontology](https://edamontology.org) — used for topic-based classification
 - [ROR](https://ror.org) — Research Organization Registry, used for country resolution
-=======
-# dbtlhub
-DBTLHub repository
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1

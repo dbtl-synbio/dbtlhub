@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import sys
 
 REQUIRED = ["requests", "pandas", "openpyxl", "urllib3"]
@@ -15,8 +14,6 @@ if missing:
     print(f"  pip install {' '.join(missing)}")
     sys.exit(1)
 
-=======
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
 import os
 import json
 import requests
@@ -29,7 +26,7 @@ API_URL = "https://bio.tools/api/tool/"
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ror_cache.json")
 
 # -----------------------------
-# Session
+# Session Configuration
 # -----------------------------
 
 def _make_session(timeout=45):
@@ -51,7 +48,7 @@ def _make_session(timeout=45):
 
 
 # -----------------------------
-# bio.tools fetcher
+# bio.tools Fetcher
 # -----------------------------
 
 def get_all_tools(max_pages=None, sleep_time=0.3, timeout=45):
@@ -102,7 +99,7 @@ def get_all_tools(max_pages=None, sleep_time=0.3, timeout=45):
 
 
 # -----------------------------
-# ROR country lookup
+# ROR Country Lookup
 # -----------------------------
 
 _ror_cache = {}
@@ -119,11 +116,7 @@ def save_cache():
         json.dump(_ror_cache, f, indent=2)
     print(f"Saved {len(_ror_cache)} ROR lookups to cache.")
 
-<<<<<<< HEAD
 def lookup_ror_country(institution_name: str, timeout=5) -> str:
-=======
-def lookup_ror_country(institution_name: str, timeout=10) -> str:
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     """Query the ROR API to get the country of an institution by name."""
     if not institution_name.strip():
         return ""
@@ -140,7 +133,6 @@ def lookup_ror_country(institution_name: str, timeout=10) -> str:
         if not items:
             return ""
 
-        # Take the best match only if ROR flagged it as confident
         best = items[0]
         if best.get("chosen"):
             org = best.get("organization", {})
@@ -153,13 +145,13 @@ def lookup_ror_country(institution_name: str, timeout=10) -> str:
 
 def get_country_cached(institution_name: str) -> str:
     if institution_name not in _ror_cache:
-        _ror_cache[institution_name] = lookup_ror_country(institution_name)
+        _ror_cache[institution_name] = lookup_ror_country(institution_name, timeout=5)
         sleep(0.1)  # polite delay to the ROR API
     return _ror_cache[institution_name]
 
 
 # -----------------------------
-# Feature extraction
+# Feature Extraction
 # -----------------------------
 
 def extract_language(tool):
@@ -217,12 +209,12 @@ def extract_input_output(tool):
 
 
 def extract_country(tool, use_ror=True) -> str:
-    # 1. ElixirNode first — clean and direct
+    # 1. ElixirNode first
     nodes = tool.get("elixirNode", [])
     if nodes:
         return ", ".join(nodes)
 
-    # 2. Credit institutions via ROR
+    # 2. Credit institutions via ROR (only if inside DBTL cycle)
     if use_ror:
         countries = []
         for credit in tool.get("credit", []):
@@ -234,17 +226,17 @@ def extract_country(tool, use_ror=True) -> str:
         if countries:
             return ", ".join(countries)
 
-    # 3. Raw institution names if ROR found nothing
-    raw = [c.get("name", "") for c in tool.get("credit", []) if c.get("name")]
+    # 3. Raw institution names if ROR found nothing or wasn't used
+    raw = [(c.get("name") or "") for c in tool.get("credit", []) if c.get("name")]
     return ", ".join(raw) if raw else ""
 
 
 # -----------------------------
-# DBTL classification
+# DBTL Classification Mapping
 # -----------------------------
 
 EDAM_DBTL = {
-    # ── Design ───────────────────────────────────────────────────────────────
+    # Design
     "topic_2275": "Design",  # Molecular modelling
     "topic_1775": "Design",  # Protein design / function
     "topic_0082": "Design",  # Structure prediction
@@ -258,7 +250,7 @@ EDAM_DBTL = {
     "topic_3068": "Design",  # Literature and language
     "topic_2259": "Design",  # Systems biology
 
-    # ── Build ────────────────────────────────────────────────────────────────
+    # Build
     "topic_3070": "Build",   # Biology
     "topic_3372": "Build",   # Software engineering
     "topic_0196": "Build",   # Sequence assembly
@@ -266,7 +258,7 @@ EDAM_DBTL = {
     "topic_3912": "Build",   # Nucleic acid design (oligos, primers)
     "topic_3168": "Build",   # Sequencing (library prep / NGS)
 
-    # ── Test ─────────────────────────────────────────────────────────────────
+    # Test
     "topic_3308": "Test",    # Transcriptomics
     "topic_0203": "Test",    # Gene expression
     "topic_0121": "Test",    # Proteomics
@@ -280,7 +272,7 @@ EDAM_DBTL = {
     "topic_3520": "Test",    # Proteomics experiment
     "topic_0092": "Test",    # Data visualisation
 
-    # ── Learn ─────────────────────────────────────────────────────────────────
+    # Learn
     "topic_3474": "Learn",   # Machine learning
     "topic_2269": "Learn",   # Statistics and probability
     "topic_0219": "Learn",   # Data submission, annotation and curation
@@ -308,7 +300,7 @@ def classify_dbtl(tool: dict) -> dict:
 
 
 # -----------------------------
-# Special flags
+# Special Flags
 # -----------------------------
 
 def detect_sequence_input(inputs):
@@ -319,37 +311,27 @@ def detect_protein_output(outputs):
 
 
 # -----------------------------
-# Main processing
+# Main Processing Pipeline
 # -----------------------------
 
 def build_dataset(df):
     records = []
-<<<<<<< HEAD
     total = len(df)
 
     for i, (_, tool) in enumerate(df.iterrows(), 1):
 
-        # Progress every 500 tools
-        if i % 500 == 0 or i == 1:
+        # Progress counter and cache saving synchronized every 1000 tools
+        if i % 1000 == 0 or i == 1:
             print(f"  Processing tool {i}/{total} ({i/total*100:.1f}%)...")
-
-        # Save cache every 1000 tools so progress isn't lost if it crashes
-        if i % 1000 == 0:
-            save_cache()
+            if i % 1000 == 0:
+                save_cache()
 
         inputs, input_formats, outputs, output_formats = extract_input_output(tool)
         dbtl = classify_dbtl(tool)
 
-        # Only use ROR for tools in the DBTL cycle
+        # Optimization: Only use ROR if the tool maps to the DBTL cycle
         in_dbtl = any([dbtl["Design"], dbtl["Build"], dbtl["Test"], dbtl["Learn"]])
 
-=======
-
-    for _, tool in df.iterrows():
-        inputs, input_formats, outputs, output_formats = extract_input_output(tool)
-        dbtl = classify_dbtl(tool)
-
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
         record = {
             "Tool": tool.get("name"),
             "Type": extract_type(tool),
@@ -363,86 +345,64 @@ def build_dataset(df):
             "Build": dbtl["Build"],
             "Test": dbtl["Test"],
             "Learn": dbtl["Learn"],
-<<<<<<< HEAD
             "Country/Node": extract_country(tool, use_ror=in_dbtl),
-=======
-            "Country/Node": extract_country(tool, use_ror=True),
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
             "Sequence (i)": detect_sequence_input(inputs),
             "Protein structure (o)": detect_protein_output(outputs),
         }
         records.append(record)
 
-<<<<<<< HEAD
     print(f"  Processing tool {total}/{total} (100.0%)... done.")
-=======
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df = pd.DataFrame(records)
 
     dbtl_cols = ['Design', 'Build', 'Test', 'Learn']
     result_df['In_DBTL_Cycle'] = result_df[dbtl_cols].any(axis=1).astype(int)
 
-<<<<<<< HEAD
-=======
-    # ── Multi-phase combinations ──────────────────────────────────────────────
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
+    # Combinations setup
     D = result_df['Design']
     B = result_df['Build']
     T = result_df['Test']
     L = result_df['Learn']
 
-<<<<<<< HEAD
-=======
     # Pairs
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df['DB']  = (D & B).astype(int)
     result_df['DT']  = (D & T).astype(int)
     result_df['DL']  = (D & L).astype(int)
     result_df['BT']  = (B & T).astype(int)
     result_df['BL']  = (B & L).astype(int)
     result_df['TL']  = (T & L).astype(int)
-<<<<<<< HEAD
-=======
 
     # Triples
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     result_df['DBT'] = (D & B & T).astype(int)
     result_df['DBL'] = (D & B & L).astype(int)
     result_df['DTL'] = (D & T & L).astype(int)
     result_df['BTL'] = (B & T & L).astype(int)
-<<<<<<< HEAD
+
+    # All four phases (DBTL)
     result_df['DBTL'] = (D & B & T & L).astype(int)
-=======
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
 
     return result_df
 
 
 # -----------------------------
-# Run
+# Execution Block
 # -----------------------------
 
 if __name__ == "__main__":
-    load_cache()  # load any previous ROR lookups from disk
+    load_cache()
 
     print("Downloading bio.tools data...")
-    # Set max_pages=2 to do a quick test before pulling everything
     df_raw = get_all_tools(
-        max_pages=None,   # None = fetch all pages
-        sleep_time=0.3,   # polite delay between requests
-        timeout=45,       # seconds before giving up on a single request
+        max_pages=None,   # Fetch all pages
+        sleep_time=0.3,   # Polite delay
+        timeout=45,       # Connection timeout
     )
 
     print(f"Downloaded {len(df_raw)} tools. Processing dataset...")
     df_final = build_dataset(df_raw)
 
-    save_cache()  # persist new ROR lookups so next run is faster
+    save_cache()  # Final save to persist everything
 
-<<<<<<< HEAD
     out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl.csv")
-=======
-    out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl_6.csv")
->>>>>>> cf5a2ca28d2d3a1e2df693be123def029f613fc1
     print(f"Saving to {out_file}...")
     df_final.to_csv(out_file, index=False)
 
