@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # DBTL Tool Extractor
 
 A Python pipeline that automatically extracts, classifies, and analyses all tools registered in the [bio.tools](https://bio.tools) repository, organising them according to their role in the **Design–Build–Test–Learn (DBTL)** cycle used in Systems and Synthetic Biology.
