@@ -346,8 +346,6 @@ def build_dataset(df):
             "Test": dbtl["Test"],
             "Learn": dbtl["Learn"],
             "Country/Node": extract_country(tool, use_ror=in_dbtl),
-            "Sequence (i)": detect_sequence_input(inputs),
-            "Protein structure (o)": detect_protein_output(outputs),
         }
         records.append(record)
 
