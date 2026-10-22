@@ -73,7 +73,7 @@ pip install requests pandas openpyxl urllib3
 ## Usage
 
 ```bash
-python "Bio Tools DBTL Extractor.py"
+python "DBTL_biotools_extractor.py"
 ```
 
 To run a quick test with only 2 pages (~100 tools) before the full run:
@@ -87,7 +87,7 @@ Output files are saved in the **same directory as the script**:
 
 | File | Description |
 |------|-------------|
-| `bio_tools_dbtl_5.csv` | Full dataset as CSV |
+| `bio_tools_dbtl.csv` | Full dataset as CSV |
 | `ror_cache.json` | ROR API cache (speeds up future runs) |
 
 ---
