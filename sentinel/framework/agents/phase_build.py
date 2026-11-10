@@ -51,7 +51,12 @@ class BuildAgent(Agent):
             "produced_by": {"agent": self.name, "tool": "OT-2 + TapeStation (simulated)",
                             "engine": "none"},
             "produced_at": now(),
-            "design_ref": {"package": task.inputs.get("design_package", "design/handover.json"),
+            # Filled from where the Design handover was actually stored. The
+            # path is not constructed here: a phase that invents the path of
+            # its own upstream package can be wrong and look right.
+            "design_ref": {"package": task.inputs["design_package"],
+                           "contract": "design_to_build",
+                           "run_id": run_id,
                            "items": panel},
             "target_list": task.inputs.get("target_list", []),
             "samples": samples,

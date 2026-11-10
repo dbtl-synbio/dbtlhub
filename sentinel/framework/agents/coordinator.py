@@ -26,6 +26,10 @@ class Coordinator:
         self.run_id = run_id
         self.stop_on_escalation = stop_on_escalation
         self.escalations: list[tuple[str, Result]] = []
+        # Where each package was actually written. The next phase's backlink is
+        # filled from this rather than guessed, because a guessed path is a
+        # chain that looks right and resolves to nothing.
+        self.stored: dict[str, str] = {}
 
     def step(self, agent, task: Task, *, label: str, store_as: str | None = None) -> Result:
         """Run one agent, record it, store its package if it produced one."""
@@ -35,6 +39,7 @@ class Coordinator:
         package = result.outputs.get("package")
         if store_as and package:
             stored = self.ledger.write_package(store_as, package)
+            self.stored[store_as] = stored
 
         self.ledger.record(
             step=label, agent=agent.name, engine=result.engine, status=result.status,
@@ -44,6 +49,15 @@ class Coordinator:
         if result.status == "escalated":
             self.escalations.append((label, result))
         return result
+
+    def path_of(self, store_as: str) -> str:
+        """Where a package this run already stored actually lives."""
+        try:
+            return self.stored[store_as]
+        except KeyError:
+            raise KeyError(
+                f"no package stored as {store_as!r} in run {self.run_id}. A "
+                f"backlink must point at something this run really wrote.") from None
 
     def should_continue(self, result: Result) -> bool:
         """An escalated handover stops the route by default.

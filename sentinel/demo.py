@@ -17,7 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from framework.agents.base import Task
 from framework.agents.coordinator import Coordinator
 from framework.agents.sentinel_b2t import BuildToTestAgent
+from framework.agents.sentinel_d2b import DesignToBuildAgent
 from framework.agents.phase_build import BuildAgent
+from framework.agents.phase_design import DesignAgent
 from framework.agents.phase_test import TestAgent
 from framework.validator import load_contract, validate
 from usecases.bioprospecting import instruments as bp
@@ -44,6 +46,21 @@ def show(result, label: str) -> None:
 
 def run(run_id: str, faults: set[str] | None = None) -> Coordinator:
     coord = Coordinator(run_id)
+
+    # ---- Design, and the handover that starts the chain --------------------
+    design = coord.step(
+        DesignAgent(),
+        Task(goal="select a candidate panel", inputs={"n": 12}),
+        label="design")
+    d2b = coord.step(
+        DesignToBuildAgent(profile="bioprospecting", lab="newcastle"),
+        Task(goal="hand over to Build",
+             inputs={"crate": design.outputs["crate"],
+                     "items": design.outputs["items"], "run_id": run_id,
+                     "target_list": TARGETS},
+             max_repairs=2),
+        label="handover d2b", store_as="d2b")
+    show(d2b, "sentinel_d2b")
     panel = bp.design_panel(12)
 
     # ---- Build -------------------------------------------------------------
@@ -51,7 +68,9 @@ def run(run_id: str, faults: set[str] | None = None) -> Coordinator:
         BuildAgent(),
         Task(goal="build the candidate panel",
              inputs={"panel": panel, "run_id": run_id, "faults": faults,
-                     "target_list": TARGETS}),
+                     "target_list": TARGETS,
+                     # not a path this phase made up: where d2b really landed
+                     "design_package": coord.path_of("d2b")}),
         label="build", store_as="b2t_raw")
     show(build, "phase_build")
 
@@ -70,7 +89,9 @@ def run(run_id: str, faults: set[str] | None = None) -> Coordinator:
     # ---- Test --------------------------------------------------------------
     test = coord.step(
         TestAgent(),
-        Task(goal="read the plate", inputs={"package": handover.outputs["package"]}),
+        Task(goal="read the plate",
+             inputs={"package": handover.outputs["package"],
+                     "build_package": coord.path_of("b2t")}),
         label="test", store_as="t2l_raw")
     show(test, "phase_test")
 

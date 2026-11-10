@@ -88,6 +88,30 @@ therefore accepted, and the flag travels with it.
 Use `error` when the package cannot be acted on. Use `flag` when it can, but
 not blindly.
 
+## 4c. The backlink is not decoration
+
+Every package names the package it was built from, and the first one names the
+crate. That chain is the only thing keeping the context alive: Handover 1
+sends the vendor sequences and wells and nothing else, so from that point on
+the sampling site, the freezer and the collector are reachable **only** by
+following backlinks.
+
+**Fill the backlink from where the upstream package was actually stored.**
+Never construct the path. A constructed path looks right, validates fine, and
+resolves to nothing:
+
+```python
+coord.path_of("b2t")        # where it really landed
+f"{run_id}/b2t/handover.json"   # what we used to do, and it was wrong
+```
+
+Then check the whole chain at the end, across packages, which no single
+contract can do:
+
+```bash
+python3 scripts/trace.py <run-id>
+```
+
 ## 5. The step everyone skips
 
 A **deliberately broken package**, and a test that it fails *for the reason you
