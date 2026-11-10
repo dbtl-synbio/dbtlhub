@@ -74,6 +74,7 @@ Contracts carry an `x-dbtl-checks` section. Kinds available today:
 | `empty` | a list that must be empty, e.g. unmapped vocabulary keys |
 | `derived` | a field that must equal a value computable from the data, e.g. a checksum |
 | `entity_value` | a referenced entity says something the next phase must act on |
+| `within_limits` | more than the receiving phase said it can handle |
 
 Adding a kind is one function in `validator.py` plus one line in its `CHECKS`
 table. Delete the examples you do not use: an unused check is worse than no

@@ -584,6 +584,50 @@ def _check_accounted_for(package, check, errors, profile=None):
             check.get("severity", "error")))
 
 
+def _check_within_limits(package, check, errors, profile=None):
+    """Does this package respect a limit the receiving phase stated?
+
+    Every other check in this framework asks whether what arrived is complete.
+    This one asks something different, and it only became necessary once the
+    use cases started sharing crates: whether what arrived is *buildable* by
+    the phase that has to build it.
+
+    The limits are carried in the package, with `from` naming the crate they
+    were read out of, so the claim is checkable and attributable. A limit is
+    not a use-case constant and does not belong in the profile: it is this
+    run's equipment, this round's budget, and it changes between rounds.
+    """
+    limits = {lim.get("quantity"): lim for lim in (package.get("limits") or [])
+              if isinstance(lim, dict)}
+    limit = limits.get(check.get("quantity"))
+    if limit is None or limit.get("value") is None:
+        # Nothing to respect. A contract may insist the limit be stated by
+        # listing its quantity in required_limits; silence here is not a pass.
+        return
+
+    rows = _dig(package, check["of"]) or []
+    measure = check.get("measure", "count")
+    if measure == "count":
+        actual, where = len(rows), check["of"]
+    else:
+        values = [_dig(r, check["field"]) for r in rows if isinstance(r, dict)]
+        values = [v for v in values if isinstance(v, (int, float))]
+        if not values:
+            return
+        actual = max(values)
+        where = f"{check['of']}[].{check['field']}"
+
+    if actual <= limit["value"]:
+        return
+    errors.append(Error(
+        where, check.get("code", "exceeds_limit"),
+        f"{actual} {limit.get('unit', '')}".strip()
+        + f" against a stated limit of {limit['value']} "
+        + f"{limit.get('unit', '')}".rstrip()
+        + (f" (from {limit['from']})" if limit.get("from") else ""),
+        check.get("fix_hint", ""), check.get("severity", "error")))
+
+
 def _check_entity_value(package, check, errors, profile=None):
     """Does a referenced entity say something the receiving phase must act on?
 
@@ -676,6 +720,7 @@ CHECKS = {"unique": _check_unique, "cross_ref": _check_cross_ref,
           "provenance_chain": _check_provenance_chain,
           "required_provenance": _check_required_provenance,
           "entity_value": _check_entity_value,
+          "within_limits": _check_within_limits,
           "accounted_for": _check_accounted_for,
           "empty": _check_empty}
 

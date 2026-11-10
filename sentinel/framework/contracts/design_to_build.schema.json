@@ -287,6 +287,68 @@
       "items": {
         "type": "string"
       }
+    },
+    "reads": {
+      "type": "array",
+      "description": "Crates or packages this handover READ but did not produce. Information in this framework normally flows one way, from the phase that made something to the phase that receives it. This is the other direction: a receiving phase states what it can do, and the sending phase has to have looked. Referenced, never inlined - the package stays small and the graph joins the crates by their identifiers.",
+      "items": {
+        "type": "object",
+        "required": [
+          "crate",
+          "role"
+        ],
+        "properties": {
+          "crate": {
+            "type": "string",
+            "description": "The crate's identifier or path."
+          },
+          "role": {
+            "enum": [
+              "constraints",
+              "context",
+              "upstream"
+            ],
+            "description": "constraints: limits this package had to respect. context: read to interpret something. upstream: where the material came from."
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Which version was read. A shared crate grows between rounds, so 'the Build crate' is not a unique thing to have read."
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "array",
+      "description": "Limits this package was built to respect, lifted out of the crates named in 'reads'. Carried here rather than left in the crate so that a check can compare against them, and 'from' says which crate each one came out of. A limit is not a use-case constant and does not belong in the profile: it is this run's equipment and this round's budget, and it changes between rounds.",
+      "items": {
+        "type": "object",
+        "required": [
+          "quantity",
+          "value",
+          "unit",
+          "from"
+        ],
+        "properties": {
+          "quantity": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "description": "'dimensionless' rather than omitted."
+          },
+          "from": {
+            "type": "string",
+            "description": "The crate this limit was read out of."
+          },
+          "stated_by": {
+            "type": "string",
+            "description": "Who or what put it there - a researcher seeding the crate before round 1, or a phase recording its own equipment."
+          }
+        }
+      }
     }
   },
   "x-dbtl-checks": [
@@ -374,6 +436,15 @@
       "code": "flagged_entity",
       "message": "the crate states something about this entity that Build has to act on",
       "fix_hint": "not auto-fixable, and not a defect in the crate: the crate is telling the truth. Either the candidate is dropped from the order, or Build is told and accepts it knowingly"
+    },
+    {
+      "kind": "within_limits",
+      "of": "order.items",
+      "measure": "count",
+      "quantity": "library_size",
+      "code": "exceeds_stated_limit",
+      "message": "more constructs ordered than the receiving phase said it can build",
+      "fix_hint": "not auto-fixable: dropping candidates to fit is a scientific choice about which ones to lose. Either Build raises the limit in its own crate, or Design selects a smaller panel and says which ones it dropped"
     }
   ]
 }

@@ -8,68 +8,109 @@
     "to": "YYY",
     "note": "The use case numbers its handovers. Carrying that number here means two teams arguing about 'the Design handover' are provably arguing about the same one."
   },
-
   "title": "XXX -> YYY handover (generic)",
   "description": "TODO one paragraph: what this handover carries, and what the receiving phase cannot do without. Write it for the person who has to decide whether their package satisfies it, not for yourself. Fields marked x-pattern take their regex from the active profile, so the contract stays generic and the use case supplies the formats.",
-
   "type": "object",
-
   "$comment": "THE ENVELOPE. These seven fields are identical in every handover contract. Do not rename them: the coordinator, the ledger and the cross-use-case comparison all read them. Add your payload below.",
-  "required": ["contract", "contract_version", "profile", "run_id", "produced_by", "produced_at"],
-
+  "required": [
+    "contract",
+    "contract_version",
+    "profile",
+    "run_id",
+    "produced_by",
+    "produced_at"
+  ],
   "properties": {
-    "contract": { "const": "XXX_to_YYY" },
-    "contract_version": { "const": "0.1.0" },
+    "contract": {
+      "const": "XXX_to_YYY"
+    },
+    "contract_version": {
+      "const": "0.1.0"
+    },
     "profile": {
       "type": "string",
       "description": "Which use-case profile this package was written against.",
-      "enum": ["bioprospecting", "biomanufacturing"]
+      "enum": [
+        "bioprospecting",
+        "biomanufacturing"
+      ]
     },
-    "run_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
-    "produced_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "produced_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
     "produced_by": {
       "type": "object",
       "description": "'engine' records the model used, or 'none' for a deterministic step. It is what makes the model comparison fall out of the ledger instead of needing its own experiment.",
-      "required": ["agent", "tool", "engine"],
+      "required": [
+        "agent",
+        "tool",
+        "engine"
+      ],
       "properties": {
-        "agent": { "type": "string" },
-        "tool": { "type": "string" },
-        "engine": { "type": "string" }
+        "agent": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        }
       }
     },
-
     "TODO_ref": {
       "type": "object",
       "description": "MANDATORY, in every handover: the link back to the package this one was built from. A result that cannot be traced to what produced it is not a result. Name it after the upstream phase - design_ref, build_ref, test_ref.",
-      "required": ["package"],
+      "required": [
+        "package"
+      ],
       "properties": {
-        "package": { "type": "string" }
+        "package": {
+          "type": "string"
+        }
       }
     },
-
     "TODO_items": {
       "type": "array",
       "minItems": 1,
       "description": "The payload. Samples, results, candidates - whatever this handover actually carries.",
       "items": {
         "type": "object",
-        "required": ["TODO_id"],
+        "required": [
+          "TODO_id"
+        ],
         "properties": {
           "TODO_id": {
             "type": "string",
             "x-pattern": "TODO_name_a_pattern_in_the_profile"
           },
-
           "$comment": "Every number in every handover travels in this shape. Copy it verbatim - a bare value is not a measurement, and one shared shape is what lets a single query span the whole cycle.",
           "measurements": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["quantity", "value", "unit", "method"],
+              "required": [
+                "quantity",
+                "value",
+                "unit",
+                "method"
+              ],
               "properties": {
-                "quantity": { "type": "string" },
-                "value": { "type": ["number", "boolean"] },
+                "quantity": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": [
+                    "number",
+                    "boolean"
+                  ]
+                },
                 "unit": {
                   "type": "string",
                   "description": "Use 'dimensionless' rather than omitting the field; 'none' is not a unit."
@@ -80,10 +121,18 @@
                 },
                 "uncertainty": {
                   "type": "object",
-                  "required": ["value", "unit"],
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
                   "properties": {
-                    "value": { "type": "number", "minimum": 0 },
-                    "unit": { "type": "string" }
+                    "value": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -91,15 +140,78 @@
           }
         }
       }
+    },
+    "reads": {
+      "type": "array",
+      "description": "Crates or packages this handover READ but did not produce. Information in this framework normally flows one way, from the phase that made something to the phase that receives it. This is the other direction: a receiving phase states what it can do, and the sending phase has to have looked. Referenced, never inlined - the package stays small and the graph joins the crates by their identifiers.",
+      "items": {
+        "type": "object",
+        "required": [
+          "crate",
+          "role"
+        ],
+        "properties": {
+          "crate": {
+            "type": "string",
+            "description": "The crate's identifier or path."
+          },
+          "role": {
+            "enum": [
+              "constraints",
+              "context",
+              "upstream"
+            ],
+            "description": "constraints: limits this package had to respect. context: read to interpret something. upstream: where the material came from."
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Which version was read. A shared crate grows between rounds, so 'the Build crate' is not a unique thing to have read."
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "array",
+      "description": "Limits this package was built to respect, lifted out of the crates named in 'reads'. Carried here rather than left in the crate so that a check can compare against them, and 'from' says which crate each one came out of. A limit is not a use-case constant and does not belong in the profile: it is this run's equipment and this round's budget, and it changes between rounds.",
+      "items": {
+        "type": "object",
+        "required": [
+          "quantity",
+          "value",
+          "unit",
+          "from"
+        ],
+        "properties": {
+          "quantity": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "description": "'dimensionless' rather than omitted."
+          },
+          "from": {
+            "type": "string",
+            "description": "The crate this limit was read out of."
+          },
+          "stated_by": {
+            "type": "string",
+            "description": "Who or what put it there - a researcher seeding the crate before round 1, or a phase recording its own equipment."
+          }
+        }
+      }
     }
   },
-
   "x-dbtl-checks": [
     {
       "$comment": "The rules a JSON Schema cannot express. Available kinds: unique, cross_ref, required_quantities, provenance_chain, required_provenance, empty. Adding a new kind is one function in validator.py plus one line in its CHECKS table. Delete the examples you do not need - an unused check is worse than no check, because people stop reading them.",
       "kind": "unique",
       "of": "TODO_items",
-      "fields": ["TODO_id"],
+      "fields": [
+        "TODO_id"
+      ],
       "code": "duplicate_TODO_id",
       "message": "this identifier is not unique"
     },

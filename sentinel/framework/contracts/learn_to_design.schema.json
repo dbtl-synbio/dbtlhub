@@ -49,29 +49,51 @@
     "produced_by": {
       "type": "object",
       "description": "'engine' records the model used for the agent's own decisions, or 'none' for a deterministic step. It is not the scientific model - that is 'model' below, and the two must not be confused.",
-      "required": ["agent", "tool", "engine"],
+      "required": [
+        "agent",
+        "tool",
+        "engine"
+      ],
       "properties": {
-        "agent": { "type": "string" },
-        "tool": { "type": "string" },
-        "engine": { "type": "string" }
+        "agent": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        }
       }
     },
     "test_ref": {
       "type": "object",
       "description": "MANDATORY: the Test -> Learn package this round learned from. A recommendation that cannot be traced to the measurements behind it is an opinion, and Design has no way to weigh it against the next one.",
-      "required": ["package", "results"],
+      "required": [
+        "package",
+        "results"
+      ],
       "properties": {
-        "package": { "type": "string" },
+        "package": {
+          "type": "string"
+        },
         "results": {
           "type": "array",
           "minItems": 1,
           "description": "The result identifiers that were available to the model. Recommendations cite these.",
           "items": {
             "type": "object",
-            "required": ["result_id"],
+            "required": [
+              "result_id"
+            ],
             "properties": {
-              "result_id": { "type": "string" },
-              "design_item_id": { "type": "string", "x-pattern": "design_item_id" }
+              "result_id": {
+                "type": "string"
+              },
+              "design_item_id": {
+                "type": "string",
+                "x-pattern": "design_item_id"
+              }
             }
           }
         }
@@ -80,9 +102,16 @@
     "model": {
       "type": "object",
       "description": "What produced the predictions. Without a version and a training set a prediction cannot be reproduced, cannot be audited, and cannot be compared with the next round's - which makes the whole cycle unmeasurable.",
-      "required": ["name", "version", "trained_on", "fitted_at"],
+      "required": [
+        "name",
+        "version",
+        "trained_on",
+        "fitted_at"
+      ],
       "properties": {
-        "name": { "type": "string" },
+        "name": {
+          "type": "string"
+        },
         "version": {
           "type": "string",
           "description": "A released version, a commit, or a content hash. 'latest' is not a version."
@@ -91,17 +120,33 @@
           "type": "array",
           "minItems": 1,
           "description": "The run_ids whose results the model was fitted on. More than one once the cycle has turned.",
-          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]+$"
+          }
         },
-        "fitted_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+        "fitted_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+        },
         "holdout": {
           "type": "object",
           "description": "Optional but strongly wanted: how the model was checked against data it had not seen.",
-          "required": ["metric", "value"],
+          "required": [
+            "metric",
+            "value"
+          ],
           "properties": {
-            "metric": { "type": "string" },
-            "value": { "type": "number" },
-            "n": { "type": "integer", "minimum": 1 }
+            "metric": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         }
       }
@@ -132,10 +177,16 @@
           "proposes": {
             "type": "object",
             "description": "What to make. Either a change to something already built, or a new candidate - and in both cases it has to be a thing a Design agent can act on, not a sentence.",
-            "required": ["kind"],
+            "required": [
+              "kind"
+            ],
             "properties": {
               "kind": {
-                "enum": ["variant_of", "new_candidate", "repeat_with_change"]
+                "enum": [
+                  "variant_of",
+                  "new_candidate",
+                  "repeat_with_change"
+                ]
               },
               "derived_from_design_item": {
                 "type": "string",
@@ -156,7 +207,9 @@
             "type": "array",
             "minItems": 1,
             "description": "The result identifiers from test_ref that this recommendation rests on. Not decoration: it is what lets Design see whether two recommendations are independent or are the same observation twice.",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
           "predictions": {
             "type": "array",
@@ -164,10 +217,23 @@
             "description": "What the model expects, in the same measurement shape as every other handover - with uncertainty required, because a point prediction cannot be used to choose.",
             "items": {
               "type": "object",
-              "required": ["quantity", "value", "unit", "method", "uncertainty"],
+              "required": [
+                "quantity",
+                "value",
+                "unit",
+                "method",
+                "uncertainty"
+              ],
               "properties": {
-                "quantity": { "type": "string" },
-                "value": { "type": ["number", "boolean"] },
+                "quantity": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": [
+                    "number",
+                    "boolean"
+                  ]
+                },
                 "unit": {
                   "type": "string",
                   "description": "Use 'dimensionless' rather than omitting the field; 'none' is not a unit."
@@ -179,12 +245,26 @@
                 "uncertainty": {
                   "type": "object",
                   "description": "REQUIRED in this handover, unlike the others. A ranked list of point estimates tells Design nothing about where to spend a plate.",
-                  "required": ["value", "unit", "kind"],
+                  "required": [
+                    "value",
+                    "unit",
+                    "kind"
+                  ],
                   "properties": {
-                    "value": { "type": "number", "minimum": 0 },
-                    "unit": { "type": "string" },
+                    "value": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
                     "kind": {
-                      "enum": ["stdev", "sem", "ci95_halfwidth", "mad"],
+                      "enum": [
+                        "stdev",
+                        "sem",
+                        "ci95_halfwidth",
+                        "mad"
+                      ],
                       "description": "What the number is. 'error bar' is not an answer."
                     }
                   }
@@ -198,13 +278,77 @@
           }
         }
       }
+    },
+    "reads": {
+      "type": "array",
+      "description": "Crates or packages this handover READ but did not produce. Information in this framework normally flows one way, from the phase that made something to the phase that receives it. This is the other direction: a receiving phase states what it can do, and the sending phase has to have looked. Referenced, never inlined - the package stays small and the graph joins the crates by their identifiers.",
+      "items": {
+        "type": "object",
+        "required": [
+          "crate",
+          "role"
+        ],
+        "properties": {
+          "crate": {
+            "type": "string",
+            "description": "The crate's identifier or path."
+          },
+          "role": {
+            "enum": [
+              "constraints",
+              "context",
+              "upstream"
+            ],
+            "description": "constraints: limits this package had to respect. context: read to interpret something. upstream: where the material came from."
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Which version was read. A shared crate grows between rounds, so 'the Build crate' is not a unique thing to have read."
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "array",
+      "description": "Limits this package was built to respect, lifted out of the crates named in 'reads'. Carried here rather than left in the crate so that a check can compare against them, and 'from' says which crate each one came out of. A limit is not a use-case constant and does not belong in the profile: it is this run's equipment and this round's budget, and it changes between rounds.",
+      "items": {
+        "type": "object",
+        "required": [
+          "quantity",
+          "value",
+          "unit",
+          "from"
+        ],
+        "properties": {
+          "quantity": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "description": "'dimensionless' rather than omitted."
+          },
+          "from": {
+            "type": "string",
+            "description": "The crate this limit was read out of."
+          },
+          "stated_by": {
+            "type": "string",
+            "description": "Who or what put it there - a researcher seeding the crate before round 1, or a phase recording its own equipment."
+          }
+        }
+      }
     }
   },
   "x-dbtl-checks": [
     {
       "kind": "unique",
       "of": "recommendations",
-      "fields": ["recommendation_id"],
+      "fields": [
+        "recommendation_id"
+      ],
       "code": "duplicate_recommendation_id",
       "message": "recommendation_id is not unique",
       "fix_hint": "not auto-fixable: renaming one of them hides the collision instead of resolving it, and the two may not be the same recommendation"
@@ -212,7 +356,9 @@
     {
       "kind": "unique",
       "of": "recommendations",
-      "fields": ["rank"],
+      "fields": [
+        "rank"
+      ],
       "code": "duplicate_rank",
       "message": "two recommendations claim the same rank",
       "fix_hint": "not auto-fixable: the ordering is Learn's judgement. Resolving a tie by array position would invent a preference nobody expressed"

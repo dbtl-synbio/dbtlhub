@@ -39,6 +39,7 @@ things a schema cannot state:
 | `empty` | a list that must be empty, e.g. unmapped vocabulary keys |
 | `derived` | a field that must equal a value computable from the data, e.g. a checksum |
 | `entity_value` | a referenced entity says something the next phase must act on |
+| `within_limits` | more than the receiving phase said it can handle |
 
 Keep the envelope and the measurement shape (`quantity + value + unit +
 method`) exactly as scaffolded. Delete the example checks you do not use — an
@@ -71,6 +72,38 @@ reviewer sees, not in a Python set only its author knows about.
 Keep it only if your upstream phase does not already emit a package in the
 contract's shape. Handover 1 is the one exception: Design has to project an
 order for the synthesis vendor out of the crate and keep the two joined.
+
+## 4a. Limits: the one thing that flows backwards
+
+Everything else in this framework flows one way — the phase that made
+something hands it to the phase that receives it. The envelope has two fields
+for the other direction, and every contract carries them:
+
+```json
+"reads":  [{"crate": "#crate/build", "role": "constraints",
+            "checksum": "sha256:..."}],
+"limits": [{"quantity": "library_size", "value": 96, "unit": "variants",
+            "from": "#crate/build", "stated_by": "researcher, round 0 seed"}]
+```
+
+`reads` records a crate you consulted but did not produce. `limits` holds the
+numbers you lifted out of it, with `from` saying which crate each came from,
+so the claim is checkable and attributable. Then:
+
+```json
+{"kind": "within_limits", "of": "order.items", "measure": "count",
+ "quantity": "library_size", "code": "exceeds_stated_limit"}
+```
+
+An order of 120 against a Build crate that states 96 is refused, and the
+message names the crate the limit came from.
+
+Why this is not in the profile: a profile holds what a **use case** always
+requires. A limit is this **run's** equipment and this **round's** budget, and
+it changes between rounds. Putting it in the profile would freeze it.
+
+Record the `checksum` of what you read. A shared crate grows between rounds,
+so "the Build crate" is not a unique thing to have read.
 
 ## 4b. Errors, and flags
 
