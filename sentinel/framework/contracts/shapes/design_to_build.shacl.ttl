@@ -1,0 +1,162 @@
+# SHACL shapes for the Design -> Build handover.
+#
+# The same rules as framework/contracts/design_to_build.schema.json carries in
+# its x-dbtl-checks, written for the graph instead of the document. Keep both:
+# they check different things and both are needed.
+#
+#   JSON Schema  checks the ORDER - the flat thing the provider receives. A list
+#                of wells and sequences is document-shaped, and a schema is the
+#                right tool for it.
+#   SHACL        checks the CRATE - whether every ordered sequence is CONNECTED
+#                to a physical sample. That is a path query. No JSON Schema can
+#                express it; this is the concrete evidence for the claim that a
+#                schema alone is not enough for a handover contract.
+#
+# Run it, once the dependency is acceptable:
+#
+#     pip install pyshacl rdflib
+#     pyshacl -s design_to_build.shacl.ttl -df json-ld ro-crate-metadata.json
+#
+# NOTE these shapes assume the crate has been through the alignment step
+# (framework/kg.py: align_crate). Run against a raw crate full of local keys
+# they will report everything missing, correctly.
+
+@prefix sh:         <http://www.w3.org/ns/shacl#> .
+@prefix xsd:        <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov:       <http://www.w3.org/ns/prov#> .
+@prefix schema:     <http://schema.org/> .
+@prefix dwc:        <http://rs.tdwg.org/dwc/terms/> .
+@prefix envo:       <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix mixs:       <https://w3id.org/mixs/> .
+@prefix bioschemas: <https://bioschemas.org/> .
+@prefix qudt:       <http://qudt.org/schema/qudt/> .
+@prefix dbtl:       <https://w3id.org/dbtlhub/terms/> .
+@prefix :           <https://w3id.org/dbtlhub/shapes/design_to_build#> .
+
+# --------------------------------------------------------------------------- #
+# 1. Every ordered sequence traces back to a physical sample.
+# --------------------------------------------------------------------------- #
+# This is the shape the whole handover exists for. `oneOrMorePath` over the
+# three PROV properties is the traversal; `qualifiedValueShape` demands that at
+# least one node it reaches is a BioSample.
+
+:OrderedSequenceShape
+    a sh:NodeShape ;
+    sh:targetClass schema:MediaObject ;
+    sh:property [
+        sh:path [ sh:oneOrMorePath [ sh:alternativePath (
+            prov:wasDerivedFrom prov:wasGeneratedBy prov:used ) ] ] ;
+        sh:qualifiedValueShape [ sh:class bioschemas:BioSample ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "No chain of derivation reaches a physical sample. A sequence with no recorded origin cannot be defended, and must not be ordered."
+    ] ;
+    sh:property [
+        sh:path dbtl:sequenceChecksum ;
+        sh:minCount 1 ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "A sequence is identified by its checksum, so what comes back from the provider can be checked against what was ordered."
+    ] .
+
+# --------------------------------------------------------------------------- #
+# 2. The sample record carries the context that cannot be recovered later.
+# --------------------------------------------------------------------------- #
+
+:BioSampleShape
+    a sh:NodeShape ;
+    sh:targetClass bioschemas:BioSample ;
+    sh:property [
+        sh:path dwc:eventDate ;
+        sh:minCount 1 ; sh:datatype xsd:date ;
+        sh:message "Collection date missing."
+    ] ;
+    sh:property [
+        sh:path dwc:recordedBy ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "Who collected it, as an ORCID. A name is not an identifier."
+    ] ;
+    sh:property [
+        sh:path dbtl:storageContainer ;
+        sh:minCount 1 ;
+        sh:message "Which freezer. Without it the material cannot be found again."
+    ] ;
+    sh:property [
+        sh:path dbtl:storageCondition ;
+        sh:minCount 1 ;
+        sh:node :MeasurementShape ;
+        sh:message "Storage condition missing. -20 instead of -80 for a month is the difference between a reproducible result and an anecdote."
+    ] ;
+    sh:property [
+        sh:path ( prov:wasGeneratedBy schema:location ) ;
+        sh:minCount 1 ;
+        sh:node :SiteShape ;
+        sh:message "The sample is not linked to a located site."
+    ] .
+
+:SiteShape
+    a sh:NodeShape ;
+    sh:targetClass dwc:Location ;
+    sh:property [
+        sh:path dwc:decimalLatitude ;
+        sh:minCount 1 ; sh:datatype xsd:decimal ;
+        sh:minInclusive -90.0 ; sh:maxInclusive 90.0 ;
+        sh:message "Latitude missing or out of range. An unlocated site cannot be re-sampled, and collection cannot be shown to have been lawful under the Nagoya Protocol."
+    ] ;
+    sh:property [
+        sh:path dwc:decimalLongitude ;
+        sh:minCount 1 ; sh:datatype xsd:decimal ;
+        sh:minInclusive -180.0 ; sh:maxInclusive 180.0 ;
+        sh:message "Longitude missing or out of range."
+    ] ;
+    sh:property [
+        sh:path envo:biome ;
+        sh:minCount 1 ;
+        sh:message "Biome missing. Required as an ENVO term, not free text, or the Learn phase cannot pool results across sites."
+    ] ;
+    sh:property [
+        sh:path mixs:env_medium ;
+        sh:minCount 1 ;
+        sh:message "Environmental material missing (MIxS env_medium)."
+    ] .
+
+# --------------------------------------------------------------------------- #
+# 3. The measurement shape, shared by all four handovers.
+# --------------------------------------------------------------------------- #
+# A bare number is not a measurement. This shape is the graph form of the rule
+# the other three contracts state in JSON Schema, and it is deliberately the
+# same rule: one shape for every number in the cycle.
+
+:MeasurementShape
+    a sh:NodeShape ;
+    sh:property [ sh:path qudt:quantityKind ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path qudt:value       ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path qudt:unit        ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:message "Use 'dimensionless' rather than omitting the unit; 'none' is not a unit." ] ;
+    sh:property [ sh:path schema:instrument ; sh:minCount 1 ;
+                  sh:message "The instrument or procedure that produced the number." ] .
+
+# --------------------------------------------------------------------------- #
+# 4. Vocabulary hygiene.
+# --------------------------------------------------------------------------- #
+# Any predicate still in the local namespace after alignment is a key nobody has
+# agreed a term for, which means nobody can query it. Failing on it is the only
+# way the vocabulary ever converges between two partners.
+
+:NoLocalPredicatesShape
+    a sh:NodeShape ;
+    sh:target [
+        a sh:SPARQLTarget ;
+        sh:select """
+            SELECT ?this WHERE {
+              ?this ?p ?o .
+              FILTER(STRSTARTS(STR(?p), "https://w3id.org/dbtlhub/local/"))
+            }"""
+    ] ;
+    sh:sparql [
+        sh:message "Unaligned key: this entity uses a predicate nobody has mapped to a term." ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this ?value ?o .
+              FILTER(STRSTARTS(STR(?value), "https://w3id.org/dbtlhub/local/"))
+            }"""
+    ] .

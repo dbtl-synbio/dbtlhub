@@ -1,0 +1,17 @@
+{
+  "lab": "LifeGlimmer GmbH",
+  "contact": "Marco Anteghini",
+  "description": "The same site-level overlay for our side. It exists mainly to prove the point: two labs spell the same things differently and both are right locally. The graph only merges because both files point at the same terms in core.json.",
+
+  "aliases": {
+    "tempC": "dbtl:storageTemperature",
+    "storage_unit": "dbtl:storageContainer",
+    "position_in_box": "dbtl:storagePosition",
+    "lat": "dwc:decimalLatitude",
+    "lon": "dwc:decimalLongitude",
+    "date_collected": "dwc:eventDate",
+    "operator": "dwc:recordedBy",
+    "part_registry": "dbtl:registry",
+    "strain_collection": "dbtl:strainCollection"
+  }
+}

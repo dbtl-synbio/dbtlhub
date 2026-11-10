@@ -1,0 +1,49 @@
+{
+  "name": "bioprospecting",
+  "description": "Metagenomic enzyme characterisation (Anil's case). Design picks a panel of candidate sequences; Build synthesises and amplifies DNA; Test runs enzyme reactions against substrates and reads a plate.",
+  "patterns": {
+    "design_item_id": "^CAND-[0-9]{3}$",
+    "accession": "^(MGYP|UniProt|NCBI):[A-Za-z0-9_.]+$",
+    "sample_id": "^BP[0-9]+-[A-H][0-9]{2}$",
+    "container_id": "^PLATE-[0-9]+$",
+    "position": "^[A-H][0-9]{1,2}$",
+    "order_item_id": "^ORD-[0-9]{3}$"
+  },
+  "required_provenance": {
+    "design_to_build": {
+      "root_type": "bioschemas:BioSample",
+      "follow": ["prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used"],
+      "note": "Every ordered sequence must trace, link by link, to a physical sample. In bioprospecting that sample is a field collection, so the chain crosses from in silico entities into a vial in a freezer - which is exactly where traceability is normally lost.",
+      "entities": [
+        {
+          "type": "dwc:Location",
+          "requires": ["dwc:decimalLatitude", "dwc:decimalLongitude", "envo:biome", "mixs:env_medium"],
+          "why": "a sequence from an unlocated site cannot be re-collected, and under the Nagoya Protocol cannot be shown to have been collected legally"
+        },
+        {
+          "type": "bioschemas:BioSample",
+          "requires": ["dwc:eventDate", "dwc:recordedBy", "dbtl:storageContainer", "dbtl:storagePosition"],
+          "at": "dbtl:storageCondition",
+          "measurements": [
+            { "quantity": "storage_temperature", "unit": "degC", "method_hint": "freezer log" }
+          ],
+          "why": "the storage temperature decides whether the material still exists; -20 instead of -80 for a month is the difference between a reproducible result and an anecdote"
+        }
+      ]
+    }
+  },
+  "required_quantities": {
+    "build_to_test": [
+      { "quantity": "fragment_size", "unit": "bp", "method_hint": "Agilent TapeStation 4200" },
+      { "quantity": "dna_concentration", "unit": "ng/uL", "method_hint": "Agilent TapeStation 4200" }
+    ],
+    "test_to_learn": [
+      { "quantity": "blank_corrected_absorbance", "unit": "AU", "method_hint": "CLARIOstar 510 nm, blank subtracted" }
+    ]
+  },
+  "instruments": [
+    { "name": "Opentrons OT-2", "role": "liquid handling", "emits": "worklist, run log" },
+    { "name": "Agilent TapeStation 4200", "role": "PCR product check", "emits": "fragment size (bp), concentration (ng/uL), pass/fail" },
+    { "name": "BMG CLARIOstar Plus", "role": "plate reader", "emits": "absorbance at 510 nm" }
+  ]
+}

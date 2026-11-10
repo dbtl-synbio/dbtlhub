@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dbtl:test_to_learn/0.1.0",
+  "x-handover": {
+    "number": 3,
+    "name": "screening results",
+    "from": "test",
+    "to": "learn",
+    "source": "Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov 2026",
+    "note": "The use case numbers its handovers. Carrying that number in the contract means two teams arguing about 'the Design handover' are provably arguing about the same one."
+  },
+  "title": "Test -> Learn handover (generic)",
+  "description": "The handover the flash deck calls 'peak area is not flux'. The common ground: every result resolves to a Design item, every number carries unit and method, and the profile declares what Learn cannot work without - a blank-corrected signal for bioprospecting, a titre normalised per gDW with declared uncertainty for biomanufacturing.",
+  "type": "object",
+  "required": [
+    "contract",
+    "contract_version",
+    "profile",
+    "run_id",
+    "produced_by",
+    "produced_at",
+    "build_ref",
+    "results"
+  ],
+  "properties": {
+    "contract": {
+      "const": "test_to_learn"
+    },
+    "contract_version": {
+      "const": "0.1.0"
+    },
+    "profile": {
+      "enum": [
+        "bioprospecting",
+        "biomanufacturing"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "produced_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
+    "produced_by": {
+      "type": "object",
+      "required": [
+        "agent",
+        "tool",
+        "engine"
+      ],
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        }
+      }
+    },
+    "build_ref": {
+      "type": "object",
+      "description": "The chain back to Build, and through it to Design. Without this a measurement cannot be traced to what was built.",
+      "required": [
+        "package"
+      ],
+      "properties": {
+        "package": {
+          "type": "string"
+        }
+      }
+    },
+    "target_list": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "inchikey"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "inchikey": {
+            "type": "string",
+            "pattern": "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
+          },
+          "role": {
+            "enum": [
+              "substrate",
+              "product",
+              "intermediate",
+              "byproduct"
+            ]
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "sample_id",
+          "design_item_id",
+          "measurements"
+        ],
+        "properties": {
+          "sample_id": {
+            "type": "string",
+            "x-pattern": "sample_id"
+          },
+          "design_item_id": {
+            "type": "string",
+            "x-pattern": "design_item_id"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "container_id": {
+                "type": "string",
+                "x-pattern": "container_id"
+              },
+              "position": {
+                "type": "string",
+                "x-pattern": "position"
+              }
+            }
+          },
+          "measurements": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "quantity",
+                "value",
+                "unit",
+                "method"
+              ],
+              "properties": {
+                "quantity": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": [
+                    "number",
+                    "boolean"
+                  ]
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "normalised_to": {
+                  "type": "string",
+                  "description": "The basis a derived value is expressed per, e.g. 'gDW'. Required by profiles whose Learn step needs a rate rather than a raw signal."
+                },
+                "uncertainty": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "step",
+          "tool"
+        ],
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "x-dbtl-checks": [
+    {
+      "kind": "unique",
+      "of": "results",
+      "fields": [
+        "sample_id"
+      ],
+      "code": "duplicate_sample_id",
+      "message": "sample_id is not unique"
+    },
+    {
+      "kind": "required_quantities",
+      "of": "results",
+      "at": "measurements",
+      "from_profile": "required_quantities.test_to_learn",
+      "code": "missing_quantity",
+      "message": "the profile requires this measurement before Learn can use the data",
+      "fix_hint": "not auto-fixable: a measurement that was never taken cannot be supplied. Either the instrument output is found, or the sample is reported as incomplete"
+    }
+  ]
+}

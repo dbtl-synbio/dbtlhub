@@ -1,0 +1,22 @@
+{
+  "lab": "Newcastle University — Wipat group",
+  "contact": "see bioprospecting/README.md in dbtl-synbio/dbtlhub",
+  "description": "How this lab spells things. Nothing here is a new term: every value must already be declared in core.json. A lab may name things its own way; it may not invent vocabulary on its own, or after three labs the graph is unmergeable.",
+
+  "aliases": {
+    "freezer_temp": "dbtl:storageTemperature",
+    "freezer_id": "dbtl:storageContainer",
+    "rack": "dbtl:storagePosition",
+    "gps_lat": "dwc:decimalLatitude",
+    "gps_lon": "dwc:decimalLongitude",
+    "sampled_on": "dwc:eventDate",
+    "sampled_by": "dwc:recordedBy"
+  },
+
+  "review": [
+    "box_temp_c appeared in a crate on 10 Nov 2026 and is NOT mapped here on purpose.",
+    "It is what the demo's broken crate uses, so the failure has something real behind it.",
+    "Mapping it is one line - which is the point: the fix is a reviewed line in a file,",
+    "not a model deciding at runtime."
+  ]
+}

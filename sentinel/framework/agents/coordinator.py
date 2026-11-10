@@ -1,0 +1,67 @@
+"""The coordinator.
+
+It decomposes the goal into a route through the phases, calls one agent at a
+time, records every step in the ledger, and decides what happens when a handover
+is escalated. It also owns the Learn -> Design closure: deciding whether to
+iterate is coordination, not a handover.
+
+It knows nothing about plates, enzymes or mass spectrometry - only contracts.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from framework.agents.base import Result, Task                 # noqa: E402
+from framework.ledger import Ledger                            # noqa: E402
+
+
+class Coordinator:
+    name = "coordinator"
+
+    def __init__(self, run_id: str, *, stop_on_escalation: bool = True):
+        self.ledger = Ledger(run_id)
+        self.run_id = run_id
+        self.stop_on_escalation = stop_on_escalation
+        self.escalations: list[tuple[str, Result]] = []
+
+    def step(self, agent, task: Task, *, label: str, store_as: str | None = None) -> Result:
+        """Run one agent, record it, store its package if it produced one."""
+        result = agent.handle(task)
+
+        stored = None
+        package = result.outputs.get("package")
+        if store_as and package:
+            stored = self.ledger.write_package(store_as, package)
+
+        self.ledger.record(
+            step=label, agent=agent.name, engine=result.engine, status=result.status,
+            package=stored, errors=result.errors, notes=result.notes,
+        )
+
+        if result.status == "escalated":
+            self.escalations.append((label, result))
+        return result
+
+    def should_continue(self, result: Result) -> bool:
+        """An escalated handover stops the route by default.
+
+        Carrying a package the validator rejected into the next phase is how a
+        bad number ends up in a conclusion. Set stop_on_escalation=False only to
+        demonstrate what that costs.
+        """
+        if result.status == "ok":
+            return True
+        return not self.stop_on_escalation
+
+    def summary(self) -> dict:
+        entries = self.ledger.entries()
+        return {
+            "run_id": self.run_id,
+            "steps": len(entries),
+            "escalated": [label for label, _ in self.escalations],
+            "engines_used": sorted({e["engine"] for e in entries}),
+            "ledger": str(self.ledger.path),
+        }

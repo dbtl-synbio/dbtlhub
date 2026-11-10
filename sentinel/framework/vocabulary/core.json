@@ -1,0 +1,94 @@
+{
+  "name": "DBTLHUB core vocabulary",
+  "version": "0.1.0",
+  "description": "The terms this project has agreed on, and the common local keys that map to them. This file is the shared deliverable: it is reviewed, versioned and argued about in pull requests. A lab's own spellings do NOT belong here - they go in labs/<lab>.json, which may only point at terms declared below. That constraint is what stops every site growing its own vocabulary.",
+
+  "prefixes": {
+    "schema": "http://schema.org/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "bioschemas": "https://bioschemas.org/",
+    "dwc": "http://rs.tdwg.org/dwc/terms/",
+    "envo": "http://purl.obolibrary.org/obo/ENVO_",
+    "obi": "http://purl.obolibrary.org/obo/OBI_",
+    "edam": "http://edamontology.org/",
+    "uo": "http://purl.obolibrary.org/obo/UO_",
+    "qudt": "http://qudt.org/schema/qudt/",
+    "sosa": "http://www.w3.org/ns/sosa/",
+    "mixs": "https://w3id.org/mixs/",
+    "ro": "https://w3id.org/ro/terms/",
+    "dbtl": "https://w3id.org/dbtlhub/terms/"
+  },
+
+  "base": "https://w3id.org/dbtlhub/",
+
+  "context_terms": [
+    "name", "description", "identifier", "location", "about", "hasPart", "mentions",
+    "license", "datePublished", "conformsTo", "encodingFormat", "contentSize",
+    "author", "creator", "dateCreated", "version", "url", "keywords", "citation"
+  ],
+
+  "measurement_terms": {
+    "quantity": "qudt:quantityKind",
+    "value": "qudt:value",
+    "unit": "qudt:unit",
+    "method": "schema:instrument",
+    "uncertainty": "qudt:standardUncertainty",
+    "normalised_to": "dbtl:normalisedTo"
+  },
+
+  "terms": {
+    "dwc:decimalLatitude":   { "status": "confirmed", "for": "where the sample was collected" },
+    "dwc:decimalLongitude":  { "status": "confirmed", "for": "where the sample was collected" },
+    "dwc:eventDate":         { "status": "confirmed", "for": "when it was collected" },
+    "dwc:recordedBy":        { "status": "confirmed", "for": "who collected it, as an ORCID" },
+    "dwc:locality":          { "status": "confirmed", "for": "the site's name" },
+    "mixs:depth":            { "status": "confirmed", "for": "sampling depth" },
+    "envo:biome":            { "status": "confirmed", "for": "biome, as an ENVO term" },
+    "mixs:env_medium":       { "status": "confirmed", "for": "environmental material" },
+    "schema:instrument":     { "status": "confirmed", "for": "the tool or device that ran a step" },
+    "schema:softwareVersion":{ "status": "confirmed", "for": "the version of that tool" },
+    "schema:identifier":     { "status": "confirmed", "for": "a prefixed, resolvable accession" },
+    "prov:used":             { "status": "confirmed", "for": "what an activity consumed" },
+    "prov:generated":        { "status": "confirmed", "for": "what an activity produced" },
+    "prov:wasDerivedFrom":   { "status": "confirmed", "for": "entity-to-entity derivation" },
+    "prov:wasGeneratedBy":   { "status": "confirmed", "for": "entity to the activity that made it" },
+    "qudt:unit":             { "status": "confirmed", "for": "the unit of a bare value" },
+
+    "edam:has_identifier":   { "status": "proposed", "for": "the bio.tools entry for a step",
+                               "note": "this is the join to the dbtlhub bio.tools classification; confirm the property with EDAM" },
+    "dbtl:storageTemperature": { "status": "proposed", "for": "how cold the material is kept",
+                               "note": "no ENVO or OBI term found for the storage condition of a derived material. Carried as a measurement, not a bare number" },
+    "dbtl:storageContainer": { "status": "proposed", "for": "which freezer" },
+    "dbtl:storagePosition":  { "status": "proposed", "for": "rack / box / slot" },
+    "dbtl:sequenceChecksum": { "status": "proposed", "for": "sha256 of the sequence text" },
+    "dbtl:lengthBp":         { "status": "proposed", "for": "length in base pairs" },
+    "dbtl:lengthAa":         { "status": "proposed", "for": "length in amino acids" },
+    "dbtl:aliquotCount":     { "status": "proposed", "for": "how many aliquots exist" },
+    "dbtl:registry":         { "status": "proposed", "for": "which registry a part came from" },
+    "dbtl:strainCollection": { "status": "proposed", "for": "which collection a chassis came from" }
+  },
+
+  "aliases": {
+    "latitude": "dwc:decimalLatitude",
+    "longitude": "dwc:decimalLongitude",
+    "collection_date": "dwc:eventDate",
+    "collected_by": "dwc:recordedBy",
+    "site_name": "dwc:locality",
+    "depth_m": "mixs:depth",
+    "biome": "envo:biome",
+    "environmental_material": "mixs:env_medium",
+    "tool": "schema:instrument",
+    "tool_version": "schema:softwareVersion",
+    "accession": "schema:identifier",
+    "unit": "qudt:unit",
+    "input": "prov:used",
+    "output": "prov:generated",
+    "derived_from": "prov:wasDerivedFrom",
+    "produced_by": "prov:wasGeneratedBy",
+    "biotools_id": "edam:has_identifier",
+    "sequence_sha256": "dbtl:sequenceChecksum",
+    "length_bp": "dbtl:lengthBp",
+    "length_aa": "dbtl:lengthAa",
+    "aliquots": "dbtl:aliquotCount"
+  }
+}

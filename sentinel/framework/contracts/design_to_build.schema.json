@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dbtl:design_to_build/0.1.0",
+  "x-handover": {
+    "number": 1,
+    "name": "construct specification",
+    "from": "design",
+    "to": "build",
+    "source": "Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov 2026",
+    "note": "The use case numbers its handovers. Carrying that number in the contract means two teams arguing about 'the Design handover' are provably arguing about the same one."
+  },
+  "title": "Design -> Build handover (generic)",
+  "description": "This handover has two faces and that is the whole point. The ORDER is what leaves the building: a flat list of sequences and the well each goes in, which is all a synthesis provider needs or should receive. The CRATE is what stays: an RO-Crate describing how every one of those sequences came to exist, back to a physical sample in a freezer. The contract binds the two, so stripping the metadata for the provider is a projection rather than a loss. Profiles bind identifier formats and declare which provenance a handover is incomplete without.",
+  "type": "object",
+  "required": [
+    "contract",
+    "contract_version",
+    "profile",
+    "run_id",
+    "produced_by",
+    "produced_at",
+    "crate_ref",
+    "crate",
+    "order",
+    "bindings"
+  ],
+  "properties": {
+    "contract": {
+      "const": "design_to_build"
+    },
+    "contract_version": {
+      "const": "0.1.0"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "bioprospecting",
+        "biomanufacturing"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "produced_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
+    "produced_by": {
+      "type": "object",
+      "required": [
+        "agent",
+        "tool",
+        "engine"
+      ],
+      "properties": {
+        "agent": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        }
+      }
+    },
+    "crate_ref": {
+      "type": "object",
+      "description": "Where the crate lives and which profiles it claims to follow. 'conforms_to' is not decoration: a reader that does not know the profile cannot interpret the crate, and a crate that claims a profile it does not satisfy is worse than one that claims none.",
+      "required": [
+        "path",
+        "conforms_to",
+        "root",
+        "checksum"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "ro-crate-metadata\\.json$"
+        },
+        "conforms_to": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^https?://"
+          }
+        },
+        "root": {
+          "const": "./"
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "crate": {
+      "type": "object",
+      "description": "The crate's metadata descriptor, inlined so the contract can be checked as one document. This is metadata, not data - the sequences and reads stay where they are. Local keys must already be aligned to terms: alignment happens before validation, never after.",
+      "required": [
+        "@context",
+        "@graph"
+      ],
+      "properties": {
+        "@context": {
+          "type": [
+            "array",
+            "object",
+            "string"
+          ]
+        },
+        "@graph": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "@id",
+              "@type"
+            ],
+            "properties": {
+              "@id": {
+                "type": "string"
+              },
+              "@type": {
+                "type": [
+                  "string",
+                  "array"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "order": {
+      "type": "object",
+      "description": "The provider-facing projection. Deliberately poor: anything in here is something we have decided to send to a third party.",
+      "required": [
+        "provider",
+        "format",
+        "container_id",
+        "items"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "fasta",
+            "genbank",
+            "sbol"
+          ]
+        },
+        "container_id": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "order_item_id",
+              "position",
+              "design_item_id",
+              "sequence_type",
+              "sequence_sha256"
+            ],
+            "properties": {
+              "order_item_id": {
+                "type": "string",
+                "x-pattern": "order_item_id"
+              },
+              "position": {
+                "type": "string",
+                "x-pattern": "position"
+              },
+              "design_item_id": {
+                "type": "string",
+                "x-pattern": "design_item_id"
+              },
+              "sequence_type": {
+                "enum": [
+                  "dna",
+                  "rna",
+                  "protein"
+                ]
+              },
+              "length_bp": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sequence_sha256": {
+                "type": "string",
+                "description": "The identity of the sequence, not its text. What comes back from the provider is checked against this; a sequence that does not hash to its order line is not the thing we ordered.",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The bridge. One row per ordered item, pointing at the crate entity it was projected from. Without this the order and the crate are two documents about the same thing with no way to join them, which is the state most labs are actually in.",
+      "items": {
+        "type": "object",
+        "required": [
+          "design_item_id",
+          "crate_entity"
+        ],
+        "properties": {
+          "design_item_id": {
+            "type": "string",
+            "x-pattern": "design_item_id"
+          },
+          "crate_entity": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "description": "The agent's report on the vocabulary. 'unaligned' must be empty: a key nobody has mapped is a key nobody can query, so it is a failed handover and not a warning.",
+      "required": [
+        "confirmed",
+        "proposed",
+        "unaligned"
+      ],
+      "properties": {
+        "confirmed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "proposed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unaligned": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "target_list": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "inchikey"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "inchikey": {
+            "type": "string",
+            "pattern": "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
+          },
+          "role": {
+            "enum": [
+              "substrate",
+              "product",
+              "intermediate",
+              "byproduct"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "x-dbtl-checks": [
+    {
+      "kind": "unique",
+      "of": "order.items",
+      "fields": [
+        "position"
+      ],
+      "code": "double_booked_position",
+      "message": "two ordered sequences claim the same well of the order plate",
+      "fix_hint": "not auto-fixable: the provider would synthesise one and silently drop the other"
+    },
+    {
+      "kind": "unique",
+      "of": "order.items",
+      "fields": [
+        "design_item_id"
+      ],
+      "code": "duplicate_order_item",
+      "message": "this design item is ordered twice"
+    },
+    {
+      "kind": "cross_ref",
+      "of": "order.items",
+      "field": "design_item_id",
+      "against": "bindings[].design_item_id",
+      "code": "unbound_order_item",
+      "message": "ordered, but nothing says which crate entity it came from",
+      "fix_hint": "not auto-fixable: an unbound order line is a sequence with no origin"
+    },
+    {
+      "kind": "cross_ref",
+      "of": "bindings",
+      "field": "crate_entity",
+      "against": "crate.@graph[].@id",
+      "code": "missing_crate_entity",
+      "message": "the binding points at an entity the crate does not contain"
+    },
+    {
+      "kind": "provenance_chain",
+      "of": "bindings",
+      "field": "crate_entity",
+      "in": "crate.@graph",
+      "from_profile": "required_provenance.design_to_build",
+      "code": "broken_provenance_chain",
+      "message": "no path of derivation from this sequence back to a physical sample",
+      "fix_hint": "not auto-fixable: inventing the missing step would fabricate the origin of a sequence. Either the step is recorded, or the candidate is dropped from the order"
+    },
+    {
+      "kind": "required_provenance",
+      "of": "crate.@graph",
+      "from_profile": "required_provenance.design_to_build.entities",
+      "code": "missing_provenance",
+      "message": "the profile requires this property on this kind of entity"
+    },
+    {
+      "kind": "empty",
+      "of": "alignment.unaligned",
+      "code": "unaligned_key",
+      "message": "no term has been agreed for this key, so nothing can query it",
+      "fix_hint": "one reviewed line in vocabulary/labs/<lab>.json if it is only this site's spelling for a term we already have, or a pull request against vocabulary/core.json if it is a new term. The engine may propose; a human decides, once, and every partner gets it"
+    }
+  ]
+}
