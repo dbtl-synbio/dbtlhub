@@ -24,6 +24,7 @@ anything.
 python3 scripts/show_agents.py               # all four, as they are right now
 python3 scripts/show_agents.py --handover 1  # one in full
 python3 demo_d2b.py                          # H1: a clean crate, then a broken one
+python3 demo_l2d.py                          # H4: the round that closes, then one that does not
 ```
 
 `show_agents.py` reads the live classes and contract files, so it cannot drift
@@ -52,7 +53,7 @@ happened would have been written.
 | 1 | construct specification | working | working | the worked example; the only one with a `translate()` |
 | 2 | assembly outputs and QC results | working | working | four lines, no logic |
 | 3 | screening results | working | working | four lines, no logic |
-| 4 | model predictions and recommendations | **scaffolded** | **scaffolded** | 13 TODO — **free to take** |
+| 4 | model predictions and recommendations | working | working | three lines, no logic |
 
 ## Vocabulary: the agent never decides a term
 
@@ -121,7 +122,13 @@ In all four runs the handover still failed. Full statement in
 - **H2 and H3 packages are JSON, not RO-Crates.** The slides for the use case
   imply every handover is packaged as an RO-Crate. Worth settling as a group:
   the contracts do not care, but the example packages should be consistent.
-- **Handover 4 is entirely TODO.**
+- **Nobody has run this on a real crate.** Everything here is checked against
+  simulated packages generated in `usecases/`. Anil's own Design → Build
+  example crates use Process Run Crate's `CreateAction` / `object` / `result`
+  rather than PROV properties, so the provenance traversal does not yet walk
+  them: the mechanism is hardcoded where it should be declared in the profile.
+  That is the next thing worth fixing, and it is what would make Handover 1
+  run on somebody else's data rather than only on mine.
 
 ## Layout
 

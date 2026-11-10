@@ -6,12 +6,12 @@
     "name": "model predictions and recommendations",
     "from": "learn",
     "to": "design",
-    "note": "The use case numbers its handovers. Carrying that number here means two teams arguing about 'the Design handover' are provably arguing about the same one."
+    "source": "Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov 2026",
+    "note": "The use case numbers its handovers. Carrying that number in the contract means two teams arguing about 'the Design handover' are provably arguing about the same one."
   },
   "title": "Learn -> Design handover (generic)",
-  "description": "TODO one paragraph: what this handover carries, and what the receiving phase cannot do without. Write it for the person who has to decide whether their package satisfies it, not for yourself. Fields marked x-pattern take their regex from the active profile, so the contract stays generic and the use case supplies the formats.",
+  "description": "The handover that closes the cycle. Learn has fitted a model to the screening results and now proposes what Design should make next. The receiving phase cannot act on a ranked list alone: it needs to know which measurements each recommendation rests on, which model produced it and on what data, and how uncertain the prediction is. A point prediction with no uncertainty cannot be used to choose between candidates, so this contract refuses one.",
   "type": "object",
-  "$comment": "THE ENVELOPE. These seven fields are identical in every handover contract. Do not rename them: the coordinator, the ledger and the cross-use-case comparison all read them. Add your payload below.",
   "required": [
     "contract",
     "contract_version",
@@ -19,7 +19,9 @@
     "run_id",
     "produced_by",
     "produced_at",
-    "learn_ref"
+    "test_ref",
+    "model",
+    "recommendations"
   ],
   "properties": {
     "contract": {
@@ -46,132 +48,201 @@
     },
     "produced_by": {
       "type": "object",
-      "description": "'engine' records the model used, or 'none' for a deterministic step. It is what makes the model comparison fall out of the ledger instead of needing its own experiment.",
-      "required": [
-        "agent",
-        "tool",
-        "engine"
-      ],
+      "description": "'engine' records the model used for the agent's own decisions, or 'none' for a deterministic step. It is not the scientific model - that is 'model' below, and the two must not be confused.",
+      "required": ["agent", "tool", "engine"],
       "properties": {
-        "agent": {
-          "type": "string"
-        },
-        "tool": {
-          "type": "string"
-        },
-        "engine": {
-          "type": "string"
+        "agent": { "type": "string" },
+        "tool": { "type": "string" },
+        "engine": { "type": "string" }
+      }
+    },
+    "test_ref": {
+      "type": "object",
+      "description": "MANDATORY: the Test -> Learn package this round learned from. A recommendation that cannot be traced to the measurements behind it is an opinion, and Design has no way to weigh it against the next one.",
+      "required": ["package", "results"],
+      "properties": {
+        "package": { "type": "string" },
+        "results": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The result identifiers that were available to the model. Recommendations cite these.",
+          "items": {
+            "type": "object",
+            "required": ["result_id"],
+            "properties": {
+              "result_id": { "type": "string" },
+              "design_item_id": { "type": "string", "x-pattern": "design_item_id" }
+            }
+          }
         }
       }
     },
-    "TODO_items": {
+    "model": {
+      "type": "object",
+      "description": "What produced the predictions. Without a version and a training set a prediction cannot be reproduced, cannot be audited, and cannot be compared with the next round's - which makes the whole cycle unmeasurable.",
+      "required": ["name", "version", "trained_on", "fitted_at"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": {
+          "type": "string",
+          "description": "A released version, a commit, or a content hash. 'latest' is not a version."
+        },
+        "trained_on": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The run_ids whose results the model was fitted on. More than one once the cycle has turned.",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+        },
+        "fitted_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+        "holdout": {
+          "type": "object",
+          "description": "Optional but strongly wanted: how the model was checked against data it had not seen.",
+          "required": ["metric", "value"],
+          "properties": {
+            "metric": { "type": "string" },
+            "value": { "type": "number" },
+            "n": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "recommendations": {
       "type": "array",
       "minItems": 1,
-      "description": "The payload. Samples, results, candidates - whatever this handover actually carries.",
+      "description": "What Design should make next round, in the order Learn would make them.",
       "items": {
         "type": "object",
         "required": [
-          "TODO_id"
+          "recommendation_id",
+          "rank",
+          "proposes",
+          "evidence",
+          "predictions"
         ],
         "properties": {
-          "TODO_id": {
+          "recommendation_id": {
             "type": "string",
-            "x-pattern": "TODO_name_a_pattern_in_the_profile"
+            "x-pattern": "recommendation_id"
           },
-          "$comment": "Every number in every handover travels in this shape. Copy it verbatim - a bare value is not a measurement, and one shared shape is what lets a single query span the whole cycle.",
-          "measurements": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Learn's own ordering. Design may ignore it, but it must be stated rather than implied by array position."
+          },
+          "proposes": {
+            "type": "object",
+            "description": "What to make. Either a change to something already built, or a new candidate - and in both cases it has to be a thing a Design agent can act on, not a sentence.",
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "enum": ["variant_of", "new_candidate", "repeat_with_change"]
+              },
+              "derived_from_design_item": {
+                "type": "string",
+                "x-pattern": "design_item_id",
+                "description": "Required when kind is variant_of or repeat_with_change."
+              },
+              "change": {
+                "type": "string",
+                "description": "What to change, stated precisely enough to build: a substitution, a promoter swap, a condition."
+              },
+              "sequence": {
+                "type": "string",
+                "description": "For a new candidate: the sequence itself, not a description of it."
+              }
+            }
+          },
+          "evidence": {
             "type": "array",
             "minItems": 1,
+            "description": "The result identifiers from test_ref that this recommendation rests on. Not decoration: it is what lets Design see whether two recommendations are independent or are the same observation twice.",
+            "items": { "type": "string" }
+          },
+          "predictions": {
+            "type": "array",
+            "minItems": 1,
+            "description": "What the model expects, in the same measurement shape as every other handover - with uncertainty required, because a point prediction cannot be used to choose.",
             "items": {
               "type": "object",
-              "required": [
-                "quantity",
-                "value",
-                "unit",
-                "method"
-              ],
+              "required": ["quantity", "value", "unit", "method", "uncertainty"],
               "properties": {
-                "quantity": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": [
-                    "number",
-                    "boolean"
-                  ]
-                },
+                "quantity": { "type": "string" },
+                "value": { "type": ["number", "boolean"] },
                 "unit": {
                   "type": "string",
                   "description": "Use 'dimensionless' rather than omitting the field; 'none' is not a unit."
                 },
                 "method": {
                   "type": "string",
-                  "description": "The instrument or procedure that produced the number."
+                  "description": "The model and the procedure, e.g. 'ESM-2 + MLP, 5-fold CV mean'."
                 },
                 "uncertainty": {
                   "type": "object",
-                  "required": [
-                    "value",
-                    "unit"
-                  ],
+                  "description": "REQUIRED in this handover, unlike the others. A ranked list of point estimates tells Design nothing about where to spend a plate.",
+                  "required": ["value", "unit", "kind"],
                   "properties": {
-                    "value": {
-                      "type": "number",
-                      "minimum": 0
-                    },
-                    "unit": {
-                      "type": "string"
+                    "value": { "type": "number", "minimum": 0 },
+                    "unit": { "type": "string" },
+                    "kind": {
+                      "enum": ["stdev", "sem", "ci95_halfwidth", "mad"],
+                      "description": "What the number is. 'error bar' is not an answer."
                     }
                   }
+                },
+                "in_training_range": {
+                  "type": "boolean",
+                  "description": "Whether the prediction is an interpolation or an extrapolation. Design is allowed to accept an extrapolation; it is not allowed to be unaware it made one."
                 }
               }
             }
           }
         }
       }
-    },
-    "learn_ref": {
-      "type": "object",
-      "description": "MANDATORY, in every handover: the link back to the package this one was built from. A result that cannot be traced to what produced it is not a result. Name it after the upstream phase - design_ref, build_ref, test_ref.",
-      "required": [
-        "package"
-      ],
-      "properties": {
-        "package": {
-          "type": "string"
-        }
-      }
     }
   },
   "x-dbtl-checks": [
     {
-      "$comment": "The rules a JSON Schema cannot express. Available kinds: unique, cross_ref, required_quantities, provenance_chain, required_provenance, empty. Adding a new kind is one function in validator.py plus one line in its CHECKS table. Delete the examples you do not need - an unused check is worse than no check, because people stop reading them.",
       "kind": "unique",
-      "of": "TODO_items",
-      "fields": [
-        "TODO_id"
-      ],
-      "code": "duplicate_TODO_id",
-      "message": "this identifier is not unique"
+      "of": "recommendations",
+      "fields": ["recommendation_id"],
+      "code": "duplicate_recommendation_id",
+      "message": "recommendation_id is not unique",
+      "fix_hint": "not auto-fixable: renaming one of them hides the collision instead of resolving it, and the two may not be the same recommendation"
+    },
+    {
+      "kind": "unique",
+      "of": "recommendations",
+      "fields": ["rank"],
+      "code": "duplicate_rank",
+      "message": "two recommendations claim the same rank",
+      "fix_hint": "not auto-fixable: the ordering is Learn's judgement. Resolving a tie by array position would invent a preference nobody expressed"
     },
     {
       "kind": "cross_ref",
-      "of": "TODO_items",
-      "field": "TODO_id",
-      "against": "TODO_ref.items[].TODO_id",
-      "code": "unknown_TODO_item",
-      "message": "this item is not in what the previous phase committed to",
-      "fix_hint": "not auto-fixable: either the upstream phase adds the item, or this one mislabelled it"
+      "of": "recommendations",
+      "field": "evidence[]",
+      "against": "test_ref.results[].result_id",
+      "code": "unsupported_recommendation",
+      "message": "this recommendation cites a result that is not in the data it claims to have learned from",
+      "fix_hint": "not auto-fixable: a recommendation whose evidence cannot be found is not traceable to any measurement. Either the result is added to test_ref, or the recommendation is withdrawn"
     },
     {
-      "$comment": "Profile-driven: the contract says measurements carry units, the profile says WHICH measurements this handover is incomplete without. That split is what keeps one contract serving both use cases.",
+      "kind": "cross_ref",
+      "of": "recommendations",
+      "field": "proposes.derived_from_design_item",
+      "against": "test_ref.results[].design_item_id",
+      "code": "unknown_design_item",
+      "message": "proposes a variant of something that was never built and measured this round",
+      "fix_hint": "not auto-fixable: either the item belongs in test_ref, or the recommendation is a new candidate and should say so"
+    },
+    {
       "kind": "required_quantities",
-      "of": "TODO_items",
-      "at": "measurements",
+      "of": "recommendations",
+      "at": "predictions",
       "from_profile": "required_quantities.learn_to_design",
       "code": "missing_quantity",
-      "message": "the profile requires this measurement",
-      "fix_hint": "not auto-fixable: a measurement that was never taken cannot be supplied. Either the instrument output is found, or the sample is reported as incomplete"
+      "message": "the profile requires this prediction",
+      "fix_hint": "not auto-fixable: a quantity the model did not predict cannot be supplied. Either the model is asked for it, or the recommendation is reported as incomplete"
     }
   ]
 }

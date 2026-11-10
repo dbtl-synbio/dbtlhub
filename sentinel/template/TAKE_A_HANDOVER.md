@@ -14,8 +14,8 @@ normal case, not a cut-down one.
 ## 0. Scaffold it
 
 ```bash
-python3 scripts/new_handover.py learn_to_design \
-    --number 4 --label "model predictions" --from learn --to design
+python3 scripts/new_handover.py <name> \
+    --number N --label "what the use case calls it" --from <phase> --to <phase>
 ```
 
 Two files appear, both marked TODO. **Do not copy an existing file by hand.**
@@ -83,6 +83,7 @@ contract, one that does not.
 python3 scripts/show_agents.py               # all four, side by side
 python3 scripts/show_agents.py --handover 1  # one in full
 python3 demo_d2b.py                          # H1: clean run, then broken run
+python3 demo_l2d.py                          # H4: the round that closes, then one that does not
 ```
 
 `show_agents.py` reads the live classes and contract files, so it cannot drift

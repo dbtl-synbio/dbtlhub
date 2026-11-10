@@ -97,6 +97,7 @@ holds, and a handover only costs more when it genuinely is more.
 
 ```bash
 python3 demo_d2b.py                        # Handover 1, clean run and broken run
+python3 demo_l2d.py                        # Handover 4, the round that closes
 python3 scripts/show_agents.py             # all four, as they are right now
 python3 scripts/show_agents.py --handover 1
 ```
@@ -108,7 +109,7 @@ python3 scripts/show_agents.py --handover 1
 | 1 | construct specification | working | working | custom `translate()` — the worked example |
 | 2 | assembly outputs and QC results | working | working | four lines, no logic |
 | 3 | screening results | working | working | four lines, no logic |
-| 4 | model predictions and recommendations | **scaffolded** | **scaffolded** | 13 TODO — free to take |
+| 4 | model predictions and recommendations | working | working | three lines, no logic |
 
 Read it from the code rather than from this table, which will go stale:
 

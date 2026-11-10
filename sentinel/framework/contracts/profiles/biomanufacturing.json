@@ -7,22 +7,33 @@
     "sample_id": "^BM[0-9]+-[A-Z0-9]{2,4}$",
     "container_id": "^(FLASK|REACTOR|PLATE)-[0-9]+$",
     "position": "^([A-H][0-9]{1,2}|R[0-9]+|single)$",
-    "order_item_id": "^ORD-[0-9]{3}$"
+    "order_item_id": "^ORD-[0-9]{3}$",
+    "recommendation_id": "^REC-[0-9]{3}$"
   },
   "required_provenance": {
     "design_to_build": {
       "root_type": "bioschemas:BioChemEntity",
-      "follow": ["prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used"],
+      "follow": [
+        "prov:wasDerivedFrom",
+        "prov:wasGeneratedBy",
+        "prov:used"
+      ],
       "note": "Same contract, same check, different root. Here a construct does not trace back to a field site but to a registered part and a chassis strain. The chain is as rigid, the far end is a registry entry rather than a freezer.",
       "entities": [
         {
           "type": "bioschemas:BioChemEntity",
-          "requires": ["schema:identifier", "dbtl:registry"],
+          "requires": [
+            "schema:identifier",
+            "dbtl:registry"
+          ],
           "why": "a part without a registry accession cannot be re-obtained, and a construct built from it cannot be reproduced by anyone else"
         },
         {
           "type": "dbtl:Chassis",
-          "requires": ["schema:identifier", "dbtl:strainCollection"],
+          "requires": [
+            "schema:identifier",
+            "dbtl:strainCollection"
+          ],
           "why": "the same construct in a different chassis is a different experiment; the Learn phase cannot pool the two"
         }
       ]
@@ -30,17 +41,48 @@
   },
   "required_quantities": {
     "build_to_test": [
-      { "quantity": "sequence_verified", "unit": "dimensionless", "method_hint": "nanopore / Sanger verification" },
-      { "quantity": "biomass", "unit": "gDW/L", "method_hint": "OD600 converted to dry weight" }
+      {
+        "quantity": "sequence_verified",
+        "unit": "dimensionless",
+        "method_hint": "nanopore / Sanger verification"
+      },
+      {
+        "quantity": "biomass",
+        "unit": "gDW/L",
+        "method_hint": "OD600 converted to dry weight"
+      }
     ],
     "test_to_learn": [
-      { "quantity": "titre", "unit": "mg/gDW", "method_hint": "MZmine/OpenMS peak area, calibrated and normalised per gDW" }
+      {
+        "quantity": "titre",
+        "unit": "mg/gDW",
+        "method_hint": "MZmine/OpenMS peak area, calibrated and normalised per gDW"
+      }
+    ],
+    "learn_to_design": [
+      {
+        "quantity": "predicted_titre",
+        "unit": "g/L",
+        "method_hint": "strain model prediction, with uncertainty"
+      }
     ]
   },
   "instruments": [
-    { "name": "liquid handler", "role": "assembly and inoculation", "emits": "worklist, run log" },
-    { "name": "plate reader / nanopore", "role": "construct and growth QC", "emits": "OD600, sequence verification" },
-    { "name": "MZmine / OpenMS", "role": "LC-MS quantification", "emits": "peak areas, to be normalised to titre per gDW" }
+    {
+      "name": "liquid handler",
+      "role": "assembly and inoculation",
+      "emits": "worklist, run log"
+    },
+    {
+      "name": "plate reader / nanopore",
+      "role": "construct and growth QC",
+      "emits": "OD600, sequence verification"
+    },
+    {
+      "name": "MZmine / OpenMS",
+      "role": "LC-MS quantification",
+      "emits": "peak areas, to be normalised to titre per gDW"
+    }
   ],
   "notes": [
     "Biomass is required at Build -> Test because the Test -> Learn contract demands normalisation per gDW. A peak area without a biomass basis cannot become a titre, which is the failure the flash deck calls 'peak area is not flux'.",

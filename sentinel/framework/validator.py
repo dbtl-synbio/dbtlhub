@@ -219,14 +219,28 @@ def _check_unique(package, check, errors, profile=None):
 def _check_cross_ref(package, check, errors, profile=None):
     allowed = _dig(package, check["against"])
     allowed = {a for a in (allowed or []) if a is not None}
+    field = check["field"]
+    # 'design_item_id'              a key on the row
+    # 'proposes.derived_from_item'  a key further in
+    # 'evidence[]'                  every member of a list on the row
+    many = field.endswith("[]")
+    path = field[:-2] if many else field
+
     for i, row in enumerate(_dig(package, check["of"]) or []):
         if not isinstance(row, dict):
             continue
-        value = row.get(check["field"])
-        if value is not None and value not in allowed:
+        found = _dig(row, path)
+        if found is None:
+            continue
+        pairs = (list(enumerate(found)) if many and isinstance(found, list)
+                 else [(None, found)])
+        for j, value in pairs:
+            if value is None or value in allowed:
+                continue
+            where = (f"{check['of']}[{i}].{path}"
+                     + (f"[{j}]" if j is not None else ""))
             errors.append(Error(
-                f"{check['of']}[{i}].{check['field']}",
-                check.get("code", "unknown_ref"),
+                where, check.get("code", "unknown_ref"),
                 f"{value!r}: {check.get('message', 'not found in ' + check['against'])}",
                 check.get("fix_hint", "")))
 
