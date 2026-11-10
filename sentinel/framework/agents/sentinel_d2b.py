@@ -54,6 +54,14 @@ class DesignToBuildAgent(SentinelAgent):
         self.kg = kg_agent or CrateToGraphAgent(engine=self.engine, lab=lab)
 
     def translate(self, task: Task) -> tuple[dict, list[str]]:
+        # New arrangement: the Design phase agent wrote the run's one crate and
+        # packaged the handover itself, so there is nothing to project here and
+        # the sentinel's job is only to check. Older callers still hand a crate
+        # and a list of items, and that path is unchanged below.
+        if task.inputs.get("package") is not None:
+            return task.inputs["package"], [
+                "package supplied by the phase agent; no projection needed"]
+
         crate = task.inputs["crate"]
         items = task.inputs["items"]
         run_id = task.inputs.get("run_id", "adhoc")

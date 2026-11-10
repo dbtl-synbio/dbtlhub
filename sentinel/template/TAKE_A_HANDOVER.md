@@ -11,6 +11,53 @@ Your agent is a **subclass** of it. It inherits that loop. `sentinel_b2t.py` and
 `sentinel_t2l.py` are four lines each and contain no logic at all — that is the
 normal case, not a cut-down one.
 
+## Which kind of agent are you writing?
+
+Two kinds, and it is worth keeping the names apart:
+
+| | **phase agent** | **sentinel agent** |
+|---|---|---|
+| sits | inside a phase | between two phases |
+| does | the work | the check |
+| may | choose, rank, optimise, call a model | refuse |
+| writes | its part of the run's crate | nothing |
+| template | [`template/phase_agent.py`](phase_agent.py) | [`template/handover_agent.py`](handover_agent.py) |
+
+**The phase agent is in charge; the sentinel is a submodule it submits to.**
+That ordering is deliberate. It is what lets a phase agent be clever — pick
+which assays to run, optimise a library under a budget, call a model — because
+whatever it decides still has to survive a check somebody else wrote.
+
+The rest of this page is about the sentinel. If you are writing a phase agent,
+read `template/phase_agent.py`, and then these three rules, which are the ones
+people get wrong:
+
+1. **Resolve your own vocabulary before writing.** Your instrument exports
+   `od_600`; map it to the agreed term yourself. Nobody downstream can know
+   what your technician meant.
+2. **Look an identifier up; never construct one.** The crate already holds
+   what the earlier phases wrote. A constructed `@id` that is almost right is
+   a join to nothing, and in one shared crate it is silent — so the store
+   refuses it.
+3. **Add only what you alone know.** You may fill a gap in an entity an
+   earlier phase wrote. You may not change a value it recorded; the store
+   refuses that too, and it escalates, because no contract can settle two
+   phases disagreeing about what happened.
+
+## One crate per run
+
+There is one crate for the whole run and it *is* the knowledge graph. Every
+phase adds its own part. Nothing is joined afterwards because nothing was ever
+separate:
+
+```bash
+python3 demo_cycle.py        # Design writes it, Build grows it, both are checked
+```
+
+`runs/<id>/crate/ro-crate-metadata.json` is the crate;
+`runs/<id>/graph/run.nt` is the same thing as triples, rewritten on every
+addition so the two can never drift.
+
 ## 0. Scaffold it
 
 ```bash
