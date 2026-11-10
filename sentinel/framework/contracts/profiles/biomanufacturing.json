@@ -1,6 +1,6 @@
 {
   "name": "biomanufacturing",
-  "description": "Pathway optimisation in a microbial host (Pablo's case, and LifeGlimmer's p-coumaric acid work). Design proposes a pathway and parts; Build assembles constructs into the chassis; Test cultivates and quantifies the product by LC-MS.",
+  "description": "Pathway optimisation in a microbial host, as published for the SYNBIOCHEM pipeline: (2S)-pinocembrin in E. coli, Carbonell et al., Communications Biology 2018. The quantities and instruments below are the ones that pipeline actually uses. Earlier versions of this file described a different case and attributed it to this one; see the review note.",
   "patterns": {
     "design_item_id": "^(PATH|CONS)-[0-9]{3}$",
     "accession": "^(MetaNetX|MNXR|MNXM|UniProt|SBOL|Rhea):[A-Za-z0-9_.:]+$",
@@ -64,48 +64,49 @@
       {
         "quantity": "sequence_verified",
         "unit": "dimensionless",
-        "method_hint": "nanopore / Sanger verification"
+        "method_hint": "Sanger verification of the assembled plasmid"
       },
       {
         "quantity": "biomass",
-        "unit": "gDW/L",
-        "method_hint": "OD600 converted to dry weight"
+        "unit": "OD600",
+        "method_hint": "96-deep-well growth, plate reader"
       }
     ],
     "test_to_learn": [
       {
         "quantity": "titre",
-        "unit": "mg/gDW",
-        "method_hint": "MZmine/OpenMS peak area, calibrated and normalised per gDW"
+        "unit": "mg/L",
+        "method_hint": "Acquity UPLC - Xevo TQ-S, MRM quantification against a calibration curve, peaks processed with ProteoWizard and R"
       }
     ],
     "learn_to_design": [
       {
         "quantity": "predicted_titre",
-        "unit": "g/L",
-        "method_hint": "strain model prediction, with uncertainty"
+        "unit": "mg/L",
+        "method_hint": "strain model prediction, with uncertainty, in the same unit as the measurement that will test it"
       }
     ]
   },
   "instruments": [
     {
-      "name": "liquid handler",
-      "role": "assembly and inoculation",
+      "name": "Hamilton STAR",
+      "role": "worklist-driven liquid handling, ligase cycling assembly",
       "emits": "worklist, run log"
     },
     {
-      "name": "plate reader / nanopore",
-      "role": "construct and growth QC",
-      "emits": "OD600, sequence verification"
+      "name": "QIAprep 96 + capillary electrophoresis + Sanger",
+      "role": "plasmid prep and sequence verification",
+      "emits": "sequence-verified construct list, pass/fail"
     },
     {
-      "name": "MZmine / OpenMS",
-      "role": "LC-MS quantification",
-      "emits": "peak areas, to be normalised to titre per gDW"
+      "name": "Acquity UPLC - Xevo TQ-S (QqQ)",
+      "role": "MRM quantification of the pathway product",
+      "emits": "MRM peaks, calibrated to mg/L"
     }
   ],
   "notes": [
     "Biomass is required at Build -> Test because the Test -> Learn contract demands normalisation per gDW. A peak area without a biomass basis cannot become a titre, which is the failure the flash deck calls 'peak area is not flux'.",
     "Carrying 'sequence_verified' as a dimensionless boolean measurement keeps one measurement shape for everything, instead of a special case per data type."
-  ]
+  ],
+  "review": "The titre here is volumetric, mg/L, because that is what the published pipeline reports. A titre normalised per gram dry weight separates a strain that makes more from a strain that simply grows more, and this file used to require mg/gDW for that reason - but that was our preference, not this use case's practice, and a profile states what a use case requires. Whether to require both is a question for the use case owner, not a decision for whoever edits this file."
 }
