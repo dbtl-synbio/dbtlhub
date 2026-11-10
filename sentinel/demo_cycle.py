@@ -33,11 +33,14 @@ from framework.agents.base import Task                                # noqa: E4
 from framework.agents.coordinator import Coordinator                  # noqa: E402
 from framework.agents.phase_build_crate import BuildPhaseAgent        # noqa: E402
 from framework.agents.phase_design_crate import DesignPhaseAgent      # noqa: E402
+from framework.agents.phase_learn_crate import LearnPhaseAgent        # noqa: E402
+from framework.agents.phase_test_crate import TestPhaseAgent          # noqa: E402
 from framework.crate_store import CrateStore                          # noqa: E402
 from framework.kg import provenance_of                                # noqa: E402
 from usecases.bioprospecting import instruments as bp                 # noqa: E402
 
 RUN = "cycle"
+DIM_ARROW = "\u21b3"
 
 
 def rule(title: str) -> None:
@@ -75,22 +78,56 @@ def main() -> None:
         label="build", store_as="b2t")
     show(build, "phase_build")
 
+    rule("3. TEST - adds what only the instrument knows")
+    test = coord.step(
+        TestPhaseAgent(profile="bioprospecting"),
+        Task(goal="read the plate",
+             inputs={"package": build.outputs["package"], "run_id": RUN,
+                     "build_package": coord.path_of("b2t")}, max_repairs=2),
+        label="test", store_as="t2l")
+    show(test, "phase_test")
+
+    rule("4. LEARN - adds a claim about what has not happened yet")
+    learn = coord.step(
+        LearnPhaseAgent(profile="bioprospecting"),
+        Task(goal="rank the next round",
+             inputs={"package": test.outputs["package"], "run_id": RUN,
+                     "test_package": coord.path_of("t2l"),
+                     "next_library_size": 36}, max_repairs=2),
+        label="learn", store_as="l2d")
+    show(learn, "phase_learn")
+
     store = CrateStore(RUN)
-    rule("3. ONE CRATE, ONE GRAPH")
+    rule("5. ONE CRATE, ONE GRAPH")
     print(f"""
   crate   {store.path}
   graph   {store.graph_path}
   {len(store)} entities, {sum(1 for _ in open(store.graph_path))} triples
 
-  Build did not describe the constructs again - Design already had, in the
-  same @graph. Build added what it alone knows: which well, what the
-  instrument read. So a plate well walks back through Design's own record
-  with no backlink to follow and no second file to open:
+  No phase described what an earlier one had already described. Each added
+  only what it alone knew: Design the derivation, Build the well, Test the
+  reading, Learn the claim. So the whole cycle is one traversal, with no
+  backlink to follow and no second file to open:
 """)
-    for i, node in enumerate(provenance_of(store.crate, "#sample/BP1-A01")):
-        print(f"      {i:>2}. {node['id']:<26} {str(node.get('name'))[:42]}")
+    follow = ("prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used",
+              "dbtl:restsOn", "object")
+    chain = provenance_of(store.crate, "#recommendation/REC-001", follow=follow)
+    i = 0
+    while i < len(chain):
+        node = chain[i]
+        prefix = node["id"].rsplit("/", 1)[0]
+        run = 1
+        while i + run < len(chain) and chain[i + run]["id"].startswith(prefix + "/"):
+            run += 1
+        print(f"      {i:>2}. {node['id']:<28} {str(node.get('name'))[:42]}")
+        if run > 1:
+            print(f"          {DIM_ARROW} and {run - 1} sibling"
+                  f"{'s' if run > 2 else ''} of the same kind")
+        i += run
+    print(f"\n      {len(chain)} nodes, from what to make next back to the "
+          f"ground it came out of.")
 
-    rule("4. WHAT THE SHARED CRATE REFUSES")
+    rule("6. WHAT THE SHARED CRATE REFUSES")
     print("\n  A later phase tries to change a coordinate Design recorded:")
     before = store.index["#site/NS-01"].get("dwc:decimalLatitude")
     report = store.add("test", [{"@id": "#site/NS-01", "dwc:decimalLatitude": 0.0}])
