@@ -191,6 +191,111 @@ def write_graph(triples, path: str | Path) -> str:
     return str(path)
 
 
+BASE = DEFAULT.base
+
+
+def append_graph(triples, path: str | Path) -> str:
+    """Add triples to a graph that already exists, or start one.
+
+    Append-only, like the ledger. A run's graph is written by every step that
+    produces something, so by the end of the cycle one file spans Design to
+    Learn and a question can be asked once instead of hopping between files.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as handle:
+        handle.write(to_ntriples(triples))
+    return str(path)
+
+
+def lift_package(package: dict, stored_at: str | None = None
+                 ) -> list[tuple[str, str, str]]:
+    """A handover package -> triples, so the cycle is one graph and not four.
+
+    Deliberately few. The crate already carries the deep provenance of the
+    Design phase; what is missing from the graph is the spine that joins the
+    handovers to each other and to the things they carry, so that is all this
+    adds: the package, what produced it, what it was built from, and one node
+    per item with a link to the item upstream that it answers for.
+
+    Without this the chain exists only as file paths in a ledger, and
+    "which sediment core is behind this recommendation" is a walk, not a query.
+    """
+    name = package.get("contract", "package")
+    run = package.get("run_id", "adhoc")
+    subject = f"<{BASE}run/{run}/{name}>"
+    triples: list[tuple[str, str, str]] = [
+        (subject, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+         f"<{BASE}Handover>"),
+        (subject, f"{BASE}contract", f'"{name}"'),
+        (subject, f"{BASE}run", f'"{run}"'),
+    ]
+    made = package.get("produced_by") or {}
+    for key in ("agent", "tool", "engine"):
+        if made.get(key):
+            triples.append((subject, f"{BASE}{key}", f'"{_escape(made[key])}"'))
+    if package.get("produced_at"):
+        triples.append((subject, "http://www.w3.org/ns/prov#generatedAtTime",
+                        f'"{package["produced_at"]}"'))
+    if stored_at:
+        triples.append((subject, f"{BASE}storedAt", f'"{_escape(stored_at)}"'))
+
+    # The spine: this package was built from the one before it.
+    for field in ("design_ref", "build_ref", "test_ref"):
+        ref = package.get(field)
+        if isinstance(ref, dict) and ref.get("contract"):
+            triples.append((subject, "http://www.w3.org/ns/prov#wasDerivedFrom",
+                            f"<{BASE}run/{ref.get('run_id', run)}/"
+                            f"{ref['contract']}>"))
+    crate_ref = package.get("crate_ref")
+    if isinstance(crate_ref, dict) and crate_ref.get("path"):
+        triples.append((subject, f"{BASE}crate",
+                        f'"{_escape(crate_ref["path"])}"'))
+
+    # One node per thing carried, joined to what it answers for upstream.
+    carried = {
+        "design_to_build": ("bindings", "design_item_id", "crate_entity",
+                            f"{BASE}liftsFrom"),
+        "build_to_test": ("samples", "sample_id", "design_item_id",
+                          f"{BASE}builtFrom"),
+        # A Test result is identified by the sample it was read from, which
+        # is also how it joins back to Build. Nothing here invents a new id.
+        "test_to_learn": ("results", "sample_id", "design_item_id",
+                          f"{BASE}measures"),
+    }.get(name)
+    if carried:
+        rows, own, upstream, link = carried
+        for row in (package.get(rows) or []):
+            if not isinstance(row, dict) or not row.get(own):
+                continue
+            node = f"<{BASE}run/{run}/item/{_slug(row[own])}>"
+            triples.append((subject, f"{BASE}carries", node))
+            triples.append((node, f"{BASE}identifier", f'"{_escape(row[own])}"'))
+            if row.get(upstream):
+                target = row[upstream]
+                triples.append((node, link,
+                                f"<{iri(target)}>" if str(target).startswith("#")
+                                else f"<{BASE}run/{run}/item/{_slug(target)}>"))
+
+    for rec in (package.get("recommendations") or []):
+        if not isinstance(rec, dict) or not rec.get("recommendation_id"):
+            continue
+        node = f"<{BASE}run/{run}/item/{_slug(rec['recommendation_id'])}>"
+        triples.append((subject, f"{BASE}carries", node))
+        triples.append((node, f"{BASE}identifier",
+                        f'"{_escape(rec["recommendation_id"])}"'))
+        # The evidence is the whole point of Handover 4: a recommendation
+        # pointing at the measurements it rests on, in the graph.
+        for cited in (rec.get("evidence") or []):
+            triples.append((node, f"{BASE}restsOn",
+                            f"<{BASE}run/{run}/item/{_slug(cited)}>"))
+    return triples
+
+
+def _slug(text: str) -> str:
+    return "".join(c if c.isalnum() or c in "-._" else "_" for c in str(text))
+
+
 # --------------------------------------------------------------------------- #
 # 3. asking the graph something
 # --------------------------------------------------------------------------- #

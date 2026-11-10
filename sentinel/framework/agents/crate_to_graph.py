@@ -34,7 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from framework.agents.base import Agent, Result, Task                  # noqa: E402
-from framework.kg import align_crate, lift, write_graph                # noqa: E402
+from framework.kg import align_crate, append_graph, lift, write_graph  # noqa: E402
 from framework.vocab import load_vocabulary                            # noqa: E402
 from framework.ledger import RUNS                                      # noqa: E402
 from framework.llm import Engine, RulesEngine                          # noqa: E402
@@ -90,6 +90,10 @@ class CrateToGraphAgent(Agent):
 
         triples = lift(aligned)
         path = write_graph(triples, RUNS / run_id / "graph" / "design.nt")
+        # The same triples also join the run's one graph, so a question asked
+        # at the Learn end does not have to know that the Design phase kept
+        # its own file.
+        append_graph(triples, RUNS / run_id / "graph" / "run.nt")
         trace.append(f"wrote the aligned crate -> {crate_path}")
         trace.append(f"lifted {len(triples)} triples over "
                      f"{len(aligned['@graph'])} entities -> {path}")

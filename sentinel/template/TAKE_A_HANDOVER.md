@@ -109,8 +109,16 @@ Then check the whole chain at the end, across packages, which no single
 contract can do:
 
 ```bash
-python3 scripts/trace.py <run-id>
+python3 scripts/trace.py <run-id>      # do the file links resolve?
+python3 scripts/ask.py <run-id> --behind <id>   # ask the graph instead
 ```
+
+The second one reads `runs/<id>/graph/run.nt`, which every step appends to as
+the run goes: the Design crate's own provenance and the spine joining the four
+handovers, in one file. So the question "which sediment core is behind this?"
+is one traversal rather than a tour of four packages. Your handover joins that
+graph for free - the coordinator lifts whatever your package carries. Nothing
+to write.
 
 ## 5. The step everyone skips
 

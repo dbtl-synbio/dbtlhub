@@ -40,6 +40,13 @@ class Coordinator:
         if store_as and package:
             stored = self.ledger.write_package(store_as, package)
             self.stored[store_as] = stored
+            # The run's graph grows with the run. Each handover adds the spine
+            # - what it is, what made it, what it was built from, and one node
+            # per thing it carries - so by the end of the cycle the whole
+            # thing is one graph and not four files joined by hand.
+            from framework.kg import append_graph, lift_package
+            append_graph(lift_package(package, stored),
+                         self.ledger.dir / "graph" / "run.nt")
 
         self.ledger.record(
             step=label, agent=agent.name, engine=result.engine, status=result.status,
