@@ -89,13 +89,20 @@ def main() -> None:
     rule("1. CLEAN RUN - everything the contract asks for is present")
     clean = run("demo-clean")
 
-    rule("2. BROKEN RUN - three mistakes injected that really happen in a lab")
+    rule("2. BROKEN RUN - mistakes the CONTRACT catches")
     print("   missing_units   the TapeStation export drops the unit column on 2 rows")
-    print("   double_booked   the OT-2 deck shifted: 2 samples claim one well")
     print("   unknown_item    a tube was relabelled by hand with CAND-999")
+    print("   dropped_well    a well Design asked for is simply not in the record")
     broken = run("demo-broken",
-                 faults={"missing_units", "double_booked", "unknown_item",
-                         "dropped_well"})
+                 faults={"missing_units", "unknown_item", "dropped_well"})
+
+    rule("2b. THE SAME RUN WITH A COLLISION - caught earlier, by the crate")
+    print("   double_booked   the OT-2 deck shifted: 2 samples claim one well\n")
+    print("   This one never reaches the contract. Two samples in one well means")
+    print("   one identifier written twice for two different things, and the")
+    print("   crate refuses that before anything is validated - so the contract's")
+    print("   own double_booked_location check is not what stops it here.")
+    collided = run("demo-collision", faults={"double_booked"})
 
     rule("3. COMMON GROUND - the same contract, the other use case")
     print("   A biomanufacturing package, written by hand, validated against the")

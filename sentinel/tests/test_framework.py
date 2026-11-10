@@ -240,6 +240,22 @@ class TestEndToEnd(unittest.TestCase):
         self.assertNotIn("ESCALATED", clean,
                          "the clean run escalates")
 
+    def test_the_broken_run_exercises_the_contract_checks(self):
+        """A demo that stops before its own checks run demonstrates nothing.
+
+        The crate store began refusing an identifier collision earlier than
+        the validator, which silently stopped demo.py before Handover 2's
+        cross-reference checks were ever reached. The faults are split so both
+        layers are shown.
+        """
+        done = run("demo.py")
+        self.assert_no_crash(done, "demo.py")
+        for code in ("unknown_design_item", "unaccounted_item"):
+            self.assertIn(code, done.stdout,
+                          f"the broken run no longer reaches {code}")
+        self.assertIn("share one @id", done.stdout,
+                      "the collision refusal is no longer shown")
+
     def test_handover_one_accepts_the_published_crate(self):
         # Inside the repository the crate is a sibling of this framework;
         # in a working copy kept outside it, the clone is next door.
