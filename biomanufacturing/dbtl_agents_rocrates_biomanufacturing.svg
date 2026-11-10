@@ -1,0 +1,371 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1452" viewBox="0 0 1800 1452" font-family="Inter, Helvetica, Arial, sans-serif" role="img" aria-labelledby="ttl dsc" xmlns:c2pa="http://c2pa.org/manifest">
+<title id="ttl">Interface agents and RO-Crates for an automated biomanufacturing DBTL pipeline</title>
+<desc id="dsc">The four DBTL stages of the SYNBIOCHEM pipeline for microbial production of fine chemicals (Carbonell et al., Communications Biology 2018), with four proposed interface agents that package a shared store of four RO-Crates, a coordinator, and a human researcher who seeds the crates and approves each round.</desc>
+<defs>
+<filter id="sh" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1b1030" flood-opacity="0.16"/></filter>
+<linearGradient id="agh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7B2DBB"/><stop offset="1" stop-color="#561C88"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#fbfaff"/></linearGradient>
+<linearGradient id="sfD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EDF5FF"/><stop offset="1" stop-color="#D9EAFD"/></linearGradient>
+<linearGradient id="sfB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4E8"/><stop offset="1" stop-color="#FDE3C8"/></linearGradient>
+<linearGradient id="sfT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EDF9EF"/><stop offset="1" stop-color="#D6F1DC"/></linearGradient>
+<linearGradient id="sfL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6EEFD"/><stop offset="1" stop-color="#E8D8F8"/></linearGradient>
+</defs>
+<rect width="1800" height="1452" fill="url(#bg)"/>
+<text x="900" y="56" font-size="40" font-weight="800" fill="#1B1B3F" text-anchor="middle">Interface agents and RO-Crates for an automated biomanufacturing DBTL pipeline</text>
+<rect x="345.0" y="76.0" width="1110.0" height="40.0" rx="20" fill="#E4E8FB"/>
+<text x="900" y="102" font-size="19" font-weight="500" fill="#23234a" text-anchor="middle">Case study: (2S)-pinocembrin in E. coli   |   SYNBIOCHEM pipeline, Carbonell et al., Communications Biology (2018)</text>
+<rect x="730.0" y="393.0" width="340.0" height="722.0" rx="22" fill="#F3ECFC" stroke="#7A2FC0" stroke-width="2.4" stroke-dasharray="9 6"/>
+<text x="900" y="423" font-size="20" font-weight="700" fill="#4B1B80" text-anchor="middle">Shared RO-Crate store</text>
+<text x="900" y="444" font-size="13" font-weight="500" fill="#6A3AA0" text-anchor="middle">All stages and agents read all four crates</text>
+<rect x="745.0" y="462" width="310.0" height="84.0" rx="13" fill="#ffffff" stroke="#1E88E5" stroke-width="2.6" filter="url(#sh)"/>
+<g stroke="#145895" stroke-width="1.313" stroke-linejoin="round"><polygon points="778.0,482.8 798.2,492.90000000000003 778.0,503.0 757.8,492.90000000000003" fill="#83bef1"/><polygon points="757.8,492.90000000000003 778.0,503.0 778.0,523.2 757.8,513.1" fill="#1E88E5"/><polygon points="798.2,492.90000000000003 778.0,503.0 778.0,523.2 798.2,513.1" fill="#176ab3"/></g><polyline points="767.9,487.85 788.1,497.95" stroke="#fff" stroke-width="2.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="811" y="490" font-size="17" font-weight="700" fill="#0B4A9E" text-anchor="start">Design RO-Crate</text>
+<text x="811" y="512" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Seed: target compound, chassis</text>
+<text x="811" y="530" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Adds: pathway, enzymes, DoE library</text>
+<rect x="745.0" y="556" width="310.0" height="84.0" rx="13" fill="#ffffff" stroke="#F08A24" stroke-width="2.6" filter="url(#sh)"/>
+<g stroke="#9c5a17" stroke-width="1.313" stroke-linejoin="round"><polygon points="778.0,576.8 798.2,586.9 778.0,597.0 757.8,586.9" fill="#f7bf87"/><polygon points="757.8,586.9 778.0,597.0 778.0,617.1999999999999 757.8,607.0999999999999" fill="#F08A24"/><polygon points="798.2,586.9 778.0,597.0 778.0,617.1999999999999 798.2,607.0999999999999" fill="#bb6c1c"/></g><polyline points="767.9,581.8499999999999 788.1,591.9499999999999" stroke="#fff" stroke-width="2.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="811" y="584" font-size="17" font-weight="700" fill="#C75F05" text-anchor="start">Build RO-Crate</text>
+<text x="811" y="606" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Seed: assembly method, deck limits</text>
+<text x="811" y="624" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Adds: worklists, oligos, plasmid IDs</text>
+<rect x="745.0" y="853" width="310.0" height="84.0" rx="13" fill="#ffffff" stroke="#2FAA4F" stroke-width="2.6" filter="url(#sh)"/>
+<g stroke="#1f6e33" stroke-width="1.313" stroke-linejoin="round"><polygon points="778.0,873.8 798.2,883.9 778.0,894.0 757.8,883.9" fill="#8dd09e"/><polygon points="757.8,883.9 778.0,894.0 778.0,914.1999999999999 757.8,904.0999999999999" fill="#2FAA4F"/><polygon points="798.2,883.9 778.0,894.0 778.0,914.1999999999999 798.2,904.0999999999999" fill="#25853e"/></g><polyline points="767.9,878.8499999999999 788.1,888.9499999999999" stroke="#fff" stroke-width="2.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="811" y="881" font-size="17" font-weight="700" fill="#12783A" text-anchor="start">Test RO-Crate</text>
+<text x="811" y="903" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Seed: media and LC-MS methods</text>
+<text x="811" y="921" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Adds: plate maps, MRM data, titers</text>
+<rect x="745.0" y="947" width="310.0" height="84.0" rx="13" fill="#ffffff" stroke="#8E50D6" stroke-width="2.6" filter="url(#sh)"/>
+<g stroke="#5c348b" stroke-width="1.313" stroke-linejoin="round"><polygon points="778.0,967.8 798.2,977.9 778.0,988.0 757.8,977.9" fill="#c19fe8"/><polygon points="757.8,977.9 778.0,988.0 778.0,1008.1999999999999 757.8,998.0999999999999" fill="#8E50D6"/><polygon points="798.2,977.9 778.0,988.0 778.0,1008.1999999999999 798.2,998.0999999999999" fill="#6f3ea7"/></g><polyline points="767.9,972.8499999999999 788.1,982.9499999999999" stroke="#fff" stroke-width="2.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="811" y="975" font-size="17" font-weight="700" fill="#6A2DB5" text-anchor="start">Learn RO-Crate</text>
+<text x="811" y="997" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Seed: model, significance threshold</text>
+<text x="811" y="1015" font-size="12.5" font-weight="400" fill="#333" text-anchor="start">Adds: factor effects, p-values, rules</text>
+<polygon points="900.0,662.0 1015.0,706.0 1015.0,794.0 900.0,838.0 785.0,794.0 785.0,706.0" fill="#F2F2F5" stroke="#8a8a96" stroke-width="2.5" filter="url(#sh)"/>
+<g stroke="#333" stroke-width="2.4" fill="#fff"><line x1="900.0" y1="686.0" x2="888.0" y2="707.0"/><line x1="900.0" y1="686.0" x2="912.0" y2="707.0"/><circle cx="900.0" cy="686.0" r="5.0"/><circle cx="888.0" cy="707.0" r="5.0"/><circle cx="912.0" cy="707.0" r="5.0"/></g>
+<text x="900" y="732" font-size="22" font-weight="800" fill="#1b1b2f" text-anchor="middle">Coordinator</text>
+<text x="900" y="753.0" font-size="13.5" font-weight="400" fill="#333" text-anchor="middle">Tracks decisions, provenance, failed</text>
+<text x="900" y="770.5" font-size="13.5" font-weight="400" fill="#333" text-anchor="middle">assemblies and human approvals;</text>
+<text x="900" y="788.0" font-size="13.5" font-weight="400" fill="#333" text-anchor="middle">curates the crates and gates scale-up</text>
+<text x="900" y="1066" font-size="12.5" font-weight="500" fill="#5a3a86" text-anchor="middle" font-style="italic">Round 0: the researcher seeds each crate with</text>
+<text x="900" y="1082" font-size="12.5" font-weight="500" fill="#5a3a86" text-anchor="middle" font-style="italic">platform and process constraints before cycle 1.</text>
+<linearGradient id="gt" gradientUnits="userSpaceOnUse" x1="712" y1="400" x2="1088" y2="400"><stop offset="0" stop-color="#74C0FF"/><stop offset="1" stop-color="#0A66D8"/></linearGradient>
+<path d="M712,400 C790,315 1010,315 1072.4,383.1" fill="none" stroke="url(#gt)" stroke-width="15" stroke-linecap="butt"/>
+<polygon points="1088.0,400.0 1058.5,391.7 1082.3,369.9" fill="#0A66D8"/>
+<linearGradient id="gr" gradientUnits="userSpaceOnUse" x1="1400" y1="702" x2="1400" y2="798"><stop offset="0" stop-color="#FFB45E"/><stop offset="1" stop-color="#E86F0A"/></linearGradient>
+<path d="M1400,702 C1453,727 1453,773 1420.8,788.2" fill="none" stroke="url(#gr)" stroke-width="15" stroke-linecap="butt"/>
+<polygon points="1400.0,798.0 1416.6,772.3 1430.4,801.5" fill="#E86F0A"/>
+<linearGradient id="gb" gradientUnits="userSpaceOnUse" x1="1088" y1="1105" x2="712" y2="1105"><stop offset="0" stop-color="#8BE59A"/><stop offset="1" stop-color="#1D9E47"/></linearGradient>
+<path d="M1088,1105 C1010,1190 790,1190 727.6,1121.9" fill="none" stroke="url(#gb)" stroke-width="15" stroke-linecap="butt"/>
+<polygon points="712.0,1105.0 741.5,1113.3 717.7,1135.1" fill="#1D9E47"/>
+<linearGradient id="gl" gradientUnits="userSpaceOnUse" x1="400" y1="798" x2="400" y2="702"><stop offset="0" stop-color="#C5A0F5"/><stop offset="1" stop-color="#7A36D0"/></linearGradient>
+<path d="M400,798 C347,772 347,728 379.4,712.1" fill="none" stroke="url(#gl)" stroke-width="15" stroke-linecap="butt"/>
+<polygon points="400.0,702.0 383.8,727.9 369.6,699.0" fill="#7A36D0"/>
+<line x1="900.0" y1="350.2" x2="900.0" y2="393.0" stroke="#7A2FC0" stroke-width="3.4" stroke-dasharray="1 7.5" stroke-linecap="round"/>
+<polygon points="900.0,393.0 893.2,382.0 906.8,382.0" fill="#7A2FC0"/>
+<polygon points="900.0,350.2 906.8,361.2 893.2,361.2" fill="#7A2FC0"/>
+<line x1="900.0" y1="1154.8" x2="900.0" y2="1115.0" stroke="#7A2FC0" stroke-width="3.4" stroke-dasharray="1 7.5" stroke-linecap="round"/>
+<polygon points="900.0,1115.0 906.8,1126.0 893.2,1126.0" fill="#7A2FC0"/>
+<polygon points="900.0,1154.8 893.2,1143.8 906.8,1143.8" fill="#7A2FC0"/>
+<line x1="374.2" y1="750.0" x2="730.0" y2="750.0" stroke="#7A2FC0" stroke-width="3.4" stroke-dasharray="1 7.5" stroke-linecap="round"/>
+<polygon points="730.0,750.0 719.0,756.8 719.0,743.2" fill="#7A2FC0"/>
+<polygon points="374.2,750.0 385.2,743.2 385.2,756.8" fill="#7A2FC0"/>
+<line x1="1425.8" y1="750.0" x2="1070.0" y2="750.0" stroke="#7A2FC0" stroke-width="3.4" stroke-dasharray="1 7.5" stroke-linecap="round"/>
+<polygon points="1070.0,750.0 1081.0,743.2 1081.0,756.8" fill="#7A2FC0"/>
+<polygon points="1425.8,750.0 1414.8,756.8 1414.8,743.2" fill="#7A2FC0"/>
+
+<rect x="340.0" y="350.0" width="370.0" height="350.0" rx="26" fill="url(#sfD)" stroke="#1E88E5" stroke-width="3.2" filter="url(#sh)"/>
+<circle cx="384" cy="391" r="19" fill="none" stroke="#0B4A9E" stroke-width="3"/><circle cx="384" cy="391" r="10" fill="none" stroke="#0B4A9E" stroke-width="3"/><circle cx="384" cy="391" r="3" fill="#0B4A9E"/>
+<text x="426" y="394" font-size="30" font-weight="800" fill="#14213D" text-anchor="start">Design (D)</text>
+<text x="426" y="418" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">Select pathway, enzymes and a sampled</text>
+<text x="426" y="436" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">library of pathway designs.</text>
+<rect x="354.0" y="446.0" width="342.0" height="202.0" rx="16" fill="#ffffff"/>
+<text x="525" y="470" font-size="18" font-weight="700" fill="#0B4A9E" text-anchor="middle">Tools &amp; techniques</text>
+<circle cx="372" cy="490.4" r="3" fill="#0B4A9E"/>
+<text x="384" y="495.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">RetroPath retrosynthesis (pathway)</text>
+<circle cx="372" cy="512.9" r="3" fill="#0B4A9E"/>
+<text x="384" y="517.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">Selenzyme enzyme selection</text>
+<circle cx="372" cy="535.4" r="3" fill="#0B4A9E"/>
+<text x="384" y="540.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">PartsGenie: RBS + codon design</text>
+<circle cx="372" cy="557.9" r="3" fill="#0B4A9E"/>
+<text x="384" y="562.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">SBC-DoE orthogonal arrays and Latin</text>
+<text x="384" y="581.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">square (R planor, DoE.base)</text>
+<circle cx="372" cy="598.9" r="3" fill="#0B4A9E"/>
+<text x="384" y="603.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">DominoGenie worklists; ICE / SBOL</text>
+<rect x="354.0" y="656.0" width="342.0" height="34.0" rx="17" fill="#ffffff" stroke="#1E88E5" stroke-width="1.8"/>
+<g stroke="#145895" stroke-width="0.8" stroke-linejoin="round"><polygon points="374,661.5 385.5,667.25 374,673.0 362.5,667.25" fill="#83bef1"/><polygon points="362.5,667.25 374,673.0 374,684.5 362.5,678.75" fill="#1E88E5"/><polygon points="385.5,667.25 374,673.0 374,684.5 385.5,678.75" fill="#176ab3"/></g><polyline points="368.25,664.375 379.75,670.125" stroke="#fff" stroke-width="1.2" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="392" y="678" font-size="13" font-weight="700" fill="#0B4A9E" text-anchor="start">Writes Design RO-Crate</text>
+<text x="600" y="678" font-size="12" font-weight="500" fill="#555" text-anchor="end">Reads</text>
+<rect x="606.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#1E88E5" stroke="#14213D" stroke-width="2.2"/>
+<text x="615.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">D</text>
+<rect x="628.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#F08A24" stroke="none" stroke-width="2.2"/>
+<text x="637.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+<rect x="650.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#2FAA4F" stroke="none" stroke-width="2.2"/>
+<text x="659.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">T</text>
+<rect x="672.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#8E50D6" stroke="none" stroke-width="2.2"/>
+<text x="681.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">L</text>
+<rect x="1090.0" y="350.0" width="370.0" height="350.0" rx="26" fill="url(#sfB)" stroke="#F08A24" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M1122 371 C1155 384 1113 398 1146 411" fill="none" stroke="#C75F05" stroke-width="3" stroke-linecap="round"/><path d="M1146 371 C1113 384 1155 398 1122 411" fill="none" stroke="#C75F05" stroke-width="3" stroke-linecap="round"/><line x1="1124" y1="378" x2="1144" y2="378" stroke="#C75F05" stroke-width="2"/><line x1="1124" y1="386" x2="1144" y2="386" stroke="#C75F05" stroke-width="2"/><line x1="1124" y1="395" x2="1144" y2="395" stroke="#C75F05" stroke-width="2"/><line x1="1124" y1="403" x2="1144" y2="403" stroke="#C75F05" stroke-width="2"/>
+<text x="1176" y="394" font-size="30" font-weight="800" fill="#14213D" text-anchor="start">Build (B)</text>
+<text x="1176" y="418" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">Assemble and sequence-verify the</text>
+<text x="1176" y="436" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">pathway plasmid library.</text>
+<rect x="1104.0" y="446.0" width="342.0" height="202.0" rx="16" fill="#ffffff"/>
+<text x="1275" y="470" font-size="18" font-weight="700" fill="#C75F05" text-anchor="middle">Tools &amp; techniques</text>
+<circle cx="1122" cy="490.4" r="3" fill="#C75F05"/>
+<text x="1134" y="495.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Commercial DNA synthesis of parts</text>
+<circle cx="1122" cy="512.9" r="3" fill="#C75F05"/>
+<text x="1134" y="517.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">PCR part prep (5'-P primers, DpnI)</text>
+<circle cx="1122" cy="535.4" r="3" fill="#C75F05"/>
+<text x="1134" y="540.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Ligase cycling reaction assembly</text>
+<circle cx="1122" cy="557.9" r="3" fill="#C75F05"/>
+<text x="1134" y="562.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">Hamilton STAR worklist-driven</text>
+<text x="1134" y="581.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">liquid handling</text>
+<circle cx="1122" cy="598.9" r="3" fill="#C75F05"/>
+<text x="1134" y="603.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">QIAprep 96, digest + CE, Sanger</text>
+<rect x="1104.0" y="656.0" width="342.0" height="34.0" rx="17" fill="#ffffff" stroke="#F08A24" stroke-width="1.8"/>
+<g stroke="#9c5a17" stroke-width="0.8" stroke-linejoin="round"><polygon points="1124,661.5 1135.5,667.25 1124,673.0 1112.5,667.25" fill="#f7bf87"/><polygon points="1112.5,667.25 1124,673.0 1124,684.5 1112.5,678.75" fill="#F08A24"/><polygon points="1135.5,667.25 1124,673.0 1124,684.5 1135.5,678.75" fill="#bb6c1c"/></g><polyline points="1118.25,664.375 1129.75,670.125" stroke="#fff" stroke-width="1.2" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="1142" y="678" font-size="13" font-weight="700" fill="#C75F05" text-anchor="start">Writes Build RO-Crate</text>
+<text x="1350" y="678" font-size="12" font-weight="500" fill="#555" text-anchor="end">Reads</text>
+<rect x="1356.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#1E88E5" stroke="none" stroke-width="2.2"/>
+<text x="1365.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">D</text>
+<rect x="1378.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#F08A24" stroke="#14213D" stroke-width="2.2"/>
+<text x="1387.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+<rect x="1400.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#2FAA4F" stroke="none" stroke-width="2.2"/>
+<text x="1409.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">T</text>
+<rect x="1422.0" y="663.5" width="19.0" height="19.0" rx="5" fill="#8E50D6" stroke="none" stroke-width="2.2"/>
+<text x="1431.5" y="677" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">L</text>
+<rect x="1090.0" y="800.0" width="370.0" height="350.0" rx="26" fill="url(#sfT)" stroke="#2FAA4F" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M1127 822 H1141 M1130.5 822 V836 L1116 858 Q1114 862 1121 862 H1147 Q1154 862 1152 858 L1137.5 836 V822" fill="none" stroke="#12783A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1123 848 Q1134 844 1145 848" fill="none" stroke="#12783A" stroke-width="2.4"/>
+<text x="1176" y="844" font-size="30" font-weight="800" fill="#14213D" text-anchor="start">Test (T)</text>
+<text x="1176" y="868" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">Cultivate production strains and</text>
+<text x="1176" y="886" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">quantify pathway titers.</text>
+<rect x="1104.0" y="896.0" width="342.0" height="202.0" rx="16" fill="#ffffff"/>
+<text x="1275" y="920" font-size="18" font-weight="700" fill="#12783A" text-anchor="middle">Tools &amp; techniques</text>
+<circle cx="1122" cy="940.4" r="3" fill="#12783A"/>
+<text x="1134" y="945.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Chassis transformation, colony picking</text>
+<circle cx="1122" cy="962.9" r="3" fill="#12783A"/>
+<text x="1134" y="967.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">96-deep-well growth, IPTG induction</text>
+<circle cx="1122" cy="985.4" r="3" fill="#12783A"/>
+<text x="1134" y="990.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Automated methanol/water extraction</text>
+<circle cx="1122" cy="1007.9" r="3" fill="#12783A"/>
+<text x="1134" y="1012.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">Acquity UPLC - Xevo TQ-S (QqQ),</text>
+<text x="1134" y="1031.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">MRM quantification</text>
+<circle cx="1122" cy="1048.9" r="3" fill="#12783A"/>
+<text x="1134" y="1053.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">ProteoWizard mzXML + R peak scripts</text>
+<rect x="1104.0" y="1106.0" width="342.0" height="34.0" rx="17" fill="#ffffff" stroke="#2FAA4F" stroke-width="1.8"/>
+<g stroke="#1f6e33" stroke-width="0.8" stroke-linejoin="round"><polygon points="1124,1111.5 1135.5,1117.25 1124,1123.0 1112.5,1117.25" fill="#8dd09e"/><polygon points="1112.5,1117.25 1124,1123.0 1124,1134.5 1112.5,1128.75" fill="#2FAA4F"/><polygon points="1135.5,1117.25 1124,1123.0 1124,1134.5 1135.5,1128.75" fill="#25853e"/></g><polyline points="1118.25,1114.375 1129.75,1120.125" stroke="#fff" stroke-width="1.2" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="1142" y="1128" font-size="13" font-weight="700" fill="#12783A" text-anchor="start">Writes Test RO-Crate</text>
+<text x="1350" y="1128" font-size="12" font-weight="500" fill="#555" text-anchor="end">Reads</text>
+<rect x="1356.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#1E88E5" stroke="none" stroke-width="2.2"/>
+<text x="1365.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">D</text>
+<rect x="1378.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#F08A24" stroke="none" stroke-width="2.2"/>
+<text x="1387.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+<rect x="1400.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#2FAA4F" stroke="#14213D" stroke-width="2.2"/>
+<text x="1409.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">T</text>
+<rect x="1422.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#8E50D6" stroke="none" stroke-width="2.2"/>
+<text x="1431.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">L</text>
+<rect x="340.0" y="800.0" width="370.0" height="350.0" rx="26" fill="url(#sfL)" stroke="#8E50D6" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M365 860 V822 M365 860 H404" fill="none" stroke="#6A2DB5" stroke-width="3" stroke-linecap="round"/><rect x="374" y="846" width="8" height="12" rx="2" fill="#6A2DB5"/><rect x="386" y="836" width="8" height="22" rx="2" fill="#6A2DB5"/><rect x="398" y="825" width="8" height="33" rx="2" fill="#6A2DB5"/>
+<text x="426" y="844" font-size="30" font-weight="800" fill="#14213D" text-anchor="start">Learn (L)</text>
+<text x="426" y="868" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">Attribute titers to design factors and</text>
+<text x="426" y="886" font-size="14.5" font-weight="400" fill="#222" text-anchor="start">derive rules for the next round.</text>
+<rect x="354.0" y="896.0" width="342.0" height="202.0" rx="16" fill="#ffffff"/>
+<text x="525" y="920" font-size="18" font-weight="700" fill="#6A2DB5" text-anchor="middle">Tools &amp; techniques</text>
+<circle cx="372" cy="940.4" r="3" fill="#6A2DB5"/>
+<text x="384" y="945.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Standard least squares analysis (JMP)</text>
+<circle cx="372" cy="962.9" r="3" fill="#6A2DB5"/>
+<text x="384" y="967.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">F-test p-values per design factor</text>
+<circle cx="372" cy="985.4" r="3" fill="#6A2DB5"/>
+<text x="384" y="990.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Copy number, promoter and gene-order</text>
+<text x="384" y="1008.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">effects</text>
+<circle cx="372" cy="1026.4" r="3" fill="#6A2DB5"/>
+<text x="384" y="1031.0" font-size="14" font-weight="400" fill="#222" text-anchor="start">Statistical machine learning models</text>
+<circle cx="372" cy="1048.9" r="3" fill="#6A2DB5"/>
+<text x="384" y="1053.5" font-size="14" font-weight="400" fill="#222" text-anchor="start">Design rules for the next library</text>
+<rect x="354.0" y="1106.0" width="342.0" height="34.0" rx="17" fill="#ffffff" stroke="#8E50D6" stroke-width="1.8"/>
+<g stroke="#5c348b" stroke-width="0.8" stroke-linejoin="round"><polygon points="374,1111.5 385.5,1117.25 374,1123.0 362.5,1117.25" fill="#c19fe8"/><polygon points="362.5,1117.25 374,1123.0 374,1134.5 362.5,1128.75" fill="#8E50D6"/><polygon points="385.5,1117.25 374,1123.0 374,1134.5 385.5,1128.75" fill="#6f3ea7"/></g><polyline points="368.25,1114.375 379.75,1120.125" stroke="#fff" stroke-width="1.2" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="392" y="1128" font-size="13" font-weight="700" fill="#6A2DB5" text-anchor="start">Writes Learn RO-Crate</text>
+<text x="600" y="1128" font-size="12" font-weight="500" fill="#555" text-anchor="end">Reads</text>
+<rect x="606.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#1E88E5" stroke="none" stroke-width="2.2"/>
+<text x="615.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">D</text>
+<rect x="628.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#F08A24" stroke="none" stroke-width="2.2"/>
+<text x="637.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+<rect x="650.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#2FAA4F" stroke="none" stroke-width="2.2"/>
+<text x="659.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">T</text>
+<rect x="672.0" y="1113.5" width="19.0" height="19.0" rx="5" fill="#8E50D6" stroke="#14213D" stroke-width="2.2"/>
+<text x="681.5" y="1127" font-size="11.5" font-weight="700" fill="#fff" text-anchor="middle">L</text>
+<line x1="710" y1="504.0" x2="738" y2="504.0" stroke="#1E88E5" stroke-width="5"/><polygon points="745.0,504.0 731.0,512.7 731.0,495.3" fill="#1E88E5"/>
+<line x1="710" y1="989.0" x2="738" y2="989.0" stroke="#8E50D6" stroke-width="5"/><polygon points="745.0,989.0 731.0,997.7 731.0,980.3" fill="#8E50D6"/>
+<line x1="1090" y1="598.0" x2="1062" y2="598.0" stroke="#F08A24" stroke-width="5"/><polygon points="1055.0,598.0 1069.0,589.3 1069.0,606.7" fill="#F08A24"/>
+<line x1="1090" y1="895.0" x2="1062" y2="895.0" stroke="#2FAA4F" stroke-width="5"/><polygon points="1055.0,895.0 1069.0,886.3 1069.0,903.7" fill="#2FAA4F"/>
+<rect x="490.0" y="124.0" width="820.0" height="186.0" rx="18" fill="#ffffff" stroke="#5B1E8E" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M490,170 V140 Q490,124 506,124 H1294 Q1310,124 1310,140 V170 Z" fill="url(#agh)"/>
+<g><line x1="523.0" y1="131.8" x2="523.0" y2="137.9" stroke="#fff" stroke-width="2.3"/><circle cx="523.0" cy="131.4" r="2.7" fill="#fff"/><rect x="508.6" y="137.9" width="28.9" height="21.3" rx="6.1" fill="#fff"/><rect x="504.0" y="144.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><rect x="538.2" y="144.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><circle cx="516.9" cy="147.0" r="2.9" fill="#5B1E8E"/><circle cx="529.1" cy="147.0" r="2.9" fill="#5B1E8E"/><rect x="517.7" y="152.3" width="10.6" height="1.7" rx="0.8" fill="#5B1E8E"/></g>
+<text x="556" y="155.8" font-size="25" font-weight="700" fill="#fff" text-anchor="start">D &#8594; B  |  Design-to-Build Agent</text>
+<circle cx="517.5" cy="194.9" r="3" fill="#222"/>
+<text x="528" y="200" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Expands the DoE library into parts, bridging</text>
+<text x="528" y="219" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">oligos and LCR worklists for the deck</text>
+<circle cx="517.5" cy="238.9" r="3" fill="#222"/>
+<text x="528" y="244" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Flags part junctions that resist assembly</text>
+<circle cx="517.5" cy="263.9" r="3" fill="#222"/>
+<text x="528" y="269" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Reads all crates, packages the Build crate</text>
+<line x1="926" y1="184" x2="926" y2="296" stroke="#cdbbe3" stroke-width="2"/>
+<rect x="938.0" y="182.0" width="358.0" height="116.0" rx="14" fill="#EBDDF8"/>
+<g stroke="#9c5a17" stroke-width="1.0595" stroke-linejoin="round"><polygon points="965.0,194.7 981.3,202.85 965.0,211.0 948.7,202.85" fill="#f7bf87"/><polygon points="948.7,202.85 965.0,211.0 965.0,227.29999999999998 948.7,219.14999999999998" fill="#F08A24"/><polygon points="981.3,202.85 965.0,211.0 965.0,227.29999999999998 981.3,219.14999999999998" fill="#bb6c1c"/></g><polyline points="956.85,198.77499999999998 973.15,206.92499999999998" stroke="#fff" stroke-width="1.7" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="992" y="213" font-size="15.5" font-weight="700" fill="#3F1568">Handoff to Build: <tspan fill="#C75F05">Build RO-Crate</tspan></text>
+<circle cx="995.5" cy="234.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="239" font-size="14" font-weight="400" fill="#222" text-anchor="start">Validated construct library</text>
+<circle cx="995.5" cy="254.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="259" font-size="14" font-weight="400" fill="#222" text-anchor="start">LCR recipes + bridging oligos</text>
+<circle cx="995.5" cy="274.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="279" font-size="14" font-weight="400" fill="#222" text-anchor="start">ICE / SBOL part and plasmid IDs</text>
+<rect x="490.0" y="1190.0" width="820.0" height="186.0" rx="18" fill="#ffffff" stroke="#5B1E8E" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M490,1236 V1206 Q490,1190 506,1190 H1294 Q1310,1190 1310,1206 V1236 Z" fill="url(#agh)"/>
+<g><line x1="523.0" y1="1197.8" x2="523.0" y2="1203.8999999999999" stroke="#fff" stroke-width="2.3"/><circle cx="523.0" cy="1197.3999999999999" r="2.7" fill="#fff"/><rect x="508.6" y="1203.8999999999999" width="28.9" height="21.3" rx="6.1" fill="#fff"/><rect x="504.0" y="1210.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><rect x="538.2" y="1210.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><circle cx="516.9" cy="1213.0" r="2.9" fill="#5B1E8E"/><circle cx="529.1" cy="1213.0" r="2.9" fill="#5B1E8E"/><rect x="517.7" y="1218.3" width="10.6" height="1.7" rx="0.8" fill="#5B1E8E"/></g>
+<text x="556" y="1221.8" font-size="25" font-weight="700" fill="#fff" text-anchor="start">T &#8594; L  |  Test-to-Learn Agent</text>
+<circle cx="517.5" cy="1260.9" r="3" fill="#222"/>
+<text x="528" y="1266" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Validates MRM peaks against calibration</text>
+<text x="528" y="1285" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">curves, LOD / LOQ limits and blanks</text>
+<circle cx="517.5" cy="1304.9" r="3" fill="#222"/>
+<text x="528" y="1310" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Normalises titers across replicate colonies</text>
+<circle cx="517.5" cy="1329.9" r="3" fill="#222"/>
+<text x="528" y="1335" font-size="15.5" font-weight="400" fill="#222" text-anchor="start">Reads all crates, packages the Learn crate</text>
+<line x1="926" y1="1250" x2="926" y2="1362" stroke="#cdbbe3" stroke-width="2"/>
+<rect x="938.0" y="1248.0" width="358.0" height="116.0" rx="14" fill="#EBDDF8"/>
+<g stroke="#5c348b" stroke-width="1.0595" stroke-linejoin="round"><polygon points="965.0,1260.7 981.3,1268.8500000000001 965.0,1277.0 948.7,1268.8500000000001" fill="#c19fe8"/><polygon points="948.7,1268.8500000000001 965.0,1277.0 965.0,1293.3 948.7,1285.15" fill="#8E50D6"/><polygon points="981.3,1268.8500000000001 965.0,1277.0 965.0,1293.3 981.3,1285.15" fill="#6f3ea7"/></g><polyline points="956.85,1264.775 973.15,1272.925" stroke="#fff" stroke-width="1.7" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="992" y="1279" font-size="15.5" font-weight="700" fill="#3F1568">Handoff to Learn: <tspan fill="#6A2DB5">Learn RO-Crate</tspan></text>
+<circle cx="995.5" cy="1300.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="1305" font-size="14" font-weight="400" fill="#222" text-anchor="start">Curated titer table (mg/L)</text>
+<circle cx="995.5" cy="1320.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="1325" font-size="14" font-weight="400" fill="#222" text-anchor="start">QC report (LOD/LOQ, controls)</text>
+<circle cx="995.5" cy="1340.4" r="3" fill="#5B1E8E"/>
+<text x="1006" y="1345" font-size="14" font-weight="400" fill="#222" text-anchor="start">Metadata (strain, media, OD600)</text>
+<rect x="12.0" y="552.0" width="300.0" height="396.0" rx="18" fill="#ffffff" stroke="#5B1E8E" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M12,616.0 V568.0 Q12,552.0 28,552.0 H296 Q312,552.0 312,568.0 V616.0 Z" fill="url(#agh)"/>
+<g><line x1="45.0" y1="559.8" x2="45.0" y2="565.9" stroke="#fff" stroke-width="2.3"/><circle cx="45.0" cy="559.4" r="2.7" fill="#fff"/><rect x="30.6" y="565.9" width="28.9" height="21.3" rx="6.1" fill="#fff"/><rect x="26.0" y="572.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><rect x="60.2" y="572.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><circle cx="38.9" cy="575.0" r="2.9" fill="#5B1E8E"/><circle cx="51.1" cy="575.0" r="2.9" fill="#5B1E8E"/><rect x="39.7" y="580.3" width="10.6" height="1.7" rx="0.8" fill="#5B1E8E"/></g>
+<text x="78" y="580" font-size="19" font-weight="700" fill="#fff" text-anchor="start">L &#8594; D  |  Learn-to-Design</text>
+<text x="78" y="602.8" font-size="19" font-weight="700" fill="#fff" text-anchor="start">Agent</text>
+<circle cx="33.5" cy="639" r="3" fill="#222"/>
+<text x="44" y="644" font-size="15" font-weight="400" fill="#222" text-anchor="start">Turns factor effects and p-values</text>
+<text x="44" y="663" font-size="15" font-weight="400" fill="#222" text-anchor="start">into design constraints</text>
+<circle cx="33.5" cy="683" r="3" fill="#222"/>
+<text x="44" y="688" font-size="15" font-weight="400" fill="#222" text-anchor="start">Chooses DoE or full factorial and</text>
+<text x="44" y="707" font-size="15" font-weight="400" fill="#222" text-anchor="start">the next library size</text>
+<circle cx="33.5" cy="727" r="3" fill="#222"/>
+<text x="44" y="732" font-size="15" font-weight="400" fill="#222" text-anchor="start">Reads all crates, packages the</text>
+<text x="44" y="751" font-size="15" font-weight="400" fill="#222" text-anchor="start">Design crate</text>
+<rect x="24.0" y="784.0" width="276.0" height="152.0" rx="14" fill="#EBDDF8"/>
+<g stroke="#145895" stroke-width="1.0595" stroke-linejoin="round"><polygon points="51.0,796.7 67.3,804.85 51.0,813.0 34.7,804.85" fill="#83bef1"/><polygon points="34.7,804.85 51.0,813.0 51.0,829.3000000000001 34.7,821.1500000000001" fill="#1E88E5"/><polygon points="67.3,804.85 51.0,813.0 51.0,829.3000000000001 67.3,821.1500000000001" fill="#176ab3"/></g><polyline points="42.85,800.7750000000001 59.15,808.9250000000001" stroke="#fff" stroke-width="1.7" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="78" y="811" font-size="15.5" font-weight="700" fill="#3F1568" text-anchor="start">Handoff to Design:</text>
+<text x="78" y="830" font-size="14" font-weight="700" fill="#0B4A9E" text-anchor="start">Design RO-Crate</text>
+<circle cx="43.5" cy="849.4" r="3" fill="#5B1E8E"/>
+<text x="54" y="854" font-size="14" font-weight="400" fill="#222" text-anchor="start">Design constraints (ColE1, CHI</text>
+<text x="54" y="871" font-size="14" font-weight="400" fill="#222" text-anchor="start">first, PAL at the 3' end)</text>
+<circle cx="43.5" cy="886.4" r="3" fill="#5B1E8E"/>
+<text x="54" y="891" font-size="14" font-weight="400" fill="#222" text-anchor="start">Prioritised promoter choices</text>
+<circle cx="43.5" cy="906.4" r="3" fill="#5B1E8E"/>
+<text x="54" y="911" font-size="14" font-weight="400" fill="#222" text-anchor="start">Next library spec (36 constructs)</text>
+<rect x="1488.0" y="552.0" width="300.0" height="396.0" rx="18" fill="#ffffff" stroke="#5B1E8E" stroke-width="3.2" filter="url(#sh)"/>
+<path d="M1488,616.0 V568.0 Q1488,552.0 1504,552.0 H1772 Q1788,552.0 1788,568.0 V616.0 Z" fill="url(#agh)"/>
+<g><line x1="1521.0" y1="559.8" x2="1521.0" y2="565.9" stroke="#fff" stroke-width="2.3"/><circle cx="1521.0" cy="559.4" r="2.7" fill="#fff"/><rect x="1506.6" y="565.9" width="28.9" height="21.3" rx="6.1" fill="#fff"/><rect x="1502.0" y="572.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><rect x="1536.2" y="572.0" width="3.8" height="9.1" rx="1.5" fill="#fff"/><circle cx="1514.9" cy="575.0" r="2.9" fill="#5B1E8E"/><circle cx="1527.1" cy="575.0" r="2.9" fill="#5B1E8E"/><rect x="1515.7" y="580.3" width="10.6" height="1.7" rx="0.8" fill="#5B1E8E"/></g>
+<text x="1554" y="580" font-size="19" font-weight="700" fill="#fff" text-anchor="start">B &#8594; T  |  Build-to-Test</text>
+<text x="1554" y="602.8" font-size="19" font-weight="700" fill="#fff" text-anchor="start">Agent</text>
+<circle cx="1509.5" cy="639" r="3" fill="#222"/>
+<text x="1520" y="644" font-size="15" font-weight="400" fill="#222" text-anchor="start">Tracks plasmid IDs, barcodes and</text>
+<text x="1520" y="663" font-size="15" font-weight="400" fill="#222" text-anchor="start">well positions</text>
+<circle cx="1509.5" cy="683" r="3" fill="#222"/>
+<text x="1520" y="688" font-size="15" font-weight="400" fill="#222" text-anchor="start">Releases only sequence-perfect</text>
+<text x="1520" y="707" font-size="15" font-weight="400" fill="#222" text-anchor="start">constructs after Sanger QC</text>
+<circle cx="1509.5" cy="727" r="3" fill="#222"/>
+<text x="1520" y="732" font-size="15" font-weight="400" fill="#222" text-anchor="start">Reads all crates, packages the</text>
+<text x="1520" y="751" font-size="15" font-weight="400" fill="#222" text-anchor="start">Test crate</text>
+<rect x="1500.0" y="784.0" width="276.0" height="152.0" rx="14" fill="#EBDDF8"/>
+<g stroke="#1f6e33" stroke-width="1.0595" stroke-linejoin="round"><polygon points="1527.0,796.7 1543.3,804.85 1527.0,813.0 1510.7,804.85" fill="#8dd09e"/><polygon points="1510.7,804.85 1527.0,813.0 1527.0,829.3000000000001 1510.7,821.1500000000001" fill="#2FAA4F"/><polygon points="1543.3,804.85 1527.0,813.0 1527.0,829.3000000000001 1543.3,821.1500000000001" fill="#25853e"/></g><polyline points="1518.85,800.7750000000001 1535.15,808.9250000000001" stroke="#fff" stroke-width="1.7" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="1554" y="811" font-size="15.5" font-weight="700" fill="#3F1568" text-anchor="start">Handoff to Test:</text>
+<text x="1554" y="830" font-size="14" font-weight="700" fill="#12783A" text-anchor="start">Test RO-Crate</text>
+<circle cx="1519.5" cy="849.4" r="3" fill="#5B1E8E"/>
+<text x="1530" y="854" font-size="14" font-weight="400" fill="#222" text-anchor="start">Verified strain list (IDs +</text>
+<text x="1530" y="871" font-size="14" font-weight="400" fill="#222" text-anchor="start">sequences)</text>
+<circle cx="1519.5" cy="886.4" r="3" fill="#5B1E8E"/>
+<text x="1530" y="891" font-size="14" font-weight="400" fill="#222" text-anchor="start">Growth, induction, LC-MS plan</text>
+<circle cx="1519.5" cy="906.4" r="3" fill="#5B1E8E"/>
+<text x="1530" y="911" font-size="14" font-weight="400" fill="#222" text-anchor="start">Assembly QC status (pass/fail)</text>
+<line x1="900.0" y1="310.0" x2="900.0" y2="336.2" stroke="#5B1E8E" stroke-width="6"/>
+<line x1="900.0" y1="1190.0" x2="900.0" y2="1168.8" stroke="#5B1E8E" stroke-width="6"/>
+<line x1="312.0" y1="750.0" x2="360.2" y2="750.0" stroke="#5B1E8E" stroke-width="6"/>
+<line x1="1488.0" y1="750.0" x2="1439.8" y2="750.0" stroke="#5B1E8E" stroke-width="6"/>
+<circle cx="900.0" cy="336.2" r="13" fill="#fff" stroke="#5B1E8E" stroke-width="5.5"/><circle cx="900.0" cy="336.2" r="3.8" fill="#5B1E8E"/>
+<circle cx="1439.8" cy="750.0" r="13" fill="#fff" stroke="#5B1E8E" stroke-width="5.5"/><circle cx="1439.8" cy="750.0" r="3.8" fill="#5B1E8E"/>
+<circle cx="900.0" cy="1168.8" r="13" fill="#fff" stroke="#5B1E8E" stroke-width="5.5"/><circle cx="900.0" cy="1168.8" r="3.8" fill="#5B1E8E"/>
+<circle cx="360.2" cy="750.0" r="13" fill="#fff" stroke="#5B1E8E" stroke-width="5.5"/><circle cx="360.2" cy="750.0" r="3.8" fill="#5B1E8E"/>
+
+<rect x="12.0" y="137.0" width="318.0" height="132.0" rx="18" fill="#F2F2F5" stroke="#666" stroke-width="2.6" filter="url(#sh)"/>
+<g fill="none" stroke="#4a4a55" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="55.0" cy="179.4" r="11.6"/><path d="M31.8,217.1 Q31.8,198.0 55.0,198.0 Q78.2,198.0 78.2,217.1 Z"/></g>
+<text x="98.0" y="174.0" font-size="20" font-weight="800" fill="#1b1b2f" text-anchor="start" >Human researcher</text>
+<text x="98.0" y="198.0" font-size="14.5" font-weight="400" fill="#222" text-anchor="start" >Sets the target compound, seeds the</text>
+<text x="98.0" y="216.0" font-size="14.5" font-weight="400" fill="#222" text-anchor="start" >crates with chassis, media and</text>
+<text x="98.0" y="234.0" font-size="14.5" font-weight="400" fill="#222" text-anchor="start" >platform limits, and approves rounds.</text>
+<line x1="330" y1="203" x2="476" y2="203" stroke="#4a4f66" stroke-width="5"/>
+<polygon points="490.0,203.0 473.0,213.5 473.0,192.5" fill="#4a4f66"/>
+
+<rect x="12.0" y="972.0" width="300.0" height="430.0" rx="16" fill="#F6F6F8" stroke="#b8b8c4" stroke-width="2" />
+<text x="28.0" y="1006.0" font-size="21" font-weight="800" fill="#222" text-anchor="start" >Legend</text>
+<rect x="28.0" y="1020.0" width="44.0" height="26.0" rx="9" fill="#DCEBFD" stroke="#1E88E5" stroke-width="2.4" />
+<text x="90.0" y="1036.0" font-size="15" font-weight="600" fill="#222" text-anchor="start" >DBTL stage</text>
+<text x="90.0" y="1054.0" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(primary experimental function)</text>
+<g><line x1="50.0" y1="1061.9" x2="50.0" y2="1067.3" stroke="#5B1E8E" stroke-width="2.0"/><circle cx="50.0" cy="1061.6" r="2.4" fill="#5B1E8E"/><rect x="37.1" y="1067.3" width="25.8" height="19.0" rx="5.4" fill="#5B1E8E"/><rect x="33.0" y="1072.8" width="3.4" height="8.2" rx="1.4" fill="#5B1E8E"/><rect x="63.6" y="1072.8" width="3.4" height="8.2" rx="1.4" fill="#5B1E8E"/><circle cx="44.6" cy="1075.5" r="2.5" fill="#fff"/><circle cx="55.4" cy="1075.5" r="2.5" fill="#fff"/><rect x="45.2" y="1080.3" width="9.5" height="1.5" rx="0.7" fill="#fff"/></g>
+<text x="90.0" y="1079.5" font-size="15" font-weight="600" fill="#222" text-anchor="start" >Interface agent</text>
+<text x="90.0" y="1097.5" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(manages stage transitions)</text>
+<polygon points="50,1102.0 67.0,1111.0 67.0,1129.0 50,1138.0 33.0,1129.0 33.0,1111.0" fill="#F2F2F5" stroke="#8a8a96" stroke-width="2"/>
+<text x="90.0" y="1123.0" font-size="15" font-weight="600" fill="#222" text-anchor="start" >Coordinator</text>
+<text x="90.0" y="1141.0" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(orchestration and decisions)</text>
+<g stroke="#145895" stroke-width="0.8" stroke-linejoin="round"><polygon points="38.0,1150.9 48.6,1156.2 38.0,1161.5 27.4,1156.2" fill="#83bef1"/><polygon points="27.4,1156.2 38.0,1161.5 38.0,1172.1 27.4,1166.8" fill="#1E88E5"/><polygon points="48.6,1156.2 38.0,1161.5 38.0,1172.1 48.6,1166.8" fill="#176ab3"/></g><polyline points="32.7,1153.6 43.3,1158.9" stroke="#fff" stroke-width="1.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<g stroke="#9c5a17" stroke-width="0.8" stroke-linejoin="round"><polygon points="49.0,1150.9 59.6,1156.2 49.0,1161.5 38.4,1156.2" fill="#f7bf87"/><polygon points="38.4,1156.2 49.0,1161.5 49.0,1172.1 38.4,1166.8" fill="#F08A24"/><polygon points="59.6,1156.2 49.0,1161.5 49.0,1172.1 59.6,1166.8" fill="#bb6c1c"/></g><polyline points="43.7,1153.6 54.3,1158.9" stroke="#fff" stroke-width="1.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<g stroke="#1f6e33" stroke-width="0.8" stroke-linejoin="round"><polygon points="60.0,1150.9 70.6,1156.2 60.0,1161.5 49.4,1156.2" fill="#8dd09e"/><polygon points="49.4,1156.2 60.0,1161.5 60.0,1172.1 49.4,1166.8" fill="#2FAA4F"/><polygon points="70.6,1156.2 60.0,1161.5 60.0,1172.1 70.6,1166.8" fill="#25853e"/></g><polyline points="54.7,1153.6 65.3,1158.9" stroke="#fff" stroke-width="1.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<g stroke="#5c348b" stroke-width="0.8" stroke-linejoin="round"><polygon points="71.0,1150.9 81.6,1156.2 71.0,1161.5 60.4,1156.2" fill="#c19fe8"/><polygon points="60.4,1156.2 71.0,1161.5 71.0,1172.1 60.4,1166.8" fill="#8E50D6"/><polygon points="81.6,1156.2 71.0,1161.5 71.0,1172.1 81.6,1166.8" fill="#6f3ea7"/></g><polyline points="65.7,1153.6 76.3,1158.9" stroke="#fff" stroke-width="1.1" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="90.0" y="1166.5" font-size="15" font-weight="600" fill="#222" text-anchor="start" >RO-Crate per stage</text>
+<text x="90.0" y="1184.5" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(one crate for each DBTL stage)</text>
+<line x1="28" y1="1207.0" x2="62" y2="1207.0" stroke="#1B3A8A" stroke-width="5"/>
+<polygon points="74.0,1207.0 61.0,1215.1 61.0,1198.9" fill="#1B3A8A"/>
+<text x="90.0" y="1210.0" font-size="15" font-weight="600" fill="#222" text-anchor="start" >DBTL process flow</text>
+<text x="90.0" y="1228.0" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(Design → Build → Test → Learn)</text>
+<line x1="36" y1="1250.5" x2="66" y2="1250.5" stroke="#7A2FC0" stroke-width="3.4" stroke-dasharray="1 7" stroke-linecap="round"/>
+<polygon points="76.0,1250.5 66.0,1256.7 66.0,1244.3" fill="#7A2FC0"/>
+<polygon points="26.0,1250.5 36.0,1244.3 36.0,1256.7" fill="#7A2FC0"/>
+<text x="90.0" y="1253.5" font-size="15" font-weight="600" fill="#222" text-anchor="start" >Read access to all crates</text>
+<text x="90.0" y="1271.5" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(stages and agents)</text>
+<line x1="28" y1="1294.0" x2="62" y2="1294.0" stroke="#F08A24" stroke-width="5"/>
+<polygon points="74.0,1294.0 61.0,1302.1 61.0,1285.9" fill="#F08A24"/>
+<text x="90.0" y="1297.0" font-size="15" font-weight="600" fill="#222" text-anchor="start" >Stage writes its own crate</text>
+<text x="90.0" y="1315.0" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(outputs and provenance)</text>
+<line x1="28" y1="1337.5" x2="62" y2="1337.5" stroke="#4a4f66" stroke-width="5"/>
+<polygon points="74.0,1337.5 61.0,1345.6 61.0,1329.4" fill="#4a4f66"/>
+<text x="90.0" y="1340.5" font-size="15" font-weight="600" fill="#222" text-anchor="start" >Human input / approval</text>
+<text x="90.0" y="1358.5" font-size="12" font-weight="400" fill="#555" text-anchor="start" >(seeding and round approval)</text>
+
+<rect x="1488.0" y="972.0" width="300.0" height="430.0" rx="16" fill="#F3ECFC" stroke="#7A2FC0" stroke-width="2.4" filter="url(#sh)"/>
+<g stroke="#4f1f7d" stroke-width="1.0" stroke-linejoin="round"><polygon points="1521.0,984.7 1537.3,992.8 1521.0,1001.0 1504.7,992.8" fill="#b68ddc"/><polygon points="1504.7,992.8 1521.0,1001.0 1521.0,1017.3 1504.7,1009.2" fill="#7A2FC0"/><polygon points="1537.3,992.8 1521.0,1001.0 1521.0,1017.3 1537.3,1009.2" fill="#5f2596"/></g><polyline points="1512.8,988.8 1529.2,996.9" stroke="#fff" stroke-width="1.7" fill="none" opacity=".85" stroke-linecap="round"/>
+<text x="1548.0" y="1009.0" font-size="20" font-weight="800" fill="#4B1B80" text-anchor="start" >RO-Crate protocol</text>
+<circle cx="1518" cy="1045" r="14" fill="#7A2FC0"/>
+<text x="1518.0" y="1050.0" font-size="15" font-weight="800" fill="#fff" text-anchor="middle" >0</text>
+<text x="1542.0" y="1050.0" font-size="16" font-weight="700" fill="#3F1568" text-anchor="start" >Seed</text>
+<text x="1542.0" y="1070.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >Before round 1, the researcher</text>
+<text x="1542.0" y="1087.5" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >seeds the crates with constraints,</text>
+<text x="1542.0" y="1105.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >e.g. platforms, media, assembly.</text>
+<circle cx="1518" cy="1131.5" r="14" fill="#7A2FC0"/>
+<text x="1518.0" y="1136.5" font-size="15" font-weight="800" fill="#fff" text-anchor="middle" >1</text>
+<text x="1542.0" y="1136.5" font-size="16" font-weight="700" fill="#3F1568" text-anchor="start" >Package</text>
+<text x="1542.0" y="1156.5" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >Each interface agent packages the</text>
+<text x="1542.0" y="1174.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >next stage's crate with validated</text>
+<text x="1542.0" y="1191.5" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >inputs.</text>
+<circle cx="1518" cy="1218.0" r="14" fill="#7A2FC0"/>
+<text x="1518.0" y="1223.0" font-size="15" font-weight="800" fill="#fff" text-anchor="middle" >2</text>
+<text x="1542.0" y="1223.0" font-size="16" font-weight="700" fill="#3F1568" text-anchor="start" >Record</text>
+<text x="1542.0" y="1243.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >Each stage adds its outputs and</text>
+<text x="1542.0" y="1260.5" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >provenance to its own crate.</text>
+<circle cx="1518" cy="1287.0" r="14" fill="#7A2FC0"/>
+<text x="1518.0" y="1292.0" font-size="15" font-weight="800" fill="#fff" text-anchor="middle" >3</text>
+<text x="1542.0" y="1292.0" font-size="16" font-weight="700" fill="#3F1568" text-anchor="start" >Share</text>
+<text x="1542.0" y="1312.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >All stages and agents read all four</text>
+<text x="1542.0" y="1329.5" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >crates, so Design can respect Build</text>
+<text x="1542.0" y="1347.0" font-size="13.5" font-weight="400" fill="#222" text-anchor="start" >and Test limits.</text>
+
+<rect x="300.0" y="1398.0" width="1200.0" height="38.0" rx="19" fill="#E9E9EE"/>
+<text x="900" y="1422" font-size="15" fill="#2a2a3a" text-anchor="middle">Experimental tools from Carbonell et al. (2018)   &#9679;   Interface agents and RO-Crates are the proposed architecture, not used in the original study.</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTpmNjFlMzU4MC05YWJiLTQ1ZDItYjgzOC1iMTJlN2Y5MDY2MTEAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaBmBiAj6FXBZVjiUEBSwI7UAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDoyMzBiMjQ1ZS0wMzI1LTQ2ZDEtOGZmMy1kMmFlYTk5OWE2MDZscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNomXcOgK/YE9R2V6kUm54STgAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFgg03ftQgd+q+VewdWTKbL3LfoyiU4z10Tlk7TSmrtu9dOkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaFDUB8e7w8CQH2t0k5rgP5MAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIMaC5nsnj7/QfQ6j6eysWcI1v1tYWhk1vD41TZsg5dcwZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GcKsZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmY2MWUzNTgwLTlhYmItNDVkMi1iODM4LWIxMmU3ZjkwNjYxMS9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjhjZDU0NTdjLTc4ODEtNGVkNC05NTYxLWNjZDU0YWU0YmUxNHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCDTd+1CB36r5V7B1ZMpsvct+jKJTjPXROWTtNKau27106JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFgg7wNlwIaX5X/iZ6ndBtb/rf3x6LU3rzwcR/juZHbe30CiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggNHsGJjDvz0+p+08OIA5nOv8rigfoP+U4l1ewAU5rw5t0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQNZoclUWdXznhjIUzRJ6a3BI15lESsC2aZFEUr//4F1hQaIW4Uzs+IExye1Zz7gxNWYUx5yRiD2kQ9+wqelDseg=</c2pa:manifest></metadata></svg>
