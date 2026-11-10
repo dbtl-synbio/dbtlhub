@@ -1,0 +1,1 @@
+Worked example grounding the DBTL interoperability discussion: the SYNBIOCHEM automated pipeline for (2S)-pinocembrin in *E. coli* (Carbonell et al., Communications Biology 2018, Fig. 1), annotated with four proposed interface agents on the stage transitions plus a coordination layer.
