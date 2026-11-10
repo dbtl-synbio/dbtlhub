@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1800" height="1160" viewBox="0 0 1800 1160" role="img" aria-labelledby="svg-title svg-desc">
+<title id="svg-title">DBTL directed-evolution workflow with agents at the interfaces</title>
+<desc id="svg-desc">Four DBTL stages each show techniques, equipment and software from Zhang et al., Nature Communications 2025. Four proposed interface agents manage the handoffs between Design, Build, Test, Learn, and the next Design round. A coordinator ensures oversight and integrity.</desc>
+<defs>
+ <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#243955" flood-opacity="0.075"/></filter>
+ <filter id="agentShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="13" flood-color="#62268B" flood-opacity="0.14"/></filter>
+ <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#6E48C2"/></marker>
+ <marker id="violetArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#8957C3"/></marker>
+ <marker id="grayArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#91A0B9"/></marker>
+</defs>
+<rect x="0" y="0" width="1800" height="1160" rx="0" fill="#F7F9FD" stroke="none" stroke-width="1" />
+<circle cx="1735" cy="95" r="205" fill="#EEF1FA" stroke="none" stroke-width="1" />
+<circle cx="70" cy="1090" r="205" fill="#EFF4FC" stroke="none" stroke-width="1" />
+<rect x="0" y="0" width="1800" height="8" rx="0" fill="#7D50BA" stroke="none" stroke-width="1" />
+<text x="80" y="71" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="38" font-weight="800" fill="#142544" text-anchor="start" >Interface agents for a DBTL directed-evolution workflow</text>
+<text x="81" y="108" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="500" fill="#5D6D85" text-anchor="start" >Case study: pCNF-RS evolution  ·  Zhang et al., Nature Communications (2025)</text>
+<rect x="1394" y="46" width="323" height="74" rx="16" fill="#FFFFFF" stroke="#E1E6EF" stroke-width="1" />
+<circle cx="1420" cy="72" r="5" fill="#2884CD" stroke="none" stroke-width="1" />
+<text x="1436" y="77" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.2" font-weight="600" fill="#36445C" text-anchor="start" >Reported DBTL stages and tools</text>
+<circle cx="1420" cy="100" r="5" fill="#854AB8" stroke="none" stroke-width="1" />
+<text x="1436" y="105" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.2" font-weight="600" fill="#36445C" text-anchor="start" >Proposed interface agents</text>
+<g id="process-flow" opacity="0.93">
+<path d="M 668 349 C 700 349, 691 302, 712 302" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 1089 302 C 1113 302, 1100 349, 1128 349" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 1514 546 C 1514 555, 1577 550, 1577 557" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 1577 708 C 1577 712, 1514 712, 1514 719" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 1128 881 C 1100 881, 1111 1002, 1089 1002" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 712 1002 C 689 1002, 699 881, 668 881" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 303 719 C 303 712, 181 713, 181 706" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+<path d="M 181 560 C 181 548, 303 553, 303 546" fill="none" stroke="#6E48C2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blueArrow)"/>
+</g>
+<g id="coordination-links" stroke="#9CA5B7" fill="none" stroke-width="2.3" stroke-dasharray="7 8">
+<path d="M900 496 L900 391"/><path d="M1067 648 L1400 634"/><path d="M900 809 L900 911"/><path d="M739 648 L355 634"/>
+</g>
+<g id="stage-design">
+<rect x="168" y="310" width="500" height="236" rx="24" fill="#FFFFFF" stroke="#DAE2EE" stroke-width="1.5" filter="url(#cardShadow)"/>
+<rect x="168" y="310" width="9" height="236" rx="5" fill="#2786CC" stroke="none" stroke-width="1" />
+<circle cx="220" cy="362" r="28" fill="#E6F3FD" stroke="none" stroke-width="1" />
+<circle cx="220" cy="362" r="17" fill="none" stroke="#2786CC" stroke-width="2.5" />
+<circle cx="220" cy="362" r="8" fill="none" stroke="#2786CC" stroke-width="2.5" />
+<circle cx="220" cy="362" r="2" fill="#2786CC" stroke="none" stroke-width="1" />
+<text x="264" y="359" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="750" fill="#172441" text-anchor="start" >01  Design</text>
+<text x="264" y="387" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="450" fill="#61708A" text-anchor="start" >Propose and prioritize enzyme variants</text>
+<line x1="200" y1="412" x2="636" y2="412" stroke="#E7EDF4" stroke-width="1"  />
+<text x="200" y="440" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="750" fill="#2786CC" text-anchor="start" letter-spacing="1.0">TECHNIQUES · EQUIPMENT · SOFTWARE</text>
+<circle cx="211" cy="470" r="3.3" fill="#2786CC" stroke="none" stroke-width="1" />
+<text x="225" y="476" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >ESM-2 protein language model</text>
+<circle cx="211" cy="497" r="3.3" fill="#2786CC" stroke="none" stroke-width="1" />
+<text x="225" y="503" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Python · PyTorch · ITC sampling</text>
+<circle cx="211" cy="524" r="3.3" fill="#2786CC" stroke="none" stroke-width="1" />
+<text x="225" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Zero-shot variant ranking (round 1)</text>
+</g>
+<g id="stage-build">
+<rect x="1128" y="310" width="500" height="236" rx="24" fill="#FFFFFF" stroke="#DAE2EE" stroke-width="1.5" filter="url(#cardShadow)"/>
+<rect x="1128" y="310" width="9" height="236" rx="5" fill="#D88A2C" stroke="none" stroke-width="1" />
+<circle cx="1180" cy="362" r="28" fill="#FFF0D9" stroke="none" stroke-width="1" />
+<path d="M1169 344 C1199 356 1161 368 1191 380" fill="none" stroke="#D88A2C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+<path d="M1191 344 C1161 356 1199 368 1169 380" fill="none" stroke="#D88A2C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+<line x1="1171" y1="350" x2="1189" y2="350" stroke="#D88A2C" stroke-width="1.7"  />
+<line x1="1171" y1="357" x2="1189" y2="357" stroke="#D88A2C" stroke-width="1.7"  />
+<line x1="1171" y1="365" x2="1189" y2="365" stroke="#D88A2C" stroke-width="1.7"  />
+<line x1="1171" y1="373" x2="1189" y2="373" stroke="#D88A2C" stroke-width="1.7"  />
+<text x="1224" y="359" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="750" fill="#172441" text-anchor="start" >02  Build</text>
+<text x="1224" y="387" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="450" fill="#61708A" text-anchor="start" >Construct genetic variants and samples</text>
+<line x1="1160" y1="412" x2="1596" y2="412" stroke="#E7EDF4" stroke-width="1"  />
+<text x="1160" y="440" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="750" fill="#D88A2C" text-anchor="start" letter-spacing="1.0">TECHNIQUES · EQUIPMENT · SOFTWARE</text>
+<circle cx="1171" cy="470" r="3.3" fill="#D88A2C" stroke="none" stroke-width="1" />
+<text x="1185" y="476" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Tecan EVO · Echo · Fluent robots</text>
+<circle cx="1171" cy="497" r="3.3" fill="#D88A2C" stroke="none" stroke-width="1" />
+<text x="1185" y="503" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >QuikChange PCR · DpnI digestion</text>
+<circle cx="1171" cy="524" r="3.3" fill="#D88A2C" stroke="none" stroke-width="1" />
+<text x="1185" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Transformation · colony picking</text>
+</g>
+<g id="stage-test">
+<rect x="1128" y="720" width="500" height="236" rx="24" fill="#FFFFFF" stroke="#DAE2EE" stroke-width="1.5" filter="url(#cardShadow)"/>
+<rect x="1128" y="720" width="9" height="236" rx="5" fill="#17996C" stroke="none" stroke-width="1" />
+<circle cx="1180" cy="772" r="28" fill="#E0F7EB" stroke="none" stroke-width="1" />
+<path d="M1174 755 H1186 M1177 755 V767 L1163 788 Q1161 792 1168 792 H1192 Q1199 792 1197 788 L1183 767 V755" fill="none" stroke="#17996C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+<path d="M1170 779 Q1180 776 1190 779" fill="none" stroke="#17996C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+<text x="1224" y="769" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="750" fill="#172441" text-anchor="start" >03  Test</text>
+<text x="1224" y="797" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="450" fill="#61708A" text-anchor="start" >Measure fitness and verify constructs</text>
+<line x1="1160" y1="822" x2="1596" y2="822" stroke="#E7EDF4" stroke-width="1"  />
+<text x="1160" y="850" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="750" fill="#17996C" text-anchor="start" letter-spacing="1.0">TECHNIQUES · EQUIPMENT · SOFTWARE</text>
+<circle cx="1171" cy="880" r="3.3" fill="#17996C" stroke="none" stroke-width="1" />
+<text x="1185" y="886" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >CLARIOstar · Cytomat incubators</text>
+<circle cx="1171" cy="907" r="3.3" fill="#17996C" stroke="none" stroke-width="1" />
+<text x="1185" y="913" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >sfGFP fluorescence · OD600 assays</text>
+<circle cx="1171" cy="934" r="3.3" fill="#17996C" stroke="none" stroke-width="1" />
+<text x="1185" y="940" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Sanger sequencing · assay QC</text>
+</g>
+<g id="stage-learn">
+<rect x="168" y="720" width="500" height="236" rx="24" fill="#FFFFFF" stroke="#DAE2EE" stroke-width="1.5" filter="url(#cardShadow)"/>
+<rect x="168" y="720" width="9" height="236" rx="5" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<circle cx="220" cy="772" r="28" fill="#F1E9FD" stroke="none" stroke-width="1" />
+<path d="M202 790 V754 M202 790 H240" fill="none" stroke="#9B5BD6" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" />
+<rect x="211" y="778" width="8" height="11" rx="2" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<rect x="223" y="769" width="8" height="20" rx="2" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<rect x="235" y="758" width="8" height="31" rx="2" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<text x="264" y="769" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="750" fill="#172441" text-anchor="start" >04  Learn</text>
+<text x="264" y="797" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="450" fill="#61708A" text-anchor="start" >Fit models to experimental measurements</text>
+<line x1="200" y1="822" x2="636" y2="822" stroke="#E7EDF4" stroke-width="1"  />
+<text x="200" y="850" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="750" fill="#9B5BD6" text-anchor="start" letter-spacing="1.0">TECHNIQUES · EQUIPMENT · SOFTWARE</text>
+<circle cx="211" cy="880" r="3.3" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<text x="225" y="886" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >ESM-2 sequence embeddings</text>
+<circle cx="211" cy="907" r="3.3" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<text x="225" y="913" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >MLP regression · PyTorch training</text>
+<circle cx="211" cy="934" r="3.3" fill="#9B5BD6" stroke="none" stroke-width="1" />
+<text x="225" y="940" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="490" fill="#273651" text-anchor="start" >Fitness prediction · variant ranking</text>
+</g>
+<g id="agent-d-b">
+<rect x="715" y="192" width="370" height="201" rx="24" fill="#FFFFFF" stroke="#9A60D0" stroke-width="2.2" filter="url(#agentShadow)"/>
+<rect x="715" y="192" width="370" height="48" rx="24" fill="#6F35AA" stroke="none" stroke-width="1" />
+<rect x="715" y="222" width="370" height="18" rx="0" fill="#6F35AA" stroke="none" stroke-width="1" />
+<circle cx="747" cy="216" r="17" fill="#FFFFFF" stroke="none" stroke-width="1" opacity="0.16"/>
+<rect x="733" y="204" width="28" height="23" rx="7" fill="white" stroke="#F6EFFF" stroke-width="2.3" />
+<circle cx="741" cy="214" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<circle cx="753" cy="214" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<path d="M742 221 Q747 224 752 221" fill="none" stroke="#F6EFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+<line x1="747" y1="204" x2="747" y2="198" stroke="#F6EFFF" stroke-width="2"  />
+<circle cx="747" cy="196" r="2.5" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<text x="776" y="223" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="19" font-weight="750" fill="white" text-anchor="start" >D→B  |  Design-to-Build</text>
+<circle cx="739" cy="263" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="268" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.5" font-weight="480" fill="#37405E" text-anchor="start" >Validate sequences and feasibility</text>
+<circle cx="739" cy="288" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="293" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.5" font-weight="480" fill="#37405E" text-anchor="start" >Check primer and cloning constraints</text>
+<circle cx="739" cy="313" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="318" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.5" font-weight="480" fill="#37405E" text-anchor="start" >Translate designs into build steps</text>
+<rect x="733" y="350" width="334" height="31" rx="10" fill="#F3E9FC" stroke="none" stroke-width="1" />
+<text x="744" y="370" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.8" font-weight="730" fill="#5E298E" text-anchor="start" >HANDOFF: variant list + build plan</text>
+</g>
+<g id="agent-b-t">
+<rect x="1400" y="557" width="370" height="151" rx="24" fill="#FFFFFF" stroke="#9A60D0" stroke-width="2.2" filter="url(#agentShadow)"/>
+<rect x="1400" y="557" width="370" height="48" rx="24" fill="#6F35AA" stroke="none" stroke-width="1" />
+<rect x="1400" y="587" width="370" height="18" rx="0" fill="#6F35AA" stroke="none" stroke-width="1" />
+<circle cx="1432" cy="581" r="17" fill="#FFFFFF" stroke="none" stroke-width="1" opacity="0.16"/>
+<rect x="1418" y="569" width="28" height="23" rx="7" fill="white" stroke="#F6EFFF" stroke-width="2.3" />
+<circle cx="1426" cy="579" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<circle cx="1438" cy="579" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<path d="M1427 586 Q1432 589 1437 586" fill="none" stroke="#F6EFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+<line x1="1432" y1="569" x2="1432" y2="563" stroke="#F6EFFF" stroke-width="2"  />
+<circle cx="1432" cy="561" r="2.5" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<text x="1461" y="588" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="750" fill="white" text-anchor="start" >B→T  |  Build-to-Test</text>
+<circle cx="1424" cy="628" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="1437" y="633" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Track samples and plate positions</text>
+<circle cx="1424" cy="650" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="1437" y="655" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Verify sequence and construct QC</text>
+<rect x="1418" y="665" width="334" height="31" rx="10" fill="#F3E9FC" stroke="none" stroke-width="1" />
+<text x="1429" y="685" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.2" font-weight="730" fill="#5E298E" text-anchor="start" >HANDOFF: verified samples + QC</text>
+</g>
+<g id="agent-t-l">
+<rect x="715" y="892" width="370" height="189" rx="24" fill="#FFFFFF" stroke="#9A60D0" stroke-width="2.2" filter="url(#agentShadow)"/>
+<rect x="715" y="892" width="370" height="48" rx="24" fill="#6F35AA" stroke="none" stroke-width="1" />
+<rect x="715" y="922" width="370" height="18" rx="0" fill="#6F35AA" stroke="none" stroke-width="1" />
+<circle cx="747" cy="916" r="17" fill="#FFFFFF" stroke="none" stroke-width="1" opacity="0.16"/>
+<rect x="733" y="904" width="28" height="23" rx="7" fill="white" stroke="#F6EFFF" stroke-width="2.3" />
+<circle cx="741" cy="914" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<circle cx="753" cy="914" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<path d="M742 921 Q747 924 752 921" fill="none" stroke="#F6EFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+<line x1="747" y1="904" x2="747" y2="898" stroke="#F6EFFF" stroke-width="2"  />
+<circle cx="747" cy="896" r="2.5" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<text x="776" y="923" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="750" fill="white" text-anchor="start" >T→L  |  Test-to-Learn</text>
+<circle cx="739" cy="963" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="968" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Normalize fluorescence / OD600</text>
+<circle cx="739" cy="985" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="990" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Check controls, outliers and replicates</text>
+<circle cx="739" cy="1007" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="752" y="1012" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Curate fitness training dataset</text>
+<rect x="733" y="1038" width="334" height="31" rx="10" fill="#F3E9FC" stroke="none" stroke-width="1" />
+<text x="744" y="1058" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.2" font-weight="730" fill="#5E298E" text-anchor="start" >HANDOFF: QC-approved fitness data</text>
+</g>
+<g id="agent-l-d">
+<rect x="31" y="560" width="337" height="146" rx="24" fill="#FFFFFF" stroke="#9A60D0" stroke-width="2.2" filter="url(#agentShadow)"/>
+<rect x="31" y="560" width="337" height="48" rx="24" fill="#6F35AA" stroke="none" stroke-width="1" />
+<rect x="31" y="590" width="337" height="18" rx="0" fill="#6F35AA" stroke="none" stroke-width="1" />
+<circle cx="63" cy="584" r="17" fill="#FFFFFF" stroke="none" stroke-width="1" opacity="0.16"/>
+<rect x="49" y="572" width="28" height="23" rx="7" fill="white" stroke="#F6EFFF" stroke-width="2.3" />
+<circle cx="57" cy="582" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<circle cx="69" cy="582" r="2.4" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<path d="M58 589 Q63 592 68 589" fill="none" stroke="#F6EFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+<line x1="63" y1="572" x2="63" y2="566" stroke="#F6EFFF" stroke-width="2"  />
+<circle cx="63" cy="564" r="2.5" fill="#F6EFFF" stroke="none" stroke-width="1" />
+<text x="92" y="591" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="750" fill="white" text-anchor="start" >L→D  |  Learn-to-Design</text>
+<circle cx="55" cy="631" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="68" y="636" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Interpret model and uncertainty</text>
+<circle cx="55" cy="653" r="3.0" fill="#7E42BD" stroke="none" stroke-width="1" />
+<text x="68" y="658" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.5" font-weight="480" fill="#37405E" text-anchor="start" >Set next-round mutation priorities</text>
+<rect x="49" y="663" width="301" height="31" rx="10" fill="#F3E9FC" stroke="none" stroke-width="1" />
+<text x="60" y="683" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.2" font-weight="730" fill="#5E298E" text-anchor="start" >HANDOFF: new design specification</text>
+</g>
+<g id="coordinator">
+<rect x="744" y="496" width="312" height="311" rx="26" fill="#FFFFFF" stroke="#A7B3C6" stroke-width="1.7" filter="url(#cardShadow)"/>
+<circle cx="900" cy="562" r="30" fill="#F0ECF8" stroke="none" stroke-width="1" />
+<circle cx="900" cy="551" r="6" fill="#FFFFFF" stroke="#625283" stroke-width="2" />
+<circle cx="883" cy="569" r="6" fill="#FFFFFF" stroke="#625283" stroke-width="2" />
+<circle cx="917" cy="569" r="6" fill="#FFFFFF" stroke="#625283" stroke-width="2" />
+<line x1="900" y1="557" x2="883" y2="563" stroke="#625283" stroke-width="2"  />
+<line x1="900" y1="557" x2="917" y2="563" stroke="#625283" stroke-width="2"  />
+<text x="900" y="624" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="770" fill="#1E2A46" text-anchor="middle" >Coordinator</text>
+<text x="900" y="651" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="550" fill="#6F538C" text-anchor="middle" >cross-stage oversight</text>
+<line x1="788" y1="669" x2="1012" y2="669" stroke="#E4E6F0" stroke-width="1"  />
+<circle cx="781" cy="696" r="3.3" fill="#9271C2" stroke="none" stroke-width="1" />
+<text x="795" y="701" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.2" font-weight="510" fill="#4B5670" text-anchor="start" >Data provenance</text>
+<circle cx="781" cy="725" r="3.3" fill="#9271C2" stroke="none" stroke-width="1" />
+<text x="795" y="730" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.2" font-weight="510" fill="#4B5670" text-anchor="start" >Handoff validation</text>
+<circle cx="781" cy="754" r="3.3" fill="#9271C2" stroke="none" stroke-width="1" />
+<text x="795" y="759" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.2" font-weight="510" fill="#4B5670" text-anchor="start" >Exception handling</text>
+<circle cx="781" cy="783" r="3.3" fill="#9271C2" stroke="none" stroke-width="1" />
+<text x="795" y="788" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16.2" font-weight="510" fill="#4B5670" text-anchor="start" >Human approval gates</text>
+</g>
+<rect x="730" y="423" width="341" height="35" rx="17" fill="#EDE6F6" stroke="none" stroke-width="1" />
+<text x="900" y="446" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.5" font-weight="700" fill="#6B3199" text-anchor="middle" >4 transition agents  ·  1 coordination layer</text>
+<line x1="80" y1="1104" x2="1720" y2="1104" stroke="#DBE2ED" stroke-width="1.5"  />
+<text x="82" y="1132" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15.4" font-weight="530" fill="#52637D" text-anchor="start" >Solid arrows: DBTL flow through interface agents     ·     Dashed lines: coordination and oversight</text>
+<text x="1718" y="1132" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#7554A5" text-anchor="end" >Proposed architecture  ·  not implemented in the original study</text>
+</svg>
