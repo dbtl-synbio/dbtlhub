@@ -280,6 +280,13 @@
           }
         }
       }
+    },
+    "crate_ref_missing_files": {
+      "type": "array",
+      "description": "Relative @ids the crate names that are not present on disk. Must be empty: in RO-Crate a relative identifier is a promise, and a dangling one is invisible to a profile validator.",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "x-dbtl-checks": [
@@ -350,6 +357,13 @@
       "code": "checksum_mismatch",
       "message": "the checksum does not match the crate it is supposed to attest",
       "fix_hint": "not auto-fixable: a checksum that does not match is not a formatting problem. Either the crate changed after the checksum was taken, or the checksum was fabricated. Recompute it from the crate, or find out which"
+    },
+    {
+      "kind": "empty",
+      "of": "crate_ref_missing_files",
+      "code": "missing_file",
+      "message": "the crate names this file and it is not there",
+      "fix_hint": "not auto-fixable: the file is either found and added to the crate, or the entity that names it is removed. An agent cannot create the data."
     }
   ]
 }

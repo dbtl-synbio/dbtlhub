@@ -25,10 +25,39 @@ python3 scripts/show_agents.py               # all four, as they are right now
 python3 scripts/show_agents.py --handover 1  # one in full
 python3 demo_d2b.py                          # H1: a clean crate, then a broken one
 python3 demo_l2d.py                          # H4: the round that closes, then one that does not
+python3 scripts/check_crate.py --break-all   # H1 on this repo's own example crate
 ```
 
 `show_agents.py` reads the live classes and contract files, so it cannot drift
 from the code. If it says a check exists, it exists.
+
+## It runs on this repository's own crate
+
+```bash
+python3 scripts/check_crate.py --break-all
+```
+
+Reads `bioprospecting/exampleROcrates/design-to-build-simple/`, the crate the
+bioprospecting use case published, and then breaks it three ways on purpose:
+
+| | | |
+|---|---|---|
+| the crate as published | **accepted** | 105 entities → 570 triples, 0 unaligned keys, an order of 4 constructs projected |
+| a file it promises, removed | refused | `missing_file` — a relative `@id` is a promise, and no profile validator checks it |
+| the profile it claims, removed | refused | `too_few_items` — a crate that states no profile cannot be interpreted |
+| the gene calling mode, removed | refused | `missing_provenance` — open ends permits a truncated gene, so Build cannot judge what it got |
+
+Two of those three faults pass every RO-Crate validator there is. The last one
+is the argument for having a contract at all: conformance is not sufficiency.
+
+**A finding, not a feature.** That crate expresses provenance through
+`CreateAction` / `object` / `result`, walked backwards; the simulated crate in
+`usecases/` follows PROV properties forwards. The metadata is in named
+`PropertyValue` entries rather than flat keys, and three entities share the
+type `Sample`, so the root is the one belonging to the study. All three
+differences are declared in `profiles/bioprospecting.json`, which is why one
+contract reads both — but **the group should pick one dialect.** Supporting two
+is a tax that compounds with every handover.
 
 ## One base class, four handovers
 
@@ -116,9 +145,14 @@ In all four runs the handover still failed. Full statement in
 - **No warning severity.** Checks pass or fail. Something like "gene calling
   mode is set to open ends" is not an error — it is a flag Build must act on —
   and there is currently nowhere to put it. This needs a third outcome.
-- **Referential integrity is partial.** The validator checks the crate
-  entities the order binds to. It does not yet check that *every* `@id` in
-  `@graph` resolves, nor that every relative `@id` is a file that is present.
+- **Referential integrity is partial.** For a crate read from disk, every
+  relative `@id` typed `File` is checked against the folder, and a file the
+  crate promises and does not deliver is a `missing_file` violation. What is
+  still missing is the general case: that *every* `@id` referenced anywhere in
+  `@graph` resolves to an entry in it.
+- **H2 and H3 packages are JSON, not RO-Crates.** The slides for the use case
+  imply every handover is packaged as an RO-Crate. Worth settling as a group:
+  the contracts do not care, but the example packages should be consistent.
 - **H2 and H3 packages are JSON, not RO-Crates.** The slides for the use case
   imply every handover is packaged as an RO-Crate. Worth settling as a group:
   the contracts do not care, but the example packages should be consistent.

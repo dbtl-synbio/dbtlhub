@@ -2,21 +2,27 @@
   "name": "bioprospecting",
   "description": "Metagenomic enzyme characterisation (Anil's case). Design picks a panel of candidate sequences; Build synthesises and amplifies DNA; Test runs enzyme reactions against substrates and reads a plate.",
   "patterns": {
-    "design_item_id": "^CAND-[0-9]{3}$",
+    "design_item_id": "^(CAND|CON|ENR)-[0-9]{3}$",
     "accession": "^(MGYP|UniProt|NCBI):[A-Za-z0-9_.]+$",
     "sample_id": "^BP[0-9]+-[A-H][0-9]{2}$",
     "container_id": "^PLATE-[0-9]+$",
     "position": "^[A-H][0-9]{1,2}$",
     "order_item_id": "^ORD-[0-9]{3}$",
-    "recommendation_id": "^REC-[0-9]{3}$"
+    "recommendation_id": "^REC-[0-9]{3}$",
+    "_note_design_item_id": "Three spellings are in use: CAND- in the simulated crate, CON- for a construct and ENR- for the protein it is based on in the use case's own crate. Agreeing one is a group decision, not an agent's."
   },
   "required_provenance": {
     "design_to_build": {
-      "root_type": "bioschemas:BioSample",
+      "root_type": [
+        "bioschemas:BioSample",
+        "Sample"
+      ],
       "follow": [
         "prov:wasDerivedFrom",
         "prov:wasGeneratedBy",
-        "prov:used"
+        "prov:used",
+        "isBasedOn",
+        "isPartOf"
       ],
       "note": "Every ordered sequence must trace, link by link, to a physical sample. In bioprospecting that sample is a field collection, so the chain crosses from in silico entities into a vial in a freezer - which is exactly where traceability is normally lost.",
       "entities": [
@@ -28,7 +34,8 @@
             "envo:biome",
             "mixs:env_medium"
           ],
-          "why": "a sequence from an unlocated site cannot be re-collected, and under the Nagoya Protocol cannot be shown to have been collected legally"
+          "why": "a sequence from an unlocated site cannot be re-collected, and under the Nagoya Protocol cannot be shown to have been collected legally",
+          "if_present": true
         },
         {
           "type": "bioschemas:BioSample",
@@ -46,9 +53,54 @@
               "method_hint": "freezer log"
             }
           ],
-          "why": "the storage temperature decides whether the material still exists; -20 instead of -80 for a month is the difference between a reproducible result and an anecdote"
+          "why": "the storage temperature decides whether the material still exists; -20 instead of -80 for a month is the difference between a reproducible result and an anecdote",
+          "if_present": true
+        },
+        {
+          "type": "Sample",
+          "if_present": true,
+          "properties_at": "additionalProperty",
+          "requires": [
+            "collection_date",
+            "geo_loc_name",
+            "env_medium"
+          ],
+          "why": "MIxS names, so they are not invented here. A sequence from an unlocated site cannot be re-collected, and under the Nagoya Protocol cannot be shown to have been collected legally.",
+          "within": {
+            "prop": "isPartOf",
+            "type": "ResearchProject"
+          }
+        },
+        {
+          "type": "CreateAction",
+          "if_present": true,
+          "where": {
+            "prop": "instrument",
+            "id_ends_with": "/tool/gene-caller"
+          },
+          "properties_at": "object",
+          "requires": [
+            "gene calling mode"
+          ],
+          "why": "Open ends permits a prediction running off the end of a contig, so a sequence may be a truncated fragment. A crate without the mode passes every automated validator there is and Build still cannot judge what it has been sent - which is the whole argument for a contract on top of a profile."
+        },
+        {
+          "one_of": [
+            "dwc:Location",
+            "Sample"
+          ],
+          "why": "Whichever dialect the crate is written in, something in it has to state where the material came from."
         }
-      ]
+      ],
+      "root_within": {
+        "prop": "isPartOf",
+        "type": "ResearchProject",
+        "note": "A Process Run Crate types the field sample, the DNA extract and the library all as Sample. The root is the one that belongs to the study rather than to another sample. An entity with no isPartOf at all is unambiguous and counts."
+      },
+      "action_type": "CreateAction",
+      "produces": "result",
+      "consumes": "object",
+      "dialects": "Two are recognised today: PROV properties on the entity, and Process Run Crate actions walked backwards through result/object. That there are two is a finding to settle as a group, not a feature."
     }
   },
   "required_quantities": {

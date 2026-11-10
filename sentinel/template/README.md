@@ -98,6 +98,7 @@ holds, and a handover only costs more when it genuinely is more.
 ```bash
 python3 demo_d2b.py                        # Handover 1, clean run and broken run
 python3 demo_l2d.py                        # Handover 4, the round that closes
+python3 scripts/check_crate.py --break-all # Handover 1 on the use case's own crate
 python3 scripts/show_agents.py             # all four, as they are right now
 python3 scripts/show_agents.py --handover 1
 ```

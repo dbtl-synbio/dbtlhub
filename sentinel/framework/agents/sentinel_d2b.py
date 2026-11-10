@@ -81,6 +81,9 @@ class DesignToBuildAgent(SentinelAgent):
                 # checksum deliberately left out: it is derivable, so it is the
                 # one thing the repair step is allowed to supply.
             },
+            # A relative @id in RO-Crate is a promise that the file is there.
+            # No profile validator checks it, so the handover does.
+            "crate_ref_missing_files": list(task.inputs.get("files_missing") or []),
             "crate": aligned,
             "order": order_from_crate(items, container=task.inputs.get(
                 "container", "ORDPLATE-1")),
@@ -120,6 +123,8 @@ def _conforms_to(crate: dict) -> list[str]:
             refs = node.get("conformsTo")
             got = [r.get("@id") for r in ([refs] if isinstance(refs, dict) else refs or [])
                    if isinstance(r, dict)]
-            if got:
-                return got
-    return list(CONFORMS_TO)
+            return got
+    # No descriptor node at all. Returning the default here would invent a
+    # claim the crate never made, and the schema is right to refuse an empty
+    # list: a reader that does not know the profile cannot interpret the crate.
+    return []

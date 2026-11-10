@@ -84,7 +84,14 @@ python3 scripts/show_agents.py               # all four, side by side
 python3 scripts/show_agents.py --handover 1  # one in full
 python3 demo_d2b.py                          # H1: clean run, then broken run
 python3 demo_l2d.py                          # H4: the round that closes, then one that does not
+python3 scripts/check_crate.py --break-all   # H1 on the use case's own crate, and three faults
 ```
+
+That last one matters more than the others. It reads
+`bioprospecting/exampleROcrates/design-to-build-simple/` — a crate somebody
+else wrote — accepts it, and then refuses it three times over with one fault
+injected each time. Check your own handover against somebody else's package
+before you believe it works.
 
 `show_agents.py` reads the live classes and contract files, so it cannot drift
 from the code. If it says a check exists, it exists.

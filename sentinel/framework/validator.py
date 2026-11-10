@@ -312,6 +312,27 @@ def _index(nodes) -> dict:
     return {n["@id"]: n for n in nodes or [] if isinstance(n, dict) and "@id" in n}
 
 
+def _reverse_actions(index: dict, rules: dict) -> dict:
+    """entity id -> the action(s) that produced it.
+
+    RO-Crate has no property pointing from a thing to the action that made it,
+    so a Process Run Crate is walked backwards by scanning for the action whose
+    `result` contains the entity. Building the reverse index once turns that
+    scan into a lookup. Crates written with PROV properties simply produce an
+    empty index here and are walked by `follow` instead - which is why a
+    contract can accept both without knowing which it is reading.
+    """
+    action_type = rules.get("action_type", "CreateAction")
+    produces = rules.get("produces", "result")
+    back: dict[str, list] = {}
+    for node in index.values():
+        if action_type not in _types(node):
+            continue
+        for made in _ids(node.get(produces)):
+            back.setdefault(made, []).append(node["@id"])
+    return back
+
+
 def _check_provenance_chain(package, check, errors, profile=None):
     """Can this sequence be traced, link by link, back to where it came from?
 
@@ -325,7 +346,34 @@ def _check_provenance_chain(package, check, errors, profile=None):
     follow = rules.get("follow") or ["prov:wasDerivedFrom"]
     if not root_type:
         return
+    roots = [root_type] if isinstance(root_type, str) else list(root_type)
+    within = rules.get("root_within") or {}
     index = _index(_dig(package, check["in"]))
+    back = _reverse_actions(index, rules)
+
+    def is_root(node) -> bool:
+        if not any(r in _types(node) for r in roots):
+            return False
+        # Several entities can share a type - in a Process Run Crate the field
+        # sample, the DNA extract and the library are all a Sample. The root is
+        # the one that belongs to the study rather than to another sample.
+        if not within or node.get(within.get("prop")) is None:
+            return True            # nothing to disambiguate: the type is enough
+        for ref in _ids(node.get(within.get("prop"))):
+            target = index.get(ref)
+            if target and within.get("type") in _types(target):
+                return True
+        return False
+
+    def predecessors(node) -> list:
+        """One step further back, whichever dialect the crate was written in."""
+        out = []
+        for prop in follow:                       # PROV, isBasedOn, isPartOf...
+            out.extend(_ids(node.get(prop)))
+        if rules.get("action_type", "CreateAction") in _types(node):
+            out.extend(_ids(node.get(rules.get("consumes", "object"))))
+        out.extend(back.get(node.get("@id"), ()))  # the action that made it
+        return out
 
     for i, row in enumerate(_dig(package, check["of"]) or []):
         if not isinstance(row, dict):
@@ -340,19 +388,18 @@ def _check_provenance_chain(package, check, errors, profile=None):
             if node is None:
                 continue
             path.append(node["@id"])
-            if root_type in _types(node):
+            if is_root(node):
                 reached = True
                 break
-            for prop in follow:
-                for ref in _ids(node.get(prop)):
-                    if ref not in seen:
-                        seen.add(ref)
-                        queue.append(ref)
+            for ref in predecessors(node):
+                if ref not in seen:
+                    seen.add(ref)
+                    queue.append(ref)
         if not reached:
             errors.append(Error(
                 f"{check['of']}[{i}].{check['field']}",
                 check.get("code", "broken_provenance_chain"),
-                f"{start!r}: {check.get('message', 'no path to ' + root_type)} "
+                f"{start!r}: {check.get('message', 'no path to ' + '/'.join(roots))} "
                 f"(walked {len(seen)} entit{'y' if len(seen) == 1 else 'ies'}, "
                 f"deepest {path[-1] if path else '-'})",
                 check.get("fix_hint", "")))
@@ -370,20 +417,59 @@ def _check_required_provenance(package, check, errors, profile=None):
     if not entries:
         return
     nodes = _dig(package, check["of"]) or []
+    index = _index(nodes)
+    matched_any: list[str] = []
+    alternatives = []
 
     for entry in entries:
+        if entry.get("one_of"):
+            alternatives.append(entry)      # evaluated once every type is known
+            continue
         wanted_type = entry.get("type")
         matching = [n for n in nodes if isinstance(n, dict) and wanted_type in _types(n)]
+        # A type can be worn by several entities that are not the same kind of
+        # thing: in a Process Run Crate the field sample, the DNA extract and
+        # the library are all a Sample, and only the first was collected from
+        # the ground. `within` narrows the entry to the ones that belong to the
+        # named kind of parent; an entity with no such property is unambiguous
+        # and is kept.
+        narrow = entry.get("within")
+        if narrow and matching:
+            matching = [n for n in matching
+                        if n.get(narrow.get("prop")) is None
+                        or any(narrow.get("type") in _types(index.get(r, {}))
+                               for r in _ids(n.get(narrow.get("prop"))))]
+        # `where` picks out one entity among many of a type - the gene-calling
+        # action among eleven CreateActions, say. Matched on what the crate
+        # already says, never on array position.
+        pick = entry.get("where")
+        if pick and matching:
+            matching = [n for n in matching if _matches(n, pick)]
+            if not matching and entry.get("if_present"):
+                continue
         if not matching:
+            # `if_present` marks an entry that belongs to one crate dialect.
+            # A Process Run Crate has no dwc:Location and a Darwin Core crate
+            # has no schema.org Sample; demanding both would fail every real
+            # crate. One of them still has to match - see require_one_of below.
+            if entry.get("if_present"):
+                continue
             errors.append(Error(
                 check["of"], check.get("code", "missing_provenance"),
                 f"no entity of type {wanted_type!r} anywhere in the crate",
                 entry.get("why", "")))
             continue
+        matched_any.append(wanted_type)
         for node in matching:
             where = f"{check['of']}[{node['@id']}]"
+            # Flat keys, or named PropertyValue entries hanging off a property
+            # - the two ways a crate carries the same fact.
+            named = _named_properties(node, entry.get("properties_at"), index)
             for prop in entry.get("requires", []):
-                if node.get(prop) in (None, "", [], {}):
+                missing = (node.get(prop) in (None, "", [], {})
+                           if entry.get("properties_at") is None
+                           else named.get(prop) in (None, "", [], {}))
+                if missing:
                     errors.append(Error(
                         f"{where}.{prop}", check.get("code", "missing_provenance"),
                         check.get("message", "required by profile"),
@@ -408,6 +494,47 @@ def _check_required_provenance(package, check, errors, profile=None):
                             "wrong_unit",
                             f"expected {req['unit']!r}, got {got.get('unit')!r}",
                             "convert, or state the basis explicitly"))
+
+    for entry in alternatives:
+        if any(t in matched_any for t in entry["one_of"]):
+            continue
+        errors.append(Error(
+            check["of"], check.get("code", "missing_provenance"),
+            f"the crate holds none of {entry['one_of']} - there is nothing in "
+            f"it that states where the material came from",
+            entry.get("why", "")))
+
+
+def _matches(node: dict, pick: dict) -> bool:
+    value = node.get(pick.get("prop"))
+    if "equals" in pick:
+        return value == pick["equals"]
+    ends = pick.get("id_ends_with")
+    if ends:
+        return any(str(ref).endswith(ends) for ref in _ids(value))
+    return value is not None
+
+
+def _named_properties(node: dict, at: str | None, index: dict) -> dict:
+    """Resolve `additionalProperty` style metadata into {name: value}.
+
+    A Process Run Crate does not put collection_date on the sample. It puts a
+    reference to a PropertyValue entry that has a name and a value, which is
+    how one crate can carry MIxS, Darwin Core and instrument settings without
+    inventing a property for each. Flat keys and PropertyValue entries say the
+    same thing, so the profile should be able to ask for either.
+    """
+    if not at:
+        return {}
+    out = {}
+    for ref in _ids(node.get(at)):
+        pv = index.get(ref)
+        if isinstance(pv, dict) and pv.get("name") is not None:
+            out[pv["name"]] = pv.get("value")
+    for inline in (node.get(at) or []) if isinstance(node.get(at), list) else []:
+        if isinstance(inline, dict) and inline.get("name") is not None:
+            out[inline["name"]] = inline.get("value")
+    return out
 
 
 def _check_empty(package, check, errors, profile=None):
