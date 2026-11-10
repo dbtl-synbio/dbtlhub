@@ -21,7 +21,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from framework.agents.base import Task                                # noqa: E402
 from framework.agents.coordinator import Coordinator                  # noqa: E402
 from framework.agents.sentinel_l2d import LearnToDesignAgent          # noqa: E402
+from framework.validator import load_contract, validate                # noqa: E402
 from usecases.bioprospecting.learning import recommendations          # noqa: E402
+
+
+def _next_round(n: int, limits: list) -> dict:
+    """A minimal next-round Design -> Build package, to check against a limit."""
+    return {
+        "contract": "design_to_build", "contract_version": "0.1.0",
+        "profile": "bioprospecting", "run_id": "round2",
+        "produced_at": "2026-11-10T00:00:00Z",
+        "produced_by": {"agent": "phase_design", "tool": "design pipeline",
+                        "engine": "none"},
+        "crate_ref": {"path": "d/ro-crate-metadata.json", "root": "./",
+                      "conforms_to": ["https://w3id.org/ro/crate/1.1"],
+                      "checksum": "sha256:" + "0" * 64},
+        "crate": {"@context": "c", "@graph": [{"@id": "./"}]},
+        "reads": [{"crate": "#crate/learn", "role": "constraints",
+                   "checksum": "sha256:abc"}],
+        "limits": limits,
+        "order": {"provider": "p", "format": "fasta",
+                  "container_id": "ORDPLATE-1",
+                  "items": [{"order_item_id": f"ORD-{i:03d}", "position": "A1",
+                             "design_item_id": f"CAND-{i:03d}",
+                             "sequence_type": "dna", "length_bp": 10,
+                             "sequence_sha256": "sha256:" + "0" * 64}
+                            for i in range(1, n + 1)]},
+        "bindings": [{"design_item_id": "CAND-001", "crate_entity": "#x"}],
+    }
 
 FAULTS = {"orphan_evidence", "tied_rank", "point_estimate", "no_prediction"}
 
@@ -68,6 +95,35 @@ def main() -> None:
 
     rule("2. A ROUND THAT DOES NOT - four failures that happen for real")
     bad = run("l2d-broken", faults=FAULTS)
+
+    rule("3. THE LIMIT THAT CLOSES THE LOOP")
+    print("""
+  Learn does not only recommend what to make next. It also says how much the
+  next round can be: the directed-evolution and biomanufacturing architectures
+  both seed their crates with platform limits, and the Learn to Design handoff
+  in both carries a next-library size.
+
+  That is not a recommendation. It is a constraint on the phase that has not
+  run yet, and it is the one piece of information in the cycle that travels
+  backwards. The envelope carries it as `limits`, with `from` naming the crate
+  it was read out of.""")
+
+    learn_limits = [{"quantity": "library_size", "value": 36,
+                     "unit": "constructs", "from": "#crate/learn",
+                     "stated_by": "learn_to_design agent, round 1"}]
+    print(f"\n  Learn states: library_size = {learn_limits[0]['value']} "
+          f"{learn_limits[0]['unit']}\n")
+
+    d2b = load_contract("design_to_build", profile="bioprospecting")
+    for n in (36, 96):
+        errors = [e for e in validate(_next_round(n, learn_limits), d2b).errors
+                  if e.code == "exceeds_stated_limit"]
+        verdict = "accepted" if not errors else f"REFUSED  {errors[0].message}"
+        print(f"    next round orders {n:>3} constructs   ->  {verdict}")
+
+    print("""
+  Nobody had to remember the number. It travelled in the package, the next
+  contract checked it, and the refusal names the crate it came from.""")
 
     rule("WHAT THIS SHOWS")
     print(f"""
