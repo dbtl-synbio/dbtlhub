@@ -342,6 +342,14 @@
       "code": "unaligned_key",
       "message": "no term has been agreed for this key, so nothing can query it",
       "fix_hint": "one reviewed line in vocabulary/labs/<lab>.json if it is only this site's spelling for a term we already have, or a pull request against vocabulary/core.json if it is a new term. The engine may propose; a human decides, once, and every partner gets it"
+    },
+    {
+      "kind": "derived",
+      "of": "crate_ref.checksum",
+      "function": "crate_checksum",
+      "code": "checksum_mismatch",
+      "message": "the checksum does not match the crate it is supposed to attest",
+      "fix_hint": "not auto-fixable: a checksum that does not match is not a formatting problem. Either the crate changed after the checksum was taken, or the checksum was fabricated. Recompute it from the crate, or find out which"
     }
   ]
 }

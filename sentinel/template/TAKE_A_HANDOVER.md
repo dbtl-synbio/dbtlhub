@@ -36,6 +36,7 @@ things a schema cannot state:
 | `provenance_chain` | a sequence with no path back to a physical sample |
 | `required_provenance` | context that cannot be recovered later |
 | `empty` | a list that must be empty, e.g. unmapped vocabulary keys |
+| `derived` | a field that must equal a value computable from the data, e.g. a checksum |
 
 Keep the envelope and the measurement shape (`quantity + value + unit +
 method`) exactly as scaffolded. Delete the example checks you do not use — an
@@ -102,44 +103,62 @@ from the code. If it says a check exists, it exists.
 
 ## Models and API keys
 
-**Nothing here needs an API key, and the default path never calls a model.**
+**Nothing here reads an API key, and the default path never calls a model.**
 Run `demo_d2b.py` on a laptop with no network and it works.
 
-The one place a model may act is an **engine**, `framework/llm.py`:
+If you do want a model, there are three routes and all three are one argument:
 
 ```python
-class Engine:
-    name = "none"
-    def propose_patches(self, package, report, contract) -> list[Patch]: ...
-    def propose_terms(self, keys, crate, vocab=None) -> dict: ...
+from framework.engines import CommandEngine
+
+CommandEngine("claude")   # the Claude Code CLI, using the login you already have
+CommandEngine("codex")    # the OpenAI Codex CLI, same
+CommandEngine("ollama")   # a model on your own machine: no key, no network
+
+CommandEngine(argv=["my-tool", "--flag"])        # anything that reads stdin
+
+agent = DesignToBuildAgent(profile="bioprospecting",
+                           engine=CommandEngine("ollama"))
 ```
 
-The default is `RulesEngine`: deterministic, offline, and it does two things —
-restore a unit the profile already states, and recompute a checksum. Both are
-*derivable*. Nothing is guessed.
+No key is read by this repository, nothing is hardcoded, and the key never
+enters a contract, a crate, a package or the ledger — only the engine's `name`
+does, so a run with a model and a run without can be told apart afterwards.
 
-If your lab wants a model instead, you write your own subclass of `Engine`,
-with your own provider and **your own key, read from your own environment
-variable**. Nobody else's key is involved, nothing is hardcoded, and the key
-never enters a contract, a crate or the ledger:
-
-```python
-agent = DesignToBuildAgent(profile="bioprospecting", engine=MyModelEngine())
-```
-
-What the framework guarantees, whatever engine you pass:
+### What the framework guarantees, whatever engine you pass
 
 1. The engine is **only asked** about errors that are not blocking. Blocking
    errors never reach it.
 2. A patch is applied **only if the validator reported that exact path** as
-   fixable. Anything else is refused and recorded as refused in the trace.
+   fixable. Anything else is refused, and the refusal is in the trace.
 3. The package is **re-validated** afterwards. The engine is never its own
-   authority.
-4. `propose_terms` output is **reported, never applied**. A model may draft a
-   vocabulary line for a human to accept; it cannot mint a term.
-5. Every step records which engine ran, in an append-only ledger, so a run
-   with a model and a run without are told apart afterwards.
+   authority — and `derived` checks mean a fabricated value fails even when
+   the field it fills was genuinely missing.
+4. `propose_terms` output is **reported, never applied**, and a term the
+   shared `core.json` does not declare is rejected outright. A model may
+   rename; it may not coin.
+5. Every step records which engine ran, in an append-only ledger.
 
-So "does this use an LLM?" has a precise answer: not by default; optionally,
-behind those five constraints; and the handover can always be checked with no
-model at all.
+### See it for yourself
+
+```bash
+python3 scripts/prove_engine.py                  # no model at all
+python3 scripts/prove_engine.py --engine claude  # or codex, or ollama
+```
+
+Measured on the same broken crate, one key nobody had mapped (`box_temp_c`):
+
+| engine | proposed | what happened |
+|---|---|---|
+| no model | nothing — a rule cannot reason about a new word | left for a human |
+| `claude -p` | `dbtl:storageTemperature` | reported, not applied |
+| `codex exec` | `dbtl:storageTemperature` | reported, not applied |
+| `ollama`, 3B, local | `envo:temperature` — nobody agreed it | **rejected** |
+
+In all four runs the handover still failed. A model may draft. It may not
+decide.
+
+Part 3 of that script needs no model and is the one that matters: a
+deliberately hostile engine proposes a renamed well, an invented coordinate
+and a fabricated checksum. Two never reach the package. The third does, and
+the re-validation catches it.

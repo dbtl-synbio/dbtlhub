@@ -71,16 +71,38 @@ else raises `VocabularyError`: a lab may rename a term, not coin one.
 
 ## Models and API keys
 
-**Nothing here needs an API key, and the default path never calls a model.**
+**Nothing here reads an API key, and the default path never calls a model.**
 The demo runs offline. The default engine is deterministic: it restores a unit
 the profile already states and recomputes a checksum, both derivable.
 
-A lab that wants a model writes one subclass of `Engine` in `framework/llm.py`
-with its own provider and **its own key from its own environment variable**,
-and passes it as one argument. Whatever engine is passed: blocking errors
-never reach it; a patch is applied only where the validator pointed; the
-package is re-validated afterwards; vocabulary drafts are reported, never
-applied; and the ledger records which engine ran. Full statement in
+If you want one, three routes, all one argument (`framework/engines.py`):
+
+```python
+CommandEngine("claude")   # the Claude Code CLI, using the login you already have
+CommandEngine("codex")    # the OpenAI Codex CLI, same
+CommandEngine("ollama")   # a model on your own machine: no key, no network
+```
+
+Whatever engine is passed: blocking errors never reach it; a patch is applied
+only where the validator pointed; the package is re-validated afterwards;
+vocabulary suggestions are reported, never applied, and a term `core.json`
+does not declare is rejected; and the ledger records which engine ran.
+
+```bash
+python3 scripts/prove_engine.py --engine claude   # or codex, or ollama, or none
+```
+
+Measured, same code, same broken crate, one key nobody had mapped
+(`box_temp_c`):
+
+| engine | proposed | what happened |
+|---|---|---|
+| no model | nothing | left for a human |
+| `claude -p` | `dbtl:storageTemperature` | reported, not applied |
+| `codex exec` | `dbtl:storageTemperature` | reported, not applied |
+| `ollama`, 3B, local | `envo:temperature` | **rejected — a model may rename, not coin** |
+
+In all four runs the handover still failed. Full statement in
 [`template/TAKE_A_HANDOVER.md`](template/TAKE_A_HANDOVER.md).
 
 ## Known gaps, stated rather than discovered later

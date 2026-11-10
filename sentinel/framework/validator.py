@@ -404,7 +404,44 @@ def _check_empty(package, check, errors, profile=None):
                             check.get("fix_hint", "")))
 
 
+def _derive_crate_checksum(package):
+    from framework.kg import crate_checksum
+    crate = package.get("crate")
+    return crate_checksum(crate) if crate else None
+
+
+# A contract may only ask for a derivation this table names. It cannot name a
+# function to import, because a contract is data and data must not choose code.
+DERIVATIONS = {"crate_checksum": _derive_crate_checksum}
+
+
+def _check_derived(package, check, errors, profile=None):
+    """A field that must equal a value computable from the package itself.
+
+    Requiring the field to be *present* is not enough. A missing checksum is a
+    fixable error, so some engine will supply one - and an engine that is wrong,
+    or hostile, can supply a plausible string that satisfies 'present' while
+    the crate's integrity claim becomes a lie. The claim has to be checked, not
+    the field.
+    """
+    claimed = _dig(package, check["of"])
+    if claimed is None:
+        return                       # absence is the schema's business, not ours
+    derive = DERIVATIONS.get(check.get("function"))
+    if derive is None:
+        return
+    actual = derive(package)
+    if actual is None or claimed == actual:
+        return
+    errors.append(Error(
+        check["of"], check.get("code", "derived_mismatch"),
+        f"{check.get('message', 'does not match the value derived from the data')} "
+        f"(claimed {str(claimed)[:24]}..., derived {str(actual)[:24]}...)",
+        check.get("fix_hint", "")))
+
+
 CHECKS = {"unique": _check_unique, "cross_ref": _check_cross_ref,
+          "derived": _check_derived,
           "required_quantities": _check_required_quantities,
           "provenance_chain": _check_provenance_chain,
           "required_provenance": _check_required_provenance,
