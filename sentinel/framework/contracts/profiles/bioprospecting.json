@@ -101,6 +101,26 @@
       "produces": "result",
       "consumes": "object",
       "dialects": "Two are recognised today: PROV properties on the entity, and Process Run Crate actions walked backwards through result/object. That there are two is a finding to settle as a group, not a feature."
+    },
+    "test_to_learn": {
+      "root_type": [
+        "dbtl:Reading"
+      ],
+      "follow": [
+        "prov:wasDerivedFrom"
+      ],
+      "note": "Anil Wipat's note of 10 November: a format check on a table of activity measurements passes whether or not the controls behaved, whether a variant was measured three times or once, and whether anything ran off the top of the instrument. Learn needs all three to be true or the model it fits is wrong. These are the three.",
+      "entities": [
+        {
+          "type": "dbtl:Reading",
+          "requires": [
+            "dbtl:blankCorrected",
+            "dbtl:replicates",
+            "dbtl:withinRange"
+          ],
+          "why": "a reading with no blank is a signal plus an unknown offset; one replicate cannot separate an effect from a pipetting error; and a value above the instrument's range is a lower bound reported as a number, which a model will fit as if it were measured"
+        }
+      ]
     }
   },
   "required_quantities": {

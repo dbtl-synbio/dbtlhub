@@ -118,6 +118,10 @@ class TestPhaseAgent(PhaseAgent):
                           "contract": "build_to_test",
                           "run_id": store.run_id},
             "target_list": incoming.get("target_list", []),
+            # The crate goes with the package so the contract can read what
+            # Test recorded about each reading. A table of numbers cannot say
+            # whether its blank was subtracted.
+            "crate": store.crate,
             "results": self._results,
             "provenance": [{"step": "plate read", "tool": "BMG CLARIOstar Plus"}],
             "reads": task.inputs.get("reads", []),

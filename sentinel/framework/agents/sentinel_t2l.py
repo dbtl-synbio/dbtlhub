@@ -21,7 +21,8 @@ from framework.agents.sentinel_base import SentinelAgent                 # noqa:
 # to make an id unique hides the collision instead of resolving it. Both are
 # also declared in the contract's fix_hints, which is where a reviewer reads
 # them; this set is the belt to that pair of braces.
-NEVER_AUTOFIX = {"duplicate_sample_id", "missing_quantity"}
+NEVER_AUTOFIX = {"duplicate_sample_id", "missing_quantity",
+                 "unusable_reading"}
 
 
 class TestToLearnAgent(SentinelAgent):

@@ -37,6 +37,26 @@
           "why": "the same construct in a different chassis is a different experiment; the Learn phase cannot pool the two"
         }
       ]
+    },
+    "test_to_learn": {
+      "root_type": [
+        "dbtl:Reading"
+      ],
+      "follow": [
+        "prov:wasDerivedFrom"
+      ],
+      "note": "The same three, stated for a titre rather than a fluorescence. Carbonell's pipeline gates peaks by LOD and LOQ against a calibration curve, which is this use case's form of 'within range'.",
+      "entities": [
+        {
+          "type": "dbtl:Reading",
+          "requires": [
+            "dbtl:blankCorrected",
+            "dbtl:replicates",
+            "dbtl:withinRange"
+          ],
+          "why": "a titre below the limit of quantification is not a small titre, and a single colony is not a measurement of a strain"
+        }
+      ]
     }
   },
   "required_quantities": {

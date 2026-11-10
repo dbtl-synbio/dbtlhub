@@ -268,6 +268,10 @@
           }
         }
       }
+    },
+    "crate": {
+      "type": "object",
+      "description": "The run's crate, as it stands when this handover is made. Carried so the checks below can read what Test recorded about each reading - the three things a table of numbers cannot say about itself."
     }
   },
   "x-dbtl-checks": [
@@ -288,6 +292,14 @@
       "code": "missing_quantity",
       "message": "the profile requires this measurement before Learn can use the data",
       "fix_hint": "not auto-fixable: a measurement that was never taken cannot be supplied. Either the instrument output is found, or the sample is reported as incomplete"
+    },
+    {
+      "kind": "required_provenance",
+      "of": "crate.@graph",
+      "from_profile": "required_provenance.test_to_learn.entities",
+      "code": "unusable_reading",
+      "message": "the profile requires this on a reading before a model is fitted to it",
+      "fix_hint": "not auto-fixable: whether the blank was subtracted, how many replicates there were and whether the value sat inside the instrument's range are facts about the run. An agent that supplied them would be inventing the conditions of an experiment"
     }
   ]
 }
