@@ -47,12 +47,13 @@ class Addition:
     added: list[str] = field(default_factory=list)
     extended: list[str] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
+    collisions: list[str] = field(default_factory=list)
     dangling: list[str] = field(default_factory=list)
     action: str = ""
 
     @property
     def ok(self) -> bool:
-        return not self.conflicts and not self.dangling
+        return not (self.conflicts or self.collisions or self.dangling)
 
     def summary(self) -> str:
         parts = [f"{len(self.added)} new"]
@@ -60,6 +61,8 @@ class Addition:
             parts.append(f"{len(self.extended)} extended")
         if self.conflicts:
             parts.append(f"{len(self.conflicts)} CONFLICT")
+        if self.collisions:
+            parts.append(f"{len(self.collisions)} COLLISION")
         if self.dangling:
             parts.append(f"{len(self.dangling)} DANGLING")
         return ", ".join(parts)
@@ -123,8 +126,16 @@ class CrateStore:
     # ---- adding ------------------------------------------------------------
     def add(self, phase: str, entities: list[dict], *, action: dict | None = None,
             files: list[str] | None = None) -> Addition:
-        """Add one phase's entities, and the action that produced them."""
+        """Add one phase's entities, and the action that produced them.
+
+        Atomic. The addition is assembled on a copy and committed only if it
+        is accepted, so a refusal leaves the crate exactly as it was - in
+        memory as well as on disk. An earlier version refused correctly and
+        still left the bad entity in the in-memory graph, which meant the next
+        caller saw a crate the store had declined to write.
+        """
         report = Addition()
+        committed, self.crate = self.crate, json.loads(json.dumps(self.crate))
         index = self.index
 
         for entity in entities:
@@ -148,7 +159,14 @@ class CrateStore:
                     existing[key] = value
                     changed = True
                 elif existing[key] != value:
-                    report.conflicts.append(f"{ref}.{key}")
+                    # Two different things wearing one identifier inside a
+                    # single addition is not one phase overwriting another:
+                    # it is this phase writing the same @id twice, and merging
+                    # them would hide the collision instead of reporting it.
+                    if ref in report.added:
+                        report.collisions.append(f"{ref}.{key}")
+                    else:
+                        report.conflicts.append(f"{ref}.{key}")
             if changed:
                 report.extended.append(ref)
 
@@ -189,6 +207,8 @@ class CrateStore:
         if report.ok:
             self._write()
             self._append_graph()
+        else:
+            self.crate = committed          # nothing happened
         return report
 
     # ---- persistence -------------------------------------------------------

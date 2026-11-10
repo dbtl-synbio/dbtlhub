@@ -22,6 +22,7 @@ anything.
 | Slides | [`docs/sentinel_agents.pptx`](docs/sentinel_agents.pptx) |
 
 ```bash
+python3 tests/test_framework.py              # 15 tests, no dependencies
 python3 scripts/show_agents.py               # all four, as they are right now
 python3 scripts/show_agents.py --handover 1  # one in full
 python3 demo_d2b.py                          # H1: a clean crate, then a broken one

@@ -16,11 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from framework.agents.base import Task
 from framework.agents.coordinator import Coordinator
-from framework.agents.sentinel_b2t import BuildToTestAgent
-from framework.agents.sentinel_d2b import DesignToBuildAgent
-from framework.agents.phase_build import BuildAgent
-from framework.agents.phase_design import DesignAgent
-from framework.agents.phase_test import TestAgent
+from framework.agents.phase_build_crate import BuildPhaseAgent
+from framework.agents.phase_design_crate import DesignPhaseAgent
+from framework.agents.phase_test_crate import TestPhaseAgent
 from framework.validator import load_contract, validate
 from usecases.bioprospecting import instruments as bp
 
@@ -45,68 +43,49 @@ def show(result, label: str) -> None:
 
 
 def run(run_id: str, faults: set[str] | None = None) -> Coordinator:
+    """One run, through the phase agents that write the run's single crate.
+
+    This used to drive a second family of agents that produced packages
+    without a crate. Keeping two families alive is what let a contract change
+    pass its own demo and break this one, so there is only one family now.
+    """
     coord = Coordinator(run_id)
 
-    # ---- Design, and the handover that starts the chain --------------------
     design = coord.step(
-        DesignAgent(),
-        Task(goal="select a candidate panel", inputs={"n": 12}),
-        label="design")
-    d2b = coord.step(
-        DesignToBuildAgent(profile="bioprospecting", lab="newcastle"),
-        Task(goal="hand over to Build",
-             inputs={"crate": design.outputs["crate"],
-                     "items": design.outputs["items"], "run_id": run_id,
-                     "target_list": TARGETS},
-             max_repairs=2),
-        label="handover d2b", store_as="d2b")
-    show(d2b, "sentinel_d2b")
-    panel = bp.design_panel(12)
+        DesignPhaseAgent(profile="bioprospecting", lab="newcastle"),
+        Task(goal="select a candidate panel",
+             inputs={"n": 12, "run_id": run_id}, max_repairs=2),
+        label="design", store_as="d2b")
+    show(design, "phase_design")
 
-    # ---- Build -------------------------------------------------------------
     build = coord.step(
-        BuildAgent(),
+        BuildPhaseAgent(profile="bioprospecting"),
         Task(goal="build the candidate panel",
-             inputs={"panel": panel, "run_id": run_id, "faults": faults,
-                     "target_list": TARGETS,
-                     # not a path this phase made up: where d2b really landed
-                     "design_package": coord.path_of("d2b")}),
-        label="build", store_as="b2t_raw")
-    show(build, "phase_build")
+             inputs={"panel": bp.design_panel(12), "run_id": run_id,
+                     "faults": faults, "target_list": TARGETS,
+                     "design_package": coord.path_of("d2b")}, max_repairs=2),
+        label="build", store_as="b2t")
+    show(build, "sentinel_b2t")
 
-    # ---- the Build -> Test handover ----------------------------------------
-    handover = coord.step(
-        BuildToTestAgent(profile="bioprospecting"),
-        Task(goal="hand over to Test", inputs={"package": build.outputs["package"]},
-             max_repairs=2),
-        label="handover b2t", store_as="b2t")
-    show(handover, "sentinel_b2t")
-
-    if not coord.should_continue(handover):
+    if not coord.should_continue(build):
         print("\n    route stopped: Test is not given a package the validator rejected")
         return coord
 
-    # ---- Test --------------------------------------------------------------
     test = coord.step(
-        TestAgent(),
+        TestPhaseAgent(profile="bioprospecting"),
         Task(goal="read the plate",
-             inputs={"package": handover.outputs["package"],
-                     "build_package": coord.path_of("b2t")}),
-        label="test", store_as="t2l_raw")
-    show(test, "phase_test")
-
-    # ---- the Test -> Learn handover (validated directly, no agent yet) -----
-    t2l = load_contract("test_to_learn", profile="bioprospecting")
-    report = validate(test.outputs["package"], t2l)
-    print(f"\n[sentinel_t2l] -> {'OK' if report.ok else 'FAIL'}")
-    print(f"    validate against {t2l['$id']} -> "
-          f"{'PASS' if report.ok else f'{len(report.errors)} error(s)'}")
-    if not report.ok:
-        print(report.text("    "))
+             inputs={"package": build.outputs["package"], "run_id": run_id,
+                     "build_package": coord.path_of("b2t")}, max_repairs=2),
+        label="test", store_as="t2l")
+    show(test, "sentinel_t2l")
     return coord
 
 
 def main() -> None:
+    import shutil
+    for run_id in ("demo-clean", "demo-broken"):
+        shutil.rmtree(Path(__file__).parent / "runs" / run_id, ignore_errors=True)
+
     rule("1. CLEAN RUN - everything the contract asks for is present")
     clean = run("demo-clean")
 
@@ -136,8 +115,8 @@ def main() -> None:
             "location": {"container_id": "REACTOR-1", "position": "R1"},
             "qc": {"verdict": "pass", "measurements": [
                 {"quantity": "sequence_verified", "value": True, "unit": "dimensionless",
-                 "method": "nanopore verification"},
-                {"quantity": "biomass", "value": 3.2, "unit": "gDW/L",
+                 "method": "Sanger verification of the assembled plasmid"},
+                {"quantity": "biomass", "value": 3.2, "unit": "OD600",
                  "method": "OD600 converted to dry weight"}]}}],
     }
     contract = load_contract("build_to_test", profile="biomanufacturing")

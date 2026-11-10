@@ -97,10 +97,10 @@ caught, one safely repairable, two needing a decision** — with the ledger as p
 | `SentinelAgent` base: translate → validate → repair → escalate | working; B→T and D→B are both subclasses, one with no code at all |
 | SHACL shapes for D→B | written, **never executed** (needs `pyshacl`) |
 | T→L contract | working, validated directly — **no sentinel agent yet** |
-| L→D contract + iteration record | **not written** — the coordinator is to own the loop closure |
-| Learn phase agent | **not written** |
+| L→D contract + iteration record | working — 5 checks, and `demo_l2d.py` runs a round that closes and one that does not |
+| Learn phase agent | working — `phase_learn_crate.py`, writes its recommendations into the run crate |
 | Model engine | interface ready (`propose_patches`, `propose_terms`), only `RulesEngine` implemented |
-| Biomanufacturing tool adapters | **not written** — only the profile exists |
+| Biomanufacturing tool adapters | still not written — the profile exists and now matches the published SYNBIOCHEM pipeline |
 | `w3id.org` namespace for `dbtl:` | **not minted** — blocks merging two teams' graphs |
 
 Suggested order: mint the namespace (it is a pull request, and it blocks others),

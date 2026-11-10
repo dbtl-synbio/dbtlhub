@@ -1,29 +1,21 @@
-certifi==2026.7.22
-charset-normalizer==3.5.2
-cloudpickle==3.1.2
-contourpy==1.3.3
-cycler==0.12.1
-fonttools==4.67.0
-idna==3.20
-igraph==1.0.0
-joblib==1.6.0
-kiwisolver==1.5.1
-leidenalg==0.12.0
-matplotlib==3.11.2
-narwhals==2.27.1
-networkx==3.6.1
-numpy==2.4.6
-packaging==26.3
-pandas==3.0.6
-pillow==12.3.0
-pyarrow==26.0.0
-pyparsing==3.3.3
-python-dateutil==2.9.0.post0
-python-igraph==1.0.0
-requests==2.34.2
-scikit-learn==1.9.1
-scipy==1.17.1
-six==1.17.0
-texttable==1.7.1
-threadpoolctl==3.7.0
-urllib3==2.8.0
+# Nothing. That is the point.
+#
+# Every demo and every script in this framework runs on the Python standard
+# library alone - no install step, no virtualenv, no network. If you can run
+# `python3 demo_cycle.py` you have everything.
+#
+# This file used to be an unrelated pip freeze (matplotlib, scikit-learn,
+# leidenalg) left over from another project in the same folder. It listed
+# nothing the framework uses and none of what the documentation names.
+#
+# Optional, and only if you want to go further than this framework does:
+#
+#   rdflib       to query runs/<id>/graph/*.nt with real SPARQL instead of
+#                the small reader in scripts/ask.py
+#   pyoxigraph   the same, faster, if a run's graph gets large
+#   pyshacl      to execute framework/contracts/shapes/*.shacl.ttl, which are
+#                written and have never been run
+#   ro-crate-py  to read and write crates with a library rather than by hand
+#
+# None of those is imported anywhere. Install them only when you write the
+# code that needs them, and add that code's dependency here when you do.

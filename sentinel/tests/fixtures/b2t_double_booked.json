@@ -1,0 +1,424 @@
+{
+ "contract": "build_to_test",
+ "contract_version": "0.2.0",
+ "profile": "bioprospecting",
+ "run_id": "fixture",
+ "produced_by": {
+  "agent": "phase_build",
+  "tool": "OT-2 (simulated)",
+  "engine": "none"
+ },
+ "produced_at": "2026-11-10T00:00:00Z",
+ "design_ref": {
+  "package": "runs/fixture/d2b/handover.json",
+  "contract": "design_to_build",
+  "run_id": "fixture",
+  "items": [
+   {
+    "design_item_id": "CAND-001",
+    "accession": "MGYP:5942859575"
+   },
+   {
+    "design_item_id": "CAND-002",
+    "accession": "MGYP:3795742288"
+   },
+   {
+    "design_item_id": "CAND-003",
+    "accession": "MGYP:3301595691"
+   },
+   {
+    "design_item_id": "CAND-004",
+    "accession": "MGYP:3179419893"
+   },
+   {
+    "design_item_id": "CAND-005",
+    "accession": "MGYP:1161042648"
+   },
+   {
+    "design_item_id": "CAND-006",
+    "accession": "MGYP:7157461338"
+   },
+   {
+    "design_item_id": "CAND-007",
+    "accession": "MGYP:1300026767"
+   },
+   {
+    "design_item_id": "CAND-008",
+    "accession": "MGYP:9979544025"
+   },
+   {
+    "design_item_id": "CAND-009",
+    "accession": "MGYP:2823296038"
+   },
+   {
+    "design_item_id": "CAND-010",
+    "accession": "MGYP:5070378921"
+   },
+   {
+    "design_item_id": "CAND-011",
+    "accession": "MGYP:2703729684"
+   },
+   {
+    "design_item_id": "CAND-012",
+    "accession": "MGYP:5192983756"
+   }
+  ]
+ },
+ "samples": [
+  {
+   "sample_id": "BP1-A01",
+   "design_item_id": "CAND-001",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A1"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1240,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 90.5,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 4.53,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A02",
+   "design_item_id": "CAND-002",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A2"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1255,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 64.6,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 3.23,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A03",
+   "design_item_id": "CAND-003",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A3"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1180,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 79.5,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 3.98,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A04",
+   "design_item_id": "CAND-004",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A4"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1180,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 39.8,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 1.99,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A05",
+   "design_item_id": "CAND-005",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A5"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1180,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 87.1,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 4.35,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A06",
+   "design_item_id": "CAND-006",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A6"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1221,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 11.3,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 0.57,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A07",
+   "design_item_id": "CAND-007",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A7"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1255,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 44.4,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 2.22,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A08",
+   "design_item_id": "CAND-008",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A8"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1221,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 15.9,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 0.8,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A09",
+   "design_item_id": "CAND-009",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A9"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1255,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 13.1,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 0.66,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A04",
+   "design_item_id": "CAND-010",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A4"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1180,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 90.4,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 4.52,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A11",
+   "design_item_id": "CAND-011",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A11"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1180,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 58.2,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 2.91,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  },
+  {
+   "sample_id": "BP1-A12",
+   "design_item_id": "CAND-012",
+   "location": {
+    "container_id": "PLATE-1",
+    "position": "A12"
+   },
+   "qc": {
+    "measurements": [
+     {
+      "quantity": "fragment_size",
+      "value": 1255,
+      "unit": "bp",
+      "method": "Agilent TapeStation 4200"
+     },
+     {
+      "quantity": "dna_concentration",
+      "value": 12.3,
+      "unit": "ng/uL",
+      "method": "Agilent TapeStation 4200",
+      "uncertainty": {
+       "value": 0.62,
+       "unit": "ng/uL"
+      }
+     }
+    ],
+    "verdict": "pass"
+   }
+  }
+ ],
+ "not_delivered": [],
+ "provenance": [
+  {
+   "step": "liquid handling",
+   "tool": "Opentrons OT-2"
+  }
+ ]
+}

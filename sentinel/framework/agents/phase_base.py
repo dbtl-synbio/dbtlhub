@@ -72,13 +72,21 @@ class PhaseAgent(Agent):
             # earlier one recorded. That is a disagreement about what happened,
             # and no contract can settle it.
             reasons = ([f"would overwrite {c}" for c in added.conflicts]
+                       + [f"two different things share one @id: {c}"
+                          for c in added.collisions]
                        + [f"points at nothing: {d}" for d in added.dangling])
-            why = ("this phase would change a value another phase already "
-                   "recorded. Fill a gap, yes; overwrite, no."
-                   if added.conflicts else
-                   "this phase wrote a reference to an entity the crate does "
-                   "not contain. In one shared crate that is a join to "
-                   "nothing, and nothing downstream would notice.")
+            if added.conflicts:
+                why = ("this phase would change a value another phase already "
+                       "recorded. Fill a gap, yes; overwrite, no.")
+            elif added.collisions:
+                why = ("this phase wrote one identifier for two different "
+                       "things. Merging them would hide whatever caused the "
+                       "collision - a shifted deck, a relabelled tube - and "
+                       "leave a crate that says they were the same thing.")
+            else:
+                why = ("this phase wrote a reference to an entity the crate "
+                       "does not contain. In one shared crate that is a join "
+                       "to nothing, and nothing downstream would notice.")
             return Result(
                 status="escalated", outputs={"store": store},
                 engine=self.engine.name, errors=reasons,

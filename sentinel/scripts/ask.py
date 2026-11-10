@@ -23,20 +23,32 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 RUNS = ROOT / "runs"
-BASE = "https://w3id.org/dbtlhub/"
 
 BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
 RED, GREEN, BLUE = "\033[31m", "\033[32m", "\033[34m"
 
-# What to follow when walking backwards. Two vocabularies meet here: the
-# handover spine this framework writes, and whatever the crate used.
-BACK = [f"{BASE}builtFrom", f"{BASE}liftsFrom", f"{BASE}measures",
-        f"{BASE}restsOn", "http://www.w3.org/ns/prov#wasDerivedFrom",
-        "http://www.w3.org/ns/prov#wasGeneratedBy",
-        "http://www.w3.org/ns/prov#used", "http://schema.org/isBasedOn"]
-LABELS = ["http://schema.org/name", f"{BASE}identifier",
-          "http://schema.org/description"]
+# What to follow when walking backwards. Expanded through the vocabulary the
+# lifter itself uses, never by gluing strings onto a base: the first version of
+# this file built "<base>restsOn" by hand while the graph held
+# "<base>terms/restsOn", so the traversal silently walked two nodes and
+# reported that nothing reached a sample. A prefix table exists; use it.
+from framework.vocab import DEFAULT                                   # noqa: E402
+
+BACK_CURIES = [
+    "dbtl:builtFrom", "dbtl:liftsFrom", "dbtl:measures", "dbtl:restsOn",
+    "prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used",
+    "schema:isBasedOn", "schema:isPartOf",
+    # An action's inputs. Walking an action without these stops at the action.
+    "schema:object",
+]
+BACK = [DEFAULT.expand(c) for c in BACK_CURIES]
+# The handover spine is written with bare base IRIs by framework.kg, not
+# through the dbtl: prefix. Both are real; neither is guessed here.
+BASE = DEFAULT.base
+LABELS = [DEFAULT.expand(c) for c in
+          ("schema:name", "dbtl:identifier", "schema:description")]
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
 
@@ -48,16 +60,24 @@ def parse(path: Path):
         if not line.endswith("."):
             continue
         line = line[:-1].strip()
-        if not line.startswith("<"):
+        if line.startswith("_:"):
+            subject, _, rest = line.partition(" ")
+            rest = rest.strip()
+        elif line.startswith("<"):
+            subject, rest = line[1:].split(">", 1)
+            rest = rest.strip()
+        else:
             continue
-        subject, rest = line[1:].split(">", 1)
-        rest = rest.strip()
         if not rest.startswith("<"):
             continue
         predicate, rest = rest[1:].split(">", 1)
         obj = rest.strip()
         if obj.startswith("<") and obj.endswith(">"):
             out.append((subject, predicate, obj[1:-1], True))
+        elif obj.startswith("_:"):
+            # A measurement is a blank node. Dropping it loses exactly the
+            # shape this framework insists on: quantity, value, unit, method.
+            out.append((subject, predicate, obj, True))
         else:
             out.append((subject, predicate, obj.strip('"'), False))
     return out
@@ -113,18 +133,21 @@ def main() -> None:
                     help="an identifier: a sample, an ordered item, a recommendation")
     args = ap.parse_args()
 
-    path = RUNS / args.run_id / "graph" / "run.nt"
-    if not path.exists():
+    paths = [RUNS / args.run_id / "graph" / name
+             for name in ("run.nt", "handovers.nt")]
+    present = [p for p in paths if p.exists()]
+    if not present:
         sys.exit(f"no graph for run {args.run_id!r}. Run the cycle first.")
 
-    triples = parse(path)
+    triples = [t for p in present for t in parse(p)]
     out, _ = index(triples)
     handovers = sorted(s for s, props in out.items()
                        if any(p == RDF_TYPE and o.endswith("Handover")
                               for p, o, _ in props))
 
-    print(f"\n{BOLD}runs/{args.run_id}/graph/run.nt{OFF}  "
-          f"{DIM}{len(triples)} triples, {len(out)} subjects{OFF}")
+    print(f"\n{BOLD}runs/{args.run_id}/graph/{OFF}  "
+          f"{DIM}{', '.join(p.name for p in present)} - {len(triples)} triples, "
+          f"{len(out)} subjects{OFF}")
     print(f"{DIM}one file: the Design crate's own provenance, plus the spine "
           f"joining the handovers{OFF}\n")
 

@@ -45,8 +45,12 @@ class Coordinator:
             # per thing it carries - so by the end of the cycle the whole
             # thing is one graph and not four files joined by hand.
             from framework.kg import append_graph, lift_package
+            # Its own file. runs/<id>/graph/run.nt belongs to the crate store,
+            # which rewrites it from the crate on every addition - appending
+            # here as well meant these triples were written and then silently
+            # clobbered. Two writers, one file, and the loser was invisible.
             append_graph(lift_package(package, stored),
-                         self.ledger.dir / "graph" / "run.nt")
+                         self.ledger.dir / "graph" / "handovers.nt")
 
         self.ledger.record(
             step=label, agent=agent.name, engine=result.engine, status=result.status,

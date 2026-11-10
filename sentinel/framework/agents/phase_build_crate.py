@@ -50,19 +50,30 @@ class BuildPhaseAgent(PhaseAgent):
 
         entities = [{"@id": f"#plate/{container}", "@type": "dbtl:Plate",
                      "identifier": container, "dbtl:format": "96 wells"}]
+        self._unknown = []
         for row in qc_rows:
             pos = row["position"]
             sample = f"BP1-{pos[0]}{int(pos[1:]):02d}"
-            entities.append({
+            entity = {
                 "@id": f"#sample/{sample}",
                 "@type": ["bioschemas:BioSample", "dbtl:BuiltSample"],
                 "identifier": sample,
                 "dbtl:storageContainer": row["container_id"],
                 "dbtl:storagePosition": pos,
-                # The join back into what Design wrote, in the same graph.
-                "prov:wasDerivedFrom": {"@id": made[row["design_item_id"]]},
                 "dbtl:verdict": row["verdict"],
-            })
+            }
+            origin = made.get(row["design_item_id"])
+            if origin:
+                # The join back into what Design wrote, in the same graph.
+                entity["prov:wasDerivedFrom"] = {"@id": origin}
+            else:
+                # A tube relabelled by hand with something Design never made.
+                # Do NOT invent a join: write the sample without an origin and
+                # let the contract refuse the package, where the message says
+                # what happened. A fabricated @id would pass the crate store
+                # and lose the error.
+                self._unknown.append(row["design_item_id"])
+            entities.append(entity)
 
         action = {
             "@id": "#action/build-phase",
@@ -71,7 +82,8 @@ class BuildPhaseAgent(PhaseAgent):
             "description": f"Liquid handling and QC over {len(qc_rows)} wells.",
             "instrument": {"@id": "#tool/ot2"},
             "endTime": now(),
-            "object": [{"@id": made[r["design_item_id"]]} for r in qc_rows],
+            "object": [{"@id": made[r["design_item_id"]]} for r in qc_rows
+                       if r["design_item_id"] in made],
             "result": [{"@id": f"#sample/BP1-{r['position'][0]}"
                                f"{int(r['position'][1:]):02d}"} for r in qc_rows],
         }
