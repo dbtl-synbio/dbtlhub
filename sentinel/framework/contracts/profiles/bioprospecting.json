@@ -147,5 +147,18 @@
       "role": "plate reader",
       "emits": "absorbance at 510 nm"
     }
-  ]
+  ],
+  "accepted_values": {
+    "design_to_build": [
+      {
+        "property": "coding sequence completeness",
+        "at": "additionalProperty",
+        "accept": [
+          "complete"
+        ],
+        "severity": "flag",
+        "why": "a gene called with open ends can run off the end of a contig, so a right or left partial is a truncated enzyme. The crate records this honestly per protein, which is correct - but ordering one without telling Build means a negative result later cannot be told apart from a protein that was never whole."
+      }
+    ]
+  }
 }

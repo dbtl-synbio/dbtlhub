@@ -63,7 +63,7 @@ def overview(pairs, profile: str) -> None:
     print(f"  {BLUE}translate{OFF} -> {BLUE}validate{OFF} -> {BLUE}repair{OFF} "
           f"(bounded) -> {BLUE}escalate{OFF}  {DIM}(framework/agents/sentinel_base.py){OFF}\n")
 
-    head = f"  {'':<4}{'sentinel':<15}{'contract':<17}{'checks':<8}{'blocking':<10}state"
+    head = f"  {'':<4}{'sentinel':<15}{'contract':<17}{'checks':<8}{'never fixed':<13}state"
     print(BOLD + head + OFF)
     print(DIM + "  " + "-" * (len(head) - 2) + OFF)
 

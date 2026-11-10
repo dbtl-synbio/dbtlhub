@@ -54,11 +54,14 @@ def _break_all(crate, items, report, args) -> None:
         # Ask the validator for the codes rather than parsing its printout:
         # a path like '.gene calling mode' has spaces in it, and a column
         # offset is not a data format.
-        codes = sorted({e.code for e in
-                        validate(result.outputs["package"], agent.contract).errors})
-        print(f"  {label:<28}{mark}  "
-              + (f"{DIM}the order can go out{OFF}" if ok
-                 else f"{len(result.errors)} error(s): {', '.join(codes)}"))
+        checked = validate(result.outputs["package"], agent.contract)
+        codes = sorted({e.code for e in checked.blocking})
+        flagged = len(checked.flags)
+        note = (f"{DIM}the order can go out{OFF}" if ok
+                else f"{len(codes)} error(s): {', '.join(codes)}")
+        if flagged:
+            note += f"  {AMBER}+{flagged} flag(s){OFF}"
+        print(f"  {label:<28}{mark}  {note}")
     print(f"\n{DIM}  Two of those three faults pass every RO-Crate validator "
           f"there is.{OFF}\n")
 
@@ -122,20 +125,32 @@ def main() -> None:
     for err in result.errors:
         print(f"  {RED}!{OFF} {err}")
 
-    colour = GREEN if result.status == "ok" else RED
-    print(f"\n  {colour}{BOLD}{result.status.upper()}{OFF}"
-          + (f"  -  {len(result.errors)} error(s) need a decision"
-             if result.errors else "  -  the order can go to the vendor"))
+    ok = result.status == "ok"
+    colour = GREEN if ok else RED
+    flags = [e for e in result.errors if "[flag]" in e]
+    if ok:
+        tail = ("  -  the order can go to the vendor" if not flags else
+                f"  -  the order can go, and Build is told about "
+                f"{len(flags)} flagged item(s)")
+    else:
+        tail = f"  -  {len(result.errors)} error(s) need a decision"
+    print(f"\n  {colour}{BOLD}{'ACCEPTED' if ok else 'REFUSED'}{OFF}{tail}")
 
     if result.status == "ok":
         view = agent.provider_view(result.outputs["package"])
         print(f"\n{BOLD}What would actually leave the building{OFF}")
         print(f"  {DIM}container {view['container_id']}, format "
               f"{view['format']}{OFF}")
-        for line in view["items"]:
+        flagged = {b["design_item_id"] for b, e in
+                   zip(result.outputs["package"]["bindings"], range(99))
+                   if any(f"bindings[{e}]" in x for x in flags)}
+        for line, binding in zip(view["items"],
+                                 result.outputs["package"]["bindings"]):
+            mark = (f"  {AMBER}← flagged{OFF}"
+                    if binding["design_item_id"] in flagged else "")
             print(f"    {line['order_item_id']}  {line['position']:<4}"
                   f"{line['sequence_type']:<5}{line['length_bp']:>6} bp  "
-                  f"{line['sequence_sha256'][:23]}...")
+                  f"{line['sequence_sha256'][:23]}...{mark}")
         print(f"  {DIM}No coordinates, no freezer, no collector. Those stay "
               f"with us, and the crate keeps them queryable.{OFF}")
     print()

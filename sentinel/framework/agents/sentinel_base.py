@@ -58,12 +58,17 @@ class SentinelAgent(Agent):
         report = validate(package, self.contract)
         trace.append(f"validate against {self.contract['$id']} "
                      f"[profile {self.profile}] -> "
-                     f"{'PASS' if report.ok else f'FAIL, {len(report.errors)} error(s)'}")
+                     + ("PASS" if report.ok else
+                        f"FAIL, {len(report.blocking)} error(s)")
+                     + (f" + {len(report.flags)} flag(s)" if report.flags else ""))
 
         attempt = 0
         while not report.ok and attempt < task.max_repairs:
             attempt += 1
-            fixable = [e for e in report.errors if not self.is_blocking(e)]
+            # Only blocking errors are candidates for repair. A flag is not a
+            # defect to be patched away - it is something true about the data
+            # that the next phase has to be told.
+            fixable = [e for e in report.blocking if not self.is_blocking(e)]
             if not fixable:
                 trace.append(f"repair {attempt}: every remaining error needs a "
                              f"decision, not a patch")
@@ -95,11 +100,20 @@ class SentinelAgent(Agent):
             # The validator is the authority: re-check, never trust the patch.
             report = validate(package, self.contract)
             trace.append(f"repair {attempt}: {applied} patch(es) applied, "
-                         f"re-validate -> {len(report.errors)} error(s) left")
+                         f"re-validate -> {len(report.blocking)} error(s) left")
+
+        for flag in report.flags:
+            trace.append(f"FLAG: {flag.message}"
+                         + (f" - {flag.fix_hint}" if flag.fix_hint else ""))
 
         if report.ok:
+            if report.flags:
+                trace.append(f"accepted with {len(report.flags)} flag(s): the "
+                             f"package is valid and the receiving phase has "
+                             f"been told what it is receiving")
             return Result(status="ok", outputs={"package": package},
-                          engine=self.engine.name, notes=trace)
+                          engine=self.engine.name, notes=trace,
+                          errors=[str(f) for f in report.flags])
 
         return Result(
             status="escalated",
@@ -107,7 +121,7 @@ class SentinelAgent(Agent):
             errors=[str(e) for e in report.errors],
             engine=self.engine.name,
             notes=trace + [
-                f"ESCALATE: {len(report.errors)} error(s) need a decision",
+                f"ESCALATE: {len(report.blocking)} error(s) need a decision",
                 *dict.fromkeys(f"  {e.code}: {e.fix_hint}"
                                for e in report.errors if e.fix_hint),
             ],

@@ -37,6 +37,7 @@ things a schema cannot state:
 | `required_provenance` | context that cannot be recovered later |
 | `empty` | a list that must be empty, e.g. unmapped vocabulary keys |
 | `derived` | a field that must equal a value computable from the data, e.g. a checksum |
+| `entity_value` | a referenced entity says something the next phase must act on |
 
 Keep the envelope and the measurement shape (`quantity + value + unit +
 method`) exactly as scaffolded. Delete the example checks you do not use — an
@@ -69,6 +70,22 @@ reviewer sees, not in a Python set only its author knows about.
 Keep it only if your upstream phase does not already emit a package in the
 contract's shape. Handover 1 is the one exception: Design has to project an
 order for the synthesis vendor out of the crate and keep the two joined.
+
+## 4b. Errors, and flags
+
+A check may declare `"severity": "flag"`. A flag does not make the package
+invalid and is never patched: it is something the upstream phase recorded
+honestly and the downstream phase has to be told about.
+
+The case that forced this into the framework: the bioprospecting example crate
+records one of its four proteins as a `right partial` — a gene called with
+open ends that ran off the end of a contig, so the enzyme may be truncated.
+Refusing the crate would be calling an accurate crate invalid. Saying nothing
+would put a truncated gene in well A3 with nobody the wiser. The handover is
+therefore accepted, and the flag travels with it.
+
+Use `error` when the package cannot be acted on. Use `flag` when it can, but
+not blindly.
 
 ## 5. The step everyone skips
 

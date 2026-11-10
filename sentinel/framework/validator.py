@@ -35,9 +35,16 @@ class Error:
     code: str
     message: str
     fix_hint: str = ""
+    # "error" stops the handover. "flag" does not: it is something the crate
+    # states honestly and the receiving phase has to be told about, like a
+    # coding sequence recorded as a right partial. Refusing it would call an
+    # accurate crate invalid; dropping it would send Build a truncated gene
+    # without saying so. Neither is acceptable, so there are two severities.
+    severity: str = "error"
 
     def __str__(self) -> str:
-        return f"{self.path:<42} {self.code:<20} {self.message}"
+        mark = "" if self.severity == "error" else "[flag] "
+        return f"{self.path:<42} {self.code:<20} {mark}{self.message}"
 
 
 @dataclass
@@ -45,8 +52,17 @@ class Report:
     errors: list[Error] = field(default_factory=list)
 
     @property
+    def blocking(self) -> list[Error]:
+        return [e for e in self.errors if e.severity == "error"]
+
+    @property
+    def flags(self) -> list[Error]:
+        return [e for e in self.errors if e.severity != "error"]
+
+    @property
     def ok(self) -> bool:
-        return not self.errors
+        """A flag does not make a package invalid. It makes it conditional."""
+        return not self.blocking
 
     def codes(self) -> list[str]:
         return [e.code for e in self.errors]
@@ -537,6 +553,48 @@ def _named_properties(node: dict, at: str | None, index: dict) -> dict:
     return out
 
 
+def _check_entity_value(package, check, errors, profile=None):
+    """Does a referenced entity say something the receiving phase must act on?
+
+    Anil Wipat's note on the use case's example crates asks for exactly this:
+    "do the values mean what Build expects?" A gene called with open ends may
+    be a truncated fragment, and the crate says so honestly, per protein. The
+    crate is not wrong and must not be refused - but Build cannot be sent a
+    right partial sequence without being told.
+    """
+    rules = _dig(profile or {}, check.get("from_profile", "")) or []
+    if not rules:
+        return
+    index = _index(_dig(package, check["in"]))
+
+    for i, row in enumerate(_dig(package, check["of"]) or []):
+        if not isinstance(row, dict):
+            continue
+        node = index.get(row.get(check["field"]))
+        if node is None:
+            continue
+        for rule in rules:
+            named = _named_properties(node, rule.get("at"), index)
+            value = named.get(rule["property"], node.get(rule["property"]))
+            if value is None:
+                if rule.get("required"):
+                    errors.append(Error(
+                        f"{check['of']}[{i}].{rule['property']}",
+                        check.get("code", "flagged_entity"),
+                        f"the profile requires {rule['property']!r} on an "
+                        f"ordered entity, and it is not stated",
+                        rule.get("why", ""), rule.get("severity", "error")))
+                continue
+            if rule.get("accept") and value not in rule["accept"]:
+                errors.append(Error(
+                    f"{check['of']}[{i}].{rule['property']}",
+                    check.get("code", "flagged_entity"),
+                    f"{node.get('identifier', node.get('@id'))}: "
+                    f"{rule['property']} is {value!r}, "
+                    f"not {' or '.join(map(repr, rule['accept']))}",
+                    rule.get("why", ""), rule.get("severity", "flag")))
+
+
 def _check_empty(package, check, errors, profile=None):
     """A list that must be empty for the handover to be complete."""
     for item in _dig(package, check["of"]) or []:
@@ -586,6 +644,7 @@ CHECKS = {"unique": _check_unique, "cross_ref": _check_cross_ref,
           "required_quantities": _check_required_quantities,
           "provenance_chain": _check_provenance_chain,
           "required_provenance": _check_required_provenance,
+          "entity_value": _check_entity_value,
           "empty": _check_empty}
 
 

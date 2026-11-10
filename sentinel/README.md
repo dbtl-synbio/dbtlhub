@@ -42,13 +42,21 @@ bioprospecting use case published, and then breaks it three ways on purpose:
 
 | | | |
 |---|---|---|
-| the crate as published | **accepted** | 105 entities → 570 triples, 0 unaligned keys, an order of 4 constructs projected |
+| the crate as published | **accepted, with one flag** | 105 entities → 570 triples, 0 unaligned keys, 4 constructs ordered — and `ENR-003` flagged, because the crate records it as a `right partial` |
 | a file it promises, removed | refused | `missing_file` — a relative `@id` is a promise, and no profile validator checks it |
 | the profile it claims, removed | refused | `too_few_items` — a crate that states no profile cannot be interpreted |
 | the gene calling mode, removed | refused | `missing_provenance` — open ends permits a truncated gene, so Build cannot judge what it got |
 
-Two of those three faults pass every RO-Crate validator there is. The last one
-is the argument for having a contract at all: conformance is not sufficiency.
+Two of those three faults pass every RO-Crate validator there is. The third is
+the argument for having a contract at all: conformance is not sufficiency.
+
+The flag on the accepted crate is the other half of that argument. One of the
+four proteins is recorded as a `right partial` — a gene called with open ends
+that ran off the end of a contig, so the enzyme may be truncated. The crate
+says so honestly. Refusing it would call an accurate crate invalid; saying
+nothing would put a truncated gene in well A3 with nobody the wiser. So a
+check can declare `"severity": "flag"`: the handover is accepted, the order
+goes out, and well A3 is marked.
 
 **A finding, not a feature.** That crate expresses provenance through
 `CreateAction` / `object` / `result`, walked backwards; the simulated crate in
@@ -142,9 +150,6 @@ In all four runs the handover still failed. Full statement in
 - **The SHACL shapes are written but never executed.**
   `framework/contracts/shapes/` holds the equivalents of the graph checks;
   nothing runs `pyshacl` against them yet.
-- **No warning severity.** Checks pass or fail. Something like "gene calling
-  mode is set to open ends" is not an error — it is a flag Build must act on —
-  and there is currently nowhere to put it. This needs a third outcome.
 - **Referential integrity is partial.** For a crate read from disk, every
   relative `@id` typed `File` is checked against the folder, and a file the
   crate promises and does not deliver is a `missing_file` violation. What is

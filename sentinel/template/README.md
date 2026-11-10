@@ -72,6 +72,7 @@ Contracts carry an `x-dbtl-checks` section. Kinds available today:
 | `required_provenance` | context that cannot be recovered later |
 | `empty` | a list that must be empty, e.g. unmapped vocabulary keys |
 | `derived` | a field that must equal a value computable from the data, e.g. a checksum |
+| `entity_value` | a referenced entity says something the next phase must act on |
 
 Adding a kind is one function in `validator.py` plus one line in its `CHECKS`
 table. Delete the examples you do not use: an unused check is worse than no

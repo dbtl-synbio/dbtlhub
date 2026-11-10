@@ -364,6 +364,16 @@
       "code": "missing_file",
       "message": "the crate names this file and it is not there",
       "fix_hint": "not auto-fixable: the file is either found and added to the crate, or the entity that names it is removed. An agent cannot create the data."
+    },
+    {
+      "kind": "entity_value",
+      "of": "bindings",
+      "field": "crate_entity",
+      "in": "crate.@graph",
+      "from_profile": "accepted_values.design_to_build",
+      "code": "flagged_entity",
+      "message": "the crate states something about this entity that Build has to act on",
+      "fix_hint": "not auto-fixable, and not a defect in the crate: the crate is telling the truth. Either the candidate is dropped from the order, or Build is told and accepts it knowingly"
     }
   ]
 }
