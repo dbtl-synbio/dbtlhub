@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel agents: where they sit and what they keep</title>
+<meta name="description" content="A plain-language walk through one DBTL cycle: what each sentinel agent checks, where a language model may act, and how the record grows into one graph.">
+<meta name="author" content="Marco Anteghini, LifeGlimmer">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+    /* base styles a browser needs when the page stands on its own */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; }
+    img, svg { max-width: 100%; }
+    [hidden] { display: none !important; }
+  /* Layout: single reading column, full-bleed diagram band, phase cards as a
+     numbered vertical sequence because the content really is a sequence. */
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --line: #e2ddd3;
+    --fg: #1d2321;
+    --muted: #6b7471;
+    --deep: #0e5c6b;      /* the cycle, the agents */
+    --sand: #b98a2e;      /* the material, the crate */
+    --refuse: #a62b2b;    /* what gets sent back */
+    --accept: #2e7d4f;    /* what goes through */
+    --model: #4b3b9e;     /* the two places a model may act */
+    --model-soft: #efedf9;
+    --deep-soft: #e6f2f4;
+    --accept-soft: #eaf5ee;
+    --refuse-soft: #fbecec;
+    --sand-soft: #fbf2de;
+    --display: "Spectral", Georgia, "Times New Roman", serif;
+    --body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181a; --surface: #1b2124; --line: #2e3639; --fg: #e8e6e0;
+      --muted: #9aa5a4; --deep: #5fb3c4; --sand: #d8ac57; --refuse: #e08585;
+      --accept: #6cc295; --model: #a79ae8;
+      --model-soft: #262238; --deep-soft: #15302f; --accept-soft: #162c22;
+      --refuse-soft: #2e1c1c; --sand-soft: #2b2415;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181a; --surface: #1b2124; --line: #2e3639; --fg: #e8e6e0;
+    --muted: #9aa5a4; --deep: #5fb3c4; --sand: #d8ac57; --refuse: #e08585;
+    --accept: #6cc295; --model: #a79ae8;
+    --model-soft: #262238; --deep-soft: #15302f; --accept-soft: #162c22;
+    --refuse-soft: #2e1c1c; --sand-soft: #2b2415;
+    color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--body);
+         font-size: 16px; line-height: 1.6; }
+  .wrap { max-width: 50rem; margin: 0 auto;
+          padding-left: max(16px, env(safe-area-inset-left, 0px));
+          padding-right: max(16px, env(safe-area-inset-right, 0px));
+          padding-block: 2.5rem 4rem; }
+  .wide { max-width: 68rem; }
+
+  h1 { font-family: var(--display); font-size: clamp(2rem, 5vw, 2.9rem);
+       line-height: 1.1; font-weight: 600; margin: 0 0 .6rem;
+       text-wrap: balance; letter-spacing: -0.015em; }
+  h2 { font-family: var(--display); font-size: clamp(1.35rem, 3.4vw, 1.8rem);
+       font-weight: 600; margin: 3.2rem 0 .4rem; text-wrap: balance; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.6rem 0 .3rem; }
+  p { margin: 0 0 1rem; }
+  .lede { font-size: 1.1rem; color: var(--muted); max-width: 42rem; }
+  .eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+             font-weight: 600; color: var(--muted); margin: 0 0 .9rem; }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 2.6rem 0 0; }
+  code { font-family: var(--mono); font-size: .86em;
+         background: var(--deep-soft); color: var(--fg);
+         padding: .1em .32em; border-radius: 3px; }
+  pre { font-family: var(--mono); font-size: .82rem; line-height: 1.55;
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: 6px; padding: .9rem 1rem; overflow-x: auto; margin: 0 0 1rem; }
+  pre code { background: none; padding: 0; }
+  a { color: var(--deep); }
+
+  /* ---- the diagram band ---- */
+  .band { background: var(--surface); border-block: 1px solid var(--line);
+          margin: 2rem 0 0; padding-block: 2rem; }
+  .figure { overflow-x: auto; }
+  .figure svg { display: block; min-width: 760px; width: 100%; height: auto; }
+  figcaption { font-size: .82rem; color: var(--muted); margin-top: .9rem;
+               max-width: 44rem; }
+
+  /* ---- the numbered sequence ---- */
+  .steps { display: grid; gap: 1rem; margin: 1.4rem 0 0; padding: 0; list-style: none; }
+  .step { background: var(--surface); border: 1px solid var(--line);
+          border-left: 3px solid var(--edge, var(--line)); border-radius: 6px;
+          padding: 1rem 1.1rem; display: grid;
+          grid-template-columns: 3.4rem 1fr; gap: .2rem 1rem; min-width: 0; }
+  .step.agent { --edge: var(--deep); }
+  .step.phase { --edge: var(--sand); }
+  .tag { font-family: var(--mono); font-size: .74rem; font-weight: 500;
+         color: var(--edge, var(--muted)); padding-top: .18rem; }
+  .step h3 { margin: 0 0 .25rem; }
+  .step p { margin: 0 0 .5rem; font-size: .94rem; }
+  .step > .body { min-width: 0; }
+  .step .tag + .body { grid-column: 2; }
+  .kv { display: grid; grid-template-columns: 7.5rem 1fr; gap: .15rem .8rem;
+        font-size: .88rem; margin-top: .6rem; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; min-width: 0; }
+  .pill { display: inline-block; font-size: .74rem; font-weight: 600;
+          padding: .12rem .5rem; border-radius: 99px; white-space: nowrap; }
+  .pill.ok { background: var(--accept-soft); color: var(--accept); }
+  .pill.no { background: var(--refuse-soft); color: var(--refuse); }
+  .pill.ai { background: var(--model-soft); color: var(--model); }
+  .pill.kg { background: var(--sand-soft); color: var(--sand); }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 1rem 0; }
+  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase;
+       color: var(--muted); font-weight: 600; }
+  td code { font-size: .8rem; }
+  .scroll { overflow-x: auto; }
+
+  .note { background: var(--model-soft); border: 1px solid var(--line);
+          border-radius: 6px; padding: 1rem 1.1rem; margin: 1.2rem 0; }
+  .note p:last-child { margin-bottom: 0; }
+  .note strong { color: var(--model); }
+
+  .big { font-family: var(--display); font-size: clamp(1.2rem, 3vw, 1.5rem);
+         line-height: 1.35; margin: 1.6rem 0; text-wrap: balance; }
+
+  @media (max-width: 30rem) {
+    .step { grid-template-columns: 1fr; }
+    .step .tag + .body { grid-column: 1; }
+    .kv { grid-template-columns: 1fr; }
+    .kv dt { margin-top: .4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">DBTLHub · Project 25 · bioprospecting</p>
+  <h1>Where the agents sit, and what they keep</h1>
+  <p class="lede">A walk through one turn of the Design–Build–Test–Learn cycle for
+  enzyme bioprospecting: what happens at each step, what the checking agent at each
+  boundary does, the two places a language model is allowed to act, and how the
+  record grows into one graph that still answers, at the far end, where a sequence
+  came from.</p>
+</div>
+
+<div class="band">
+  <div class="wrap wide">
+    <figure class="figure">
+      <svg viewBox="0 0 1040 470" role="img"
+           aria-label="The four phases of the DBTL cycle with a sentinel agent at each boundary, above a bar showing the run graph growing from 385 to 520 triples.">
+        <defs>
+          <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,1 L7,4 L0,7 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+
+        <!-- phases -->
+        <g font-family="IBM Plex Sans, sans-serif">
+          <!-- Design -->
+          <rect x="16" y="56" width="176" height="78" rx="7"
+                fill="var(--sand-soft)" stroke="var(--sand)" stroke-width="1.5"/>
+          <text x="104" y="84" text-anchor="middle" font-size="16" font-weight="600"
+                fill="var(--sand)">Design</text>
+          <text x="104" y="104" text-anchor="middle" font-size="11.5" fill="var(--fg)">find candidate enzymes</text>
+          <text x="104" y="120" text-anchor="middle" font-size="11.5" fill="var(--muted)">96 sequences + how they were found</text>
+
+          <!-- Build -->
+          <rect x="296" y="56" width="176" height="78" rx="7"
+                fill="var(--sand-soft)" stroke="var(--sand)" stroke-width="1.5"/>
+          <text x="384" y="84" text-anchor="middle" font-size="16" font-weight="600"
+                fill="var(--sand)">Build</text>
+          <text x="384" y="104" text-anchor="middle" font-size="11.5" fill="var(--fg)">synthesise and assemble</text>
+          <text x="384" y="120" text-anchor="middle" font-size="11.5" fill="var(--muted)">a 96-well plate, with QC</text>
+
+          <!-- Test -->
+          <rect x="576" y="56" width="176" height="78" rx="7"
+                fill="var(--sand-soft)" stroke="var(--sand)" stroke-width="1.5"/>
+          <text x="664" y="84" text-anchor="middle" font-size="16" font-weight="600"
+                fill="var(--sand)">Test</text>
+          <text x="664" y="104" text-anchor="middle" font-size="11.5" fill="var(--fg)">measure activity</text>
+          <text x="664" y="120" text-anchor="middle" font-size="11.5" fill="var(--muted)">readings with units and controls</text>
+
+          <!-- Learn -->
+          <rect x="856" y="56" width="168" height="78" rx="7"
+                fill="var(--sand-soft)" stroke="var(--sand)" stroke-width="1.5"/>
+          <text x="940" y="84" text-anchor="middle" font-size="16" font-weight="600"
+                fill="var(--sand)">Learn</text>
+          <text x="940" y="104" text-anchor="middle" font-size="11.5" fill="var(--fg)">fit a model, propose next</text>
+          <text x="940" y="120" text-anchor="middle" font-size="11.5" fill="var(--muted)">ranked recommendations</text>
+        </g>
+
+        <!-- sentinel agents between the phases -->
+        <g font-family="IBM Plex Sans, sans-serif">
+          <g>
+            <rect x="200" y="70" width="88" height="50" rx="25"
+                  fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="2"/>
+            <text x="244" y="90" text-anchor="middle" font-size="13" font-weight="600" fill="var(--deep)">H1</text>
+            <text x="244" y="107" text-anchor="middle" font-size="10" fill="var(--deep)">sentinel</text>
+          </g>
+          <g>
+            <rect x="480" y="70" width="88" height="50" rx="25"
+                  fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="2"/>
+            <text x="524" y="90" text-anchor="middle" font-size="13" font-weight="600" fill="var(--deep)">H2</text>
+            <text x="524" y="107" text-anchor="middle" font-size="10" fill="var(--deep)">sentinel</text>
+          </g>
+          <g>
+            <rect x="760" y="70" width="88" height="50" rx="25"
+                  fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="2"/>
+            <text x="804" y="90" text-anchor="middle" font-size="13" font-weight="600" fill="var(--deep)">H3</text>
+            <text x="804" y="107" text-anchor="middle" font-size="10" fill="var(--deep)">sentinel</text>
+          </g>
+        </g>
+
+        <!-- H4 closing the loop -->
+        <path d="M940 134 L940 170 L104 170 L104 140" fill="none"
+              stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"
+              marker-end="url(#ar)"/>
+        <rect x="478" y="152" width="92" height="36" rx="18"
+              fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="2"/>
+        <text x="524" y="170" text-anchor="middle" font-size="12" font-weight="600"
+              fill="var(--deep)" font-family="IBM Plex Sans, sans-serif">H4</text>
+        <text x="524" y="182" text-anchor="middle" font-size="9" fill="var(--deep)"
+              font-family="IBM Plex Sans, sans-serif">sentinel</text>
+
+        <!-- arrows between boxes -->
+        <g stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)" fill="none">
+          <path d="M192 95 L198 95"/>
+          <path d="M290 95 L294 95"/>
+          <path d="M472 95 L478 95"/>
+          <path d="M570 95 L574 95"/>
+          <path d="M752 95 L758 95"/>
+          <path d="M850 95 L854 95"/>
+        </g>
+
+        <!-- verdict legend under the agents -->
+        <g font-family="IBM Plex Sans, sans-serif" font-size="10.5">
+          <rect x="196" y="26" width="652" height="20" rx="10" fill="none"/>
+          <text x="522" y="40" text-anchor="middle" fill="var(--muted)">
+            each one accepts, flags, or refuses — a refusal stops the route, and the next phase gets nothing
+          </text>
+        </g>
+
+        <!-- ================= the graph bar ================= -->
+        <text x="16" y="232" font-size="11" font-weight="600" letter-spacing="1.4"
+              fill="var(--muted)" font-family="IBM Plex Sans, sans-serif">
+          ONE GRAPH PER RUN, APPENDED TO AT EVERY STEP
+        </text>
+
+        <g font-family="IBM Plex Mono, monospace">
+          <!-- segment 1 : the crate -->
+          <rect x="16" y="246" width="368" height="42" rx="4"
+                fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="1.2"/>
+          <text x="30" y="266" font-size="11.5" fill="var(--deep)" font-weight="500">the Design crate, lifted</text>
+          <text x="30" y="281" font-size="10.5" fill="var(--muted)">385 triples · every step back to the sediment</text>
+
+          <!-- segment 2 -->
+          <rect x="388" y="246" width="120" height="42" rx="4"
+                fill="var(--accept-soft)" stroke="var(--accept)" stroke-width="1.2"/>
+          <text x="400" y="266" font-size="11.5" fill="var(--accept)" font-weight="500">+ Build</text>
+          <text x="400" y="281" font-size="10.5" fill="var(--muted)">→ 430</text>
+
+          <!-- segment 3 -->
+          <rect x="512" y="246" width="120" height="42" rx="4"
+                fill="var(--accept-soft)" stroke="var(--accept)" stroke-width="1.2"/>
+          <text x="524" y="266" font-size="11.5" fill="var(--accept)" font-weight="500">+ handover 2</text>
+          <text x="524" y="281" font-size="10.5" fill="var(--muted)">→ 475</text>
+
+          <!-- segment 4 -->
+          <rect x="636" y="246" width="120" height="42" rx="4"
+                fill="var(--accept-soft)" stroke="var(--accept)" stroke-width="1.2"/>
+          <text x="648" y="266" font-size="11.5" fill="var(--accept)" font-weight="500">+ Test</text>
+          <text x="648" y="281" font-size="10.5" fill="var(--muted)">→ 520</text>
+
+          <!-- open end -->
+          <rect x="760" y="246" width="264" height="42" rx="4"
+                fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="5 4"/>
+          <text x="772" y="266" font-size="11.5" fill="var(--muted)" font-weight="500">+ Learn, + the next round…</text>
+          <text x="772" y="281" font-size="10.5" fill="var(--muted)">it only ever grows</text>
+        </g>
+
+        <!-- the question the graph answers -->
+        <g font-family="IBM Plex Sans, sans-serif">
+          <path d="M60 296 L60 330" stroke="var(--deep)" stroke-width="1.5"
+                marker-end="url(#ar)" fill="none"/>
+          <text x="16" y="352" font-size="13" font-weight="600" fill="var(--fg)">
+            One question, one traversal, one file
+          </text>
+          <text x="16" y="374" font-size="12" fill="var(--muted)" font-family="IBM Plex Mono, monospace">
+            ask.py --behind BP1-A01
+          </text>
+          <text x="16" y="398" font-size="12" fill="var(--fg)">
+            well A1 of the plate → the construct → the candidate protein → Pfam search →
+          </text>
+          <text x="16" y="416" font-size="12" fill="var(--fg)">
+            gene prediction → assembly → sequencing → DNA extraction →
+          </text>
+          <text x="16" y="440" font-size="13" font-weight="600" fill="var(--accept)">
+            sediment core NS-01, 0–5 cm, collected 12 April 2026
+          </text>
+          <text x="16" y="460" font-size="11" fill="var(--muted)" font-style="italic">
+            17 nodes. The synthesis vendor was sent a sequence and a well; this is everything that stayed.
+          </text>
+        </g>
+
+        <!-- model markers -->
+        <g font-family="IBM Plex Sans, sans-serif">
+          <circle cx="244" cy="60" r="9" fill="var(--model-soft)" stroke="var(--model)" stroke-width="1.5"/>
+          <text x="244" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="var(--model)">AI</text>
+          <circle cx="524" cy="60" r="9" fill="var(--model-soft)" stroke="var(--model)" stroke-width="1.5"/>
+          <text x="524" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="var(--model)">AI</text>
+          <circle cx="804" cy="60" r="9" fill="var(--model-soft)" stroke="var(--model)" stroke-width="1.5"/>
+          <text x="804" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="var(--model)">AI</text>
+          <text x="1024" y="200" text-anchor="end" font-size="10.5" fill="var(--model)">
+            AI = the two optional spots, inside every agent. Off by default.
+          </text>
+        </g>
+      </svg>
+      <figcaption>Triple counts are from a real run, not an illustration:
+      <code>runs/&lt;id&gt;/graph/run.nt</code> after each step of the bioprospecting demo.</figcaption>
+    </figure>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <h2>First, the three words</h2>
+  <p><strong>Phase.</strong> The science: finding enzymes, making them, measuring them,
+  learning from the numbers. We did not change any of it.</p>
+  <p><strong>Handover.</strong> The moment one phase passes its work to the next. There
+  are four in a cycle, and this is where things get lost.</p>
+  <p><strong>Sentinel agent.</strong> A small program sitting at one handover. It reads
+  what arrived, decides whether the next phase can accept it, and is allowed to say no.</p>
+
+  <p class="big">A phase does the work. A sentinel decides whether the work can travel.</p>
+
+  <hr class="rule">
+
+  <h2>The path, step by step</h2>
+
+  <ol class="steps">
+
+    <li class="step phase">
+      <span class="tag">phase</span>
+      <div class="body">
+        <h3>Design — find the candidates</h3>
+        <p>Sediment is collected, DNA is extracted and sequenced, the reads are
+        assembled, genes are predicted and annotated, similar proteins are clustered,
+        and 96 are chosen. Eleven steps, each one recorded.</p>
+        <dl class="kv">
+          <dt>produces</dt><dd>an RO-Crate: a folder with the sequences, plus one file
+          saying what everything is and what produced it</dd>
+          <dt>a model?</dt><dd>no</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step agent">
+      <span class="tag">H1</span>
+      <div class="body">
+        <h3>Design → Build <span class="pill ai">AI may draft</span></h3>
+        <p>The synthesis vendor needs almost nothing: a list of sequences and which
+        well each goes in. Everything else — where the sediment came from, the freezer
+        temperature, who held the corer — stays with us. So this agent has two jobs:
+        cut the order down, and make sure what stays is still usable.</p>
+        <dl class="kv">
+          <dt>checks</dt><dd>that every key the lab invented has an agreed term; that
+          numbers carry their units; and, the one that matters, that every sequence has
+          an unbroken path back to a physical sample</dd>
+          <dt>refuses</dt><dd><span class="pill no">a sequence with no origin</span>
+          <span class="pill no">a site with no coordinates</span>
+          <span class="pill no">a file the crate promises and does not contain</span></dd>
+          <dt>flags</dt><dd>a protein the crate honestly records as a truncated gene.
+          The crate is correct, so it is not refused — but the plate goes out with that
+          well marked</dd>
+          <dt>into the graph</dt><dd><span class="pill kg">385 triples</span> the whole
+          Design record, including the eleven steps back to the sediment</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step phase">
+      <span class="tag">phase</span>
+      <div class="body">
+        <h3>Build — make them</h3>
+        <p>The vendor synthesises, the lab assembles, a liquid handler fills a 96-well
+        plate, an instrument runs quality control on each well.</p>
+        <dl class="kv">
+          <dt>produces</dt><dd>a plate map and QC readings</dd>
+          <dt>a model?</dt><dd>no</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step agent">
+      <span class="tag">H2</span>
+      <div class="body">
+        <h3>Build → Test <span class="pill ai">AI may draft</span></h3>
+        <p>Design said which 96 wells it wanted. Build says what actually arrived. The
+        agent computes the difference — and a failed synthesis is a perfectly normal
+        outcome, it just has to be <em>stated</em>.</p>
+        <dl class="kv">
+          <dt>checks</dt><dd>no two samples claim the same well; nothing arrived that
+          Design never asked for; every required measurement has its unit; and nothing
+          Design asked for is quietly missing</dd>
+          <dt>refuses</dt><dd><span class="pill no">a well silently absent</span>
+          <span class="pill no">two samples in one position</span>
+          <span class="pill no">a measurement with no unit</span></dd>
+          <dt>into the graph</dt><dd><span class="pill kg">→ 475</span> each sample,
+          joined to the design item it was built from</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step phase">
+      <span class="tag">phase</span>
+      <div class="body">
+        <h3>Test — measure them</h3>
+        <p>Cells are grown, the assay is run, a plate reader produces a number per well
+        against its blank and its controls.</p>
+        <dl class="kv">
+          <dt>produces</dt><dd>one reading per well, with the method that produced it</dd>
+          <dt>a model?</dt><dd>no</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step agent">
+      <span class="tag">H3</span>
+      <div class="body">
+        <h3>Test → Learn <span class="pill ai">AI may draft</span></h3>
+        <p>A model is about to be fitted to these numbers. The agent's job is to make
+        sure each number can be traced to the well it came from and says what it is.</p>
+        <dl class="kv">
+          <dt>checks</dt><dd>every result resolves to something Build actually made, and
+          carries unit and method</dd>
+          <dt>refuses</dt><dd><span class="pill no">a measurement nobody took</span>
+          <span class="pill no">a duplicate sample id</span></dd>
+          <dt>into the graph</dt><dd><span class="pill kg">→ 520</span> each reading,
+          joined to the sample it was read from</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step phase">
+      <span class="tag">phase</span>
+      <div class="body">
+        <h3>Learn — decide what to make next</h3>
+        <p>A model is fitted to the results and ranks what to try in the next round.</p>
+        <dl class="kv">
+          <dt>produces</dt><dd>ranked recommendations with predicted values</dd>
+          <dt>a model?</dt><dd><strong>yes — but this is the science's own model</strong>
+          (a protein language model, a regression), not the agent's. The agent never
+          touches it; it only checks what comes out</dd>
+        </dl>
+      </div>
+    </li>
+
+    <li class="step agent">
+      <span class="tag">H4</span>
+      <div class="body">
+        <h3>Learn → Design <span class="pill ai">AI may draft</span></h3>
+        <p>This handover carries the one thing in the cycle that is not a measurement
+        of something that happened: a claim about something that has not happened yet.
+        So the contract asks the three questions that make such a claim checkable.</p>
+        <dl class="kv">
+          <dt>checks</dt><dd><strong>what does it rest on</strong> — every
+          recommendation names result ids that must exist in the data it claims to have
+          learned from; <strong>what produced it</strong> — model name, version and
+          training runs, because "latest" is not a version;
+          <strong>how sure is it</strong> — uncertainty is required, and must say what
+          kind it is</dd>
+          <dt>refuses</dt><dd><span class="pill no">a reason citing a measurement that
+          does not exist</span> <span class="pill no">a prediction with no uncertainty</span></dd>
+          <dt>does not check</dt><dd>whether the recommendation is any <em>good</em>.
+          That is next round's job, and the model's holdout score travels along so the
+          two can be compared. Traceable, reproducible and weighable are checkable;
+          being right is not</dd>
+        </dl>
+      </div>
+    </li>
+  </ol>
+
+  <hr class="rule">
+
+  <h2>Where a language model is allowed to act</h2>
+  <p>Two places in the whole framework. Nothing reads an API key, and the default path
+  never calls a model at all — the demo runs on a laptop with no network.</p>
+
+  <div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Where</th><th>What it may do</th><th>What stops it</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Naming a word nobody agreed</strong><br>
+          <code>propose_terms</code></td>
+        <td>The lab wrote <code>box_temp_c</code>. No query can use that. A model can
+        work out it means a storage temperature — a rule cannot reason about a word it
+        has never seen.</td>
+        <td>It may only choose from terms the shared vocabulary already declares, and
+        the answer is <strong>reported, never applied</strong>. The handover still
+        fails until a human adds the line.</td>
+      </tr>
+      <tr>
+        <td><strong>Repairing what is derivable</strong><br>
+          <code>propose_patches</code></td>
+        <td>Put back a unit the profile already states. Recompute a checksum.</td>
+        <td>It is only shown errors that are safe to touch; it may only write where the
+        validator pointed; and the package is <strong>re-validated afterwards</strong>,
+        so it is never its own judge.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><strong>Measured, not asserted.</strong> On one invented key, with the same code:
+    the Claude CLI and the Codex CLI both proposed the right term; a three-billion
+    parameter model running locally proposed one nobody had agreed, and the framework
+    rejected it. In every run the handover still failed, because a suggestion is
+    reported and never applied.</p>
+    <p>Bring whichever model you like — a CLI you already log into, or one on your own
+    laptop with no network at all:
+    <code>CommandEngine("claude")</code>, <code>CommandEngine("codex")</code>,
+    <code>CommandEngine("ollama")</code>. One argument, your own key or none.</p>
+  </div>
+
+  <p class="big">A model may draft. It may not decide.</p>
+
+  <hr class="rule">
+
+  <h2>Why the graph matters</h2>
+  <p>Handover 1 sends the vendor a sequence and a well. From that moment, the sampling
+  site, the freezer and the collector are reachable only through what we wrote down.
+  Two different checks keep that true, and both are needed.</p>
+
+  <h3>Do the links resolve?</h3>
+  <p>Every package names the package it was built from, and the first names the crate.
+  <code>trace.py</code> walks a run backwards and fails if a link breaks. Running it the
+  first time showed the chain had never been real: two phases were building the path of
+  their own upstream package as a text string, and one of them named a file no run had
+  ever written. Every package validated perfectly on its own. That failure is invisible
+  to any check that looks at one package at a time.</p>
+
+  <h3>Can you ask it a question?</h3>
+  <p>A list of file paths is not something you can query. So every step appends to one
+  graph per run, and the Design crate's own record joins the same file. By the end of a
+  cycle, one graph holds the deep provenance of the Design phase and the spine linking
+  the four handovers — which is how the walk in the picture above happens in one
+  traversal instead of a tour of four files.</p>
+  <p>It is plain N-Triples on disk: no database, no server, and
+  <code>rdflib</code> or <code>pyoxigraph</code> will load it unchanged when a real
+  query engine is wanted. A new handover joins the graph for free.</p>
+
+  <hr class="rule">
+
+  <h2>If you are taking a handover</h2>
+  <p>The loop every agent runs — reshape, validate, repair within a budget, escalate —
+  is written once and inherited. Two of the four agents are three lines each with no
+  logic at all. That is the normal case.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>File</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td><code>template/TAKE_A_HANDOVER.md</code></td><td><strong>Read this first.</strong> One page: the four decisions, in order</td></tr>
+      <tr><td><code>scripts/new_handover.py</code></td><td>Scaffolds your contract and your agent with the shared parts already correct. Do not copy a file by hand</td></tr>
+      <tr><td><code>template/handover_agent.py</code></td><td>The copy-me agent, with each decision marked</td></tr>
+      <tr><td><code>template/handover_contract.schema.json</code></td><td>The copy-me contract</td></tr>
+      <tr><td><code>scripts/show_agents.py</code></td><td>The four as they are right now, read from the live code</td></tr>
+      <tr><td><code>scripts/check_crate.py --break-all</code></td><td>Handover 1 against the use case's own crate, then the same crate broken three ways</td></tr>
+      <tr><td><code>scripts/prove_engine.py</code></td><td>The model question, reproducible — part 3 needs no model</td></tr>
+      <tr><td><code>scripts/trace.py</code> · <code>scripts/ask.py</code></td><td>Does the chain resolve; and ask the graph</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>The four decisions are: what crosses this handover (the contract), what your use
+  case needs (the profile — this is where use cases are <em>supposed</em> to differ, so
+  do not fork the contract), which errors must never be fixed automatically, and whether
+  you need to reshape the incoming package at all (usually not).</p>
+
+  <p>On the third one, the test is not "is this hard to fix" but
+  <strong>"would fixing it invent something nobody recorded"</strong>. A guessed well
+  writes a lab record that never happened, which is worse than a failed handover,
+  because a failed handover is visible.</p>
+
+  <hr class="rule">
+
+  <h2>Running it</h2>
+<pre><code>python3 demo_d2b.py                        # handover 1: a clean crate, then a broken one
+python3 demo.py                            # design through to the test results
+python3 demo_l2d.py                        # handover 4: the round that closes
+python3 scripts/check_crate.py --break-all # on the use case's own crate
+python3 scripts/ask.py demo-clean --behind BP1-A01
+</code></pre>
+  <p>Everything lives in <code>sentinel/</code> in
+  <code>dbtl-synbio/dbtlhub</code>. No dependencies, no API key, no network.</p>
+
+</div>
+</body>
+</html>

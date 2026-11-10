@@ -18,6 +18,7 @@ anything.
 | **Taking a handover** | [`template/TAKE_A_HANDOVER.md`](template/TAKE_A_HANDOVER.md) — one page, and the thing to read first |
 | Why the template exists | [`template/README.md`](template/README.md) |
 | Handover 1 in detail | [`framework/DESIGN_TO_BUILD.md`](framework/DESIGN_TO_BUILD.md) |
+| **Walkthrough** | [`docs/walkthrough.html`](docs/walkthrough.html) — one page, plain language: every step of the cycle, what each agent checks, where a model may act, and the diagram of the graph growing. Open it in a browser |
 | Slides | [`docs/sentinel_agents.pptx`](docs/sentinel_agents.pptx) |
 
 ```bash
