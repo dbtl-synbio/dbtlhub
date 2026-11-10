@@ -130,7 +130,14 @@ def damage(crate: dict, kind: str, root: str | Path) -> tuple[dict, list[str]]:
     index = {e["@id"]: e for e in graph if isinstance(e, dict) and "@id" in e}
 
     if kind == "missing-conformsto":
-        index.get("ro-crate-metadata.json", {}).pop("conformsTo", None)
+        # The profile claim lives on the ROOT dataset, not on the metadata
+        # descriptor: the descriptor only says which version of RO-Crate the
+        # file itself follows. Removing the right one is the whole test.
+        descriptor = index.get("ro-crate-metadata.json", {})
+        about = descriptor.get("about")
+        root_id = about.get("@id") if isinstance(about, dict) else "./"
+        index.get(root_id, {}).pop("conformsTo", None)
+        descriptor.pop("conformsTo", None)
 
     elif kind == "dangling-reference":
         ghost = "sequencing-report.pdf"
@@ -176,10 +183,19 @@ def _types(node: dict) -> list[str]:
 
 
 def _conforms_to(index: dict) -> list[str]:
-    node = index.get("ro-crate-metadata.json", {})
-    refs = node.get("conformsTo")
-    refs = [refs] if isinstance(refs, dict) else (refs or [])
-    return [r.get("@id") for r in refs if isinstance(r, dict)]
+    """Both places: the descriptor's RO-Crate version, the root's profile."""
+    descriptor = index.get("ro-crate-metadata.json", {})
+    about = descriptor.get("about")
+    root = index.get(about.get("@id") if isinstance(about, dict) else "./", {})
+    out = []
+    for node in (descriptor, root):
+        refs = node.get("conformsTo")
+        refs = [refs] if isinstance(refs, dict) else (refs or [])
+        for ref in refs:
+            got = ref.get("@id") if isinstance(ref, dict) else ref
+            if got and got not in out:
+                out.append(got)
+    return out
 
 
 def _constructs(root: Path) -> dict:

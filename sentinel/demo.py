@@ -94,7 +94,8 @@ def main() -> None:
     print("   double_booked   the OT-2 deck shifted: 2 samples claim one well")
     print("   unknown_item    a tube was relabelled by hand with CAND-999")
     broken = run("demo-broken",
-                 faults={"missing_units", "double_booked", "unknown_item"})
+                 faults={"missing_units", "double_booked", "unknown_item",
+                         "dropped_well"})
 
     rule("3. COMMON GROUND - the same contract, the other use case")
     print("   A biomanufacturing package, written by hand, validated against the")

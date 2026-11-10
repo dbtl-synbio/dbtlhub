@@ -118,13 +118,31 @@ class DesignToBuildAgent(SentinelAgent):
 
 
 def _conforms_to(crate: dict) -> list[str]:
-    for node in crate.get("@graph", []):
-        if node.get("@id") == "ro-crate-metadata.json":
-            refs = node.get("conformsTo")
-            got = [r.get("@id") for r in ([refs] if isinstance(refs, dict) else refs or [])
-                   if isinstance(r, dict)]
-            return got
-    # No descriptor node at all. Returning the default here would invent a
-    # claim the crate never made, and the schema is right to refuse an empty
-    # list: a reader that does not know the profile cannot interpret the crate.
-    return []
+    """Every profile the crate claims, from both places RO-Crate puts them.
+
+    The metadata descriptor says which version of RO-Crate the *file* follows.
+    The root dataset - the entity the descriptor is `about` - says which
+    profile the *content* follows, such as Process Run Crate 0.6. Reading only
+    the first gets you "ro/crate/1.3" and silently loses the statement that
+    tells a reader how to interpret the crate at all.
+
+    A crate may claim several. Process, Workflow and Provenance Run Crate each
+    include the rules of the one before, and a crate lists all it follows.
+
+    No claim anywhere returns an empty list rather than a default: inventing a
+    conformance claim the crate never made is the thing this framework exists
+    to prevent, and the schema is right to refuse the result.
+    """
+    index = {e.get("@id"): e for e in crate.get("@graph", []) if isinstance(e, dict)}
+    descriptor = index.get("ro-crate-metadata.json", {})
+    about = descriptor.get("about")
+    root_id = about.get("@id") if isinstance(about, dict) else "./"
+    out: list[str] = []
+    for node in (descriptor, index.get(root_id, {})):
+        refs = node.get("conformsTo")
+        refs = [refs] if isinstance(refs, dict) else (refs or [])
+        for ref in refs:
+            got = ref.get("@id") if isinstance(ref, dict) else ref
+            if got and got not in out:
+                out.append(got)
+    return out

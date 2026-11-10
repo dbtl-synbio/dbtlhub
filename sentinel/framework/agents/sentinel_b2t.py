@@ -20,7 +20,8 @@ from framework.agents.sentinel_base import SentinelAgent                # noqa: 
 # A guess here would fabricate a lab record. Renaming a sample to make an id
 # unique belongs in the same category: it hides the collision instead of
 # resolving it.
-NEVER_AUTOFIX = {"double_booked_location", "unknown_design_item", "duplicate_sample_id"}
+NEVER_AUTOFIX = {"double_booked_location", "unknown_design_item", "duplicate_sample_id",
+                 "unaccounted_item"}
 
 
 class BuildToTestAgent(SentinelAgent):

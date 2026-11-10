@@ -253,6 +253,30 @@
           }
         }
       }
+    },
+    "not_delivered": {
+      "type": "array",
+      "description": "Items Design committed to that are not in this plate, each with a reason. A failed synthesis is a normal outcome and belongs here; what is not acceptable is a well that is simply absent from the record, because then nobody can tell a failure from an omission.",
+      "items": {
+        "type": "object",
+        "required": [
+          "design_item_id",
+          "reason"
+        ],
+        "properties": {
+          "design_item_id": {
+            "type": "string",
+            "x-pattern": "design_item_id"
+          },
+          "reason": {
+            "type": "string",
+            "description": "What happened, in the vendor's or the lab's own words."
+          },
+          "reported_by": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "x-dbtl-checks": [
@@ -293,6 +317,18 @@
       "code": "missing_quantity",
       "message": "the profile requires this measurement",
       "fix_hint": "not auto-fixable: a measurement that was never taken cannot be supplied. Either the instrument output is found, or the sample is reported as incomplete"
+    },
+    {
+      "kind": "accounted_for",
+      "of": "design_ref.items",
+      "field": "design_item_id",
+      "against": [
+        "samples[].design_item_id",
+        "not_delivered[].design_item_id"
+      ],
+      "code": "unaccounted_item",
+      "message": "Design committed to this item and the Build record neither contains it nor reports it as not delivered",
+      "fix_hint": "not auto-fixable: an absent well has no field to correct. Either the sample is found and added, or the failure is stated in not_delivered. Dropping it silently is how a failed synthesis becomes a missing result nobody can explain."
     }
   ]
 }

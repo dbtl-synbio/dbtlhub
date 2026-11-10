@@ -55,6 +55,12 @@ def ot2_worklist(panel: list[dict], container: str = "PLATE-1", seed: int = 7,
         culprit["position"] = victim["position"]
         log.append(f"WARN tip collision near {victim['position']}, retried")
 
+    # A synthesis that failed, and a worklist that simply does not mention the
+    # well. This is the fault nobody sees: every row present is correct, and
+    # the plate is one short. Design asked for it, Build never answers for it.
+    if "dropped_well" in faults and len(rows) > 4:
+        rows.pop(4)
+
     if "unknown_item" in faults and rows:
         # Build labelled a sample with a candidate Design never committed to.
         rows[5]["design_item_id"] = "CAND-999"

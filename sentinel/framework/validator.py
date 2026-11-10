@@ -553,6 +553,37 @@ def _named_properties(node: dict, at: str | None, index: dict) -> dict:
     return out
 
 
+def _check_accounted_for(package, check, errors, profile=None):
+    """Everything the previous phase committed to has to be answered for.
+
+    `cross_ref` catches the easy direction: something arrived that was never
+    asked for. This is the other one, and it is the one that goes unnoticed -
+    a well that was asked for and simply is not in the record. Nothing is
+    wrong with any row; a row is just absent, and absence has no field to
+    check.
+
+    Design states the intended layout, Build records what arrived, and the
+    difference falls out of the two records instead of somebody noticing it.
+    A failure is a legitimate outcome: it just has to be stated, not omitted.
+    """
+    seen: set = set()
+    for path in (check.get("against") or []):
+        for value in (_dig(package, path) or []):
+            if value is not None:
+                seen.add(value)
+
+    for i, row in enumerate(_dig(package, check["of"]) or []):
+        value = row.get(check["field"]) if isinstance(row, dict) else row
+        if value is None or value in seen:
+            continue
+        errors.append(Error(
+            f"{check['of']}[{i}].{check.get('field', '')}".rstrip("."),
+            check.get("code", "unaccounted_item"),
+            f"{value!r}: {check.get('message', 'committed to, and not answered for')}",
+            check.get("fix_hint", ""),
+            check.get("severity", "error")))
+
+
 def _check_entity_value(package, check, errors, profile=None):
     """Does a referenced entity say something the receiving phase must act on?
 
@@ -645,6 +676,7 @@ CHECKS = {"unique": _check_unique, "cross_ref": _check_cross_ref,
           "provenance_chain": _check_provenance_chain,
           "required_provenance": _check_required_provenance,
           "entity_value": _check_entity_value,
+          "accounted_for": _check_accounted_for,
           "empty": _check_empty}
 
 

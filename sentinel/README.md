@@ -58,6 +58,18 @@ nothing would put a truncated gene in well A3 with nobody the wiser. So a
 check can declare `"severity": "flag"`: the handover is accepted, the order
 goes out, and well A3 is marked.
 
+**Three faults, written out.** `--write-broken` puts them on disk as folders,
+in `sentinel/examples/design-to-build/`, which is what
+`exampleROcrates/README.md` asks for: one crate that satisfies the contract
+and one that does not, per handover. Move them into `exampleROcrates/` if you
+would rather they lived beside the good one.
+
+**A second finding, smaller and more embarrassing.** A crate declares its
+RO-Crate version on the metadata descriptor and its *profile* on the root
+dataset. We were reading only the first, so a crate conforming to Process Run
+Crate 0.6 came back as "ro/crate/1.3" and the statement that tells a reader
+how to interpret it was lost. Both are read now.
+
 **A finding, not a feature.** That crate expresses provenance through
 `CreateAction` / `object` / `result`, walked backwards; the simulated crate in
 `usecases/` follows PROV properties forwards. The metadata is in named

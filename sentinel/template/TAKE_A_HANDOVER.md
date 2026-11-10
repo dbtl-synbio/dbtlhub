@@ -32,6 +32,7 @@ things a schema cannot state:
 |---|---|
 | `unique` | two samples claiming one well |
 | `cross_ref` | an item the previous phase never committed to |
+| `accounted_for` | an item the previous phase committed to, quietly absent |
 | `required_quantities` | a measurement the profile says this handover needs |
 | `provenance_chain` | a sequence with no path back to a physical sample |
 | `required_provenance` | context that cannot be recovered later |

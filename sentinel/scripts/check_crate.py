@@ -18,6 +18,7 @@ in the profile, where a use case's differences belong.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -33,6 +34,59 @@ from usecases.bioprospecting.prc_crate import (BREAKAGES, DEFAULT,  # noqa: E402
 
 BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
 RED, GREEN, AMBER = "\033[31m", "\033[32m", "\033[33m"
+
+
+def _write_broken(crate, report, out: Path) -> None:
+    """Put the damaged crates on disk, one folder each.
+
+    The use case asks for one crate that satisfies the contract and one that
+    does not, per handover. Generating them in memory proves the checks work;
+    writing them out means somebody else can run their own agent against the
+    same faults.
+    """
+    import shutil
+    source = Path(report["root"])
+    out.mkdir(parents=True, exist_ok=True)
+    for kind in sorted(BREAKAGES):
+        folder = out / kind
+        folder.mkdir(exist_ok=True)
+        for name in ("panel.faa", "constructs.json", "plate-layout.csv"):
+            if (source / name).exists():
+                shutil.copy2(source / name, folder / name)
+        damaged, _ = damage(crate, kind, source)
+        (folder / "ro-crate-metadata.json").write_text(
+            json.dumps(damaged, indent=2) + "\n")
+        print(f"  wrote {folder}/   {DIM}{BREAKAGES[kind]}{OFF}")
+    (out / "README.md").write_text(_broken_readme(source))
+    print(f"  wrote {out}/README.md")
+
+
+def _broken_readme(source: Path) -> str:
+    rows = "\n".join(f"| `{k}` | {v} |" for k, v in sorted(BREAKAGES.items()))
+    return f"""# Design to Build: crates that must be refused
+
+Generated from `{source.name}/` by:
+
+```bash
+python3 scripts/check_crate.py --write-broken sentinel/examples/design-to-build
+```
+
+One fault each, and the data files are copied unchanged so the only
+difference is the one named below.
+
+| folder | the fault |
+|---|---|
+{rows}
+
+Check any of them:
+
+```bash
+python3 scripts/check_crate.py sentinel/examples/design-to-build/<folder>
+```
+
+Two of the three pass every RO-Crate validator there is. That is the point
+of including them.
+"""
 
 
 def _break_all(crate, items, report, args) -> None:
@@ -75,6 +129,8 @@ def main() -> None:
     ap.add_argument("--lab", default=None, help="a lab vocabulary file to add")
     ap.add_argument("--break", dest="breakage", choices=sorted(BREAKAGES),
                     help="damage the crate on the way in, and see it refused")
+    ap.add_argument("--write-broken", metavar="DIR",
+                    help="write each damaged crate to DIR as a folder on disk")
     ap.add_argument("--break-all", action="store_true",
                     help="every breakage in turn, one line each")
     args = ap.parse_args()
@@ -83,6 +139,9 @@ def main() -> None:
         crate, items, report = load(args.folder)
     except CrateError as exc:
         sys.exit(f"{RED}{exc}{OFF}")
+
+    if args.write_broken:
+        return _write_broken(crate, report, Path(args.write_broken))
 
     if args.break_all:
         return _break_all(crate, items, report, args)
@@ -133,7 +192,9 @@ def main() -> None:
                 f"  -  the order can go, and Build is told about "
                 f"{len(flags)} flagged item(s)")
     else:
-        tail = f"  -  {len(result.errors)} error(s) need a decision"
+        tail = f"  -  {len(result.errors) - len(flags)} error(s) need a decision"
+        if flags:
+            tail += f", and {len(flags)} flag(s)"
     print(f"\n  {colour}{BOLD}{'ACCEPTED' if ok else 'REFUSED'}{OFF}{tail}")
 
     if result.status == "ok":
