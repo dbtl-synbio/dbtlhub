@@ -151,3 +151,99 @@ def test_asking_a_remote_instance_that_does_not_answer_raises(deploy,
     monkeypatch.setattr(deploy, "run", lambda command, timeout=900: Refused())
     with pytest.raises(OSError, match="No such container"):
         deploy.ask(8080, "/health", inside="sentinel-test")
+
+
+# ------------------------------- starting the sentinel leaves the model alone
+#
+# Found on a Google Cloud machine on 12 November 2026. Step 3 creates the
+# network and starts the model on it. Step 4 used to call the routine that
+# stops a previous deployment, which removes the sentinel, the model and
+# the network between them, so it deleted the network it was about to join
+# and Docker refused to start the container.
+#
+# No test reached it because the only route that gets there is the one
+# where this program starts a model itself.
+
+
+def _commands_issued(deploy, monkeypatch):
+    issued = []
+
+    class Worked:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def remember(command, timeout=900):
+        issued.append(command)
+        return Worked()
+
+    monkeypatch.setattr(deploy, "run", remember)
+    return issued
+
+
+def test_starting_the_sentinel_does_not_remove_the_model(deploy, monkeypatch,
+                                                         tmp_path):
+    issued = _commands_issued(deploy, monkeypatch)
+    deploy.start_instance(
+        "sentinel-demo", "sentinel-oo:dev", tmp_path, None, 8080,
+        "http://sentinel-demo-model:11434", "qwen2.5:14b",
+        network="sentinel-demo-net")
+
+    removed = [" ".join(c) for c in issued if c[:3] == ["docker", "rm", "-f"]]
+    assert removed == ["docker rm -f sentinel-demo"], removed
+
+
+def test_starting_the_sentinel_does_not_remove_the_network(deploy, monkeypatch,
+                                                           tmp_path):
+    issued = _commands_issued(deploy, monkeypatch)
+    deploy.start_instance(
+        "sentinel-demo", "sentinel-oo:dev", tmp_path, None, 8080,
+        "http://sentinel-demo-model:11434", "qwen2.5:14b",
+        network="sentinel-demo-net")
+
+    assert not [c for c in issued if c[:3] == ["docker", "network", "rm"]]
+
+
+def test_the_sentinel_joins_the_network_the_model_is_on(deploy, monkeypatch,
+                                                        tmp_path):
+    issued = _commands_issued(deploy, monkeypatch)
+    deploy.start_instance(
+        "sentinel-demo", "sentinel-oo:dev", tmp_path, None, 8080,
+        "http://sentinel-demo-model:11434", "qwen2.5:14b",
+        network="sentinel-demo-net")
+
+    started = [c for c in issued if c[:2] == ["docker", "run"]][0]
+    assert "--network" in started
+    assert started[started.index("--network") + 1] == "sentinel-demo-net"
+
+
+def test_stopping_a_deployment_still_removes_all_three(deploy, monkeypatch):
+    """The stop route is the one that should take the model and the network
+    with it: leaving a model container running is a nine gigabyte surprise
+    on somebody's machine."""
+    issued = _commands_issued(deploy, monkeypatch)
+    deploy.stop_instance("sentinel-demo", quiet=True)
+
+    issued = [" ".join(c) for c in issued]
+    assert "docker rm -f sentinel-demo" in issued
+    assert "docker rm -f sentinel-demo-model" in issued
+    assert "docker network rm sentinel-demo-net" in issued
+
+
+def test_starting_the_model_replaces_one_left_from_before(deploy, monkeypatch):
+    """Deploying twice under one name used to stop with "the container name
+    is already in use", which is what anybody does after a deployment fails
+    once. The model itself is in a volume and is not touched."""
+    issued = _commands_issued(deploy, monkeypatch)
+    monkeypatch.setattr(deploy, "image_exists", lambda image: True)
+    monkeypatch.setattr(deploy, "model_already_there",
+                        lambda container, model: True)
+
+    deploy.start_model("sentinel-demo", "qwen2.5:14b", yes=True)
+
+    issued = [" ".join(c) for c in issued]
+    assert "docker rm -f sentinel-demo-model" in issued
+    assert issued.index("docker rm -f sentinel-demo-model") < next(
+        n for n, c in enumerate(issued) if c.startswith("docker run"))
+    # The volume holding the model is never removed.
+    assert not [c for c in issued if c.startswith("docker volume rm")]

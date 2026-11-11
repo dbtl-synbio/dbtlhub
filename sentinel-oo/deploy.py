@@ -283,6 +283,15 @@ def start_model(name: str, model: str, yes: bool,
                 + (pulled.stdout + pulled.stderr).strip()[-800:]
             )
 
+    # Both of these already exist if this deployment has been run before,
+    # and neither matters: the network is only a name, and the model itself
+    # lives in a volume that is left alone, so a container of the same name
+    # is replaced rather than fought with.
+    #
+    # Without this, deploying twice under one name stopped with "the
+    # container name is already in use", which is what anybody does after a
+    # deployment fails once. Found on 12 November 2026.
+    run(["docker", "rm", "-f", container], timeout=120)
     run(["docker", "network", "create", network], timeout=60)
 
     command = [
@@ -406,7 +415,20 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
                    network: str | None = None,
                    reachable_from_network: bool = False,
                    contracts_volume: str | None = None) -> None:
-    stop_instance(name, quiet=True)
+    # Only the sentinel container, and only if one is left from before.
+    #
+    # It used to call stop_instance here, which removes three things: the
+    # sentinel, the model beside it, and the network between them. By this
+    # point step 3 has already created that network and started the model
+    # on it, so stopping all three deleted the network this container is
+    # about to join, and Docker then refused to start it: "failed to set up
+    # container networking".
+    #
+    # Nothing caught it because the only route that reaches this line is the
+    # one where this program starts a model itself, and the first attempt at
+    # that stalled on an 11 gigabyte download on 11 November 2026 and was
+    # never finished. It failed on a Google Cloud machine on 12 November.
+    run(["docker", "rm", "-f", name], timeout=120)
 
     command = [
         "docker", "run", "-d",
