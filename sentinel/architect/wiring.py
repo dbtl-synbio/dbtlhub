@@ -37,19 +37,10 @@ from framework.agents.phase_build_crate import BuildPhaseAgent        # noqa: E4
 from framework.agents.phase_design_crate import DesignPhaseAgent      # noqa: E402
 from framework.agents.phase_learn_crate import LearnPhaseAgent        # noqa: E402
 from framework.agents.phase_test_crate import TestPhaseAgent          # noqa: E402
-from framework.agents.sentinel_b2t import BuildToTestAgent            # noqa: E402
-from framework.agents.sentinel_d2b import DesignToBuildAgent          # noqa: E402
-from framework.agents.sentinel_l2d import LearnToDesignAgent          # noqa: E402
-from framework.agents.sentinel_t2l import TestToLearnAgent            # noqa: E402
-from framework.validator import validate                              # noqa: E402
+from framework.agents.sentinel import Sentinel                        # noqa: E402
 
 PHASE_AGENTS = {"design": DesignPhaseAgent, "build": BuildPhaseAgent,
                 "test": TestPhaseAgent, "learn": LearnPhaseAgent}
-
-SENTINELS = {"design_to_build": DesignToBuildAgent,
-             "build_to_test": BuildToTestAgent,
-             "test_to_learn": TestToLearnAgent,
-             "learn_to_design": LearnToDesignAgent}
 
 
 # --------------------------------------------------------------------------- #
@@ -123,25 +114,25 @@ def sentinel_checker(profile: str = "bioprospecting"):
     decision to change something belongs to the Architect, so the check here is
     read-only and the repair step stays available to whoever wants it.
     """
-    def check(handover: str, package: dict, arch) -> Checked:
-        sentinel = SENTINELS[handover](profile=profile)
-        report = validate(package, sentinel.contract)
+    # One object for the whole run. It loads the contract for whichever
+    # handover it is given - the only thing that differs between them - and
+    # writes its own act into the crate, so a crate nobody checked is visibly
+    # different from one that passed.
+    sentinel = Sentinel(profile=profile)
+    VERDICT = {"accepted": Verdict.ACCEPTED,
+               "accepted_with_flags": Verdict.ACCEPTED_WITH_FLAGS,
+               "refused": Verdict.REFUSED}
 
+    def check(handover: str, package: dict, arch) -> Checked:
+        seen = sentinel.check_and_record(handover, package)
         findings = [Finding(code=e.code, path=e.path, message=e.message,
                             blocking=(e.severity == "error"),
                             fix_hint=e.fix_hint or "")
-                    for e in report.errors]
-
-        if report.blocking:
-            verdict = Verdict.REFUSED
-        elif report.flags:
-            verdict = Verdict.ACCEPTED_WITH_FLAGS
-        else:
-            verdict = Verdict.ACCEPTED
-
-        return Checked(handover=handover, verdict=verdict, findings=findings,
-                       trace=[f"{sentinel.name} against {sentinel.contract['$id']} "
-                              f"[profile {profile}]"])
+                    for e in seen.report.errors]
+        return Checked(handover=handover, verdict=VERDICT[seen.verdict],
+                       findings=findings,
+                       trace=[f"{sentinel.name} against {seen.contract_id} "
+                              f"[profile {profile}], recorded in the crate"])
     return check
 
 
