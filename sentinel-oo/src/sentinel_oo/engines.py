@@ -9,7 +9,7 @@ that has already failed, at a location the rules identified, and asked whether
 the value is already written down somewhere. Whatever it answers is checked by
 the rule engine before it counts.
 
-Three constraints, taken from Marco Anteghini's framework, and all three are
+Three constraints, taken from the `sentinel` framework, and all three are
 enforced in code rather than asked for in the prompt:
 
   The model is shown only the violations it is allowed to act on, so it

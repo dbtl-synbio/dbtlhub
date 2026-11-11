@@ -32,7 +32,8 @@ does the whole deployment:
 python deploy.py <your folder of contracts>
 ```
 
-Built by Anil Wipat and Marco Anteghini.
+Built by Anil Wipat (Newcastle University and Prozomix Ltd) and
+Marco Anteghini (LifeGlimmer).
 
 sentinel-oo is a deployable version of sentinel. The generic system is
 combined with a hand written contract file that tailors the sentinel to a
@@ -154,7 +155,7 @@ pip install -e ".[test]"
 | `src/sentinel_oo/__main__.py` | The command line, which is the whole surface until step 5 |
 | `tests/test_invariants.py` | The tests that protect design decisions rather than code |
 | `contracts/` | One file per handover. This is where a handover is added |
-| `vocabulary/` | Empty. Taken from Marco Anteghini's framework at a later step |
+| `vocabulary/` | Empty. Taken from the `sentinel` framework at a later step |
 
 ## Three things worth knowing
 

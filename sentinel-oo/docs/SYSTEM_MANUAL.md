@@ -231,11 +231,12 @@ somewhere in this record, including inside prose?
 
 Answering "no" is a correct and expected answer.
 
-**Where this thinking comes from.** Most of this section is Marco
-Anteghini's rather than new. His framework for Project 25 settled what a
-model is for at a handover, and that part of his work is reproduced here
-almost unchanged. What this design changes is how the service is structured,
-not what the model is allowed to do. The specific debts are listed under
+**Where this thinking comes from.** Most of this section is not new. The
+`sentinel` framework, which Marco Anteghini wrote for Project 25 and which
+sits beside this one in the same repository, settled what a model is for at
+a handover, and that part of it is reproduced here almost unchanged. What
+this design changes is how the service is structured, not what the model is
+allowed to do. The specific debts are listed under
 [Acknowledgements](#acknowledgements).
 
 ### What constrains it, all in code rather than in the prompt
@@ -487,16 +488,18 @@ stopped leaves a working service rather than a half-built one.
 
 ## Acknowledgements
 
-`sentinel-oo` was designed and built by Anil Wipat, Newcastle University, for
-Project 25 at ELIXIR BioHackathon Europe 2026, during the week of 9 to 13
-November 2026.
+`sentinel-oo` was designed and built by Anil Wipat (Newcastle University and
+Prozomix Ltd) and Marco Anteghini (LifeGlimmer), for Project 25 at ELIXIR
+BioHackathon Europe 2026, during the week of 9 to 13 November 2026.
 
-**It owes a great deal to Marco Anteghini's framework for the same project.**
-This design departs from his in how the service is structured. It does not
-depart from his thinking about what a model is for, which is the strongest
-part of his work and is reproduced here almost unchanged.
+**It also owes a great deal to the `sentinel` framework**, which Marco
+Anteghini wrote for the same project and which sits beside this one in the
+same repository. This design departs from that framework in how the service
+is structured. It does not depart from its thinking about what a model is
+for, which is the strongest part of that work and is reproduced here almost
+unchanged.
 
-Taken from his framework rather than invented here:
+Taken from the `sentinel` framework rather than invented here:
 
 | What | Where it appears |
 |---|---|
