@@ -550,11 +550,35 @@ has to read.
 
 ### The service
 
-### The run graph
+### The run graph - DONE, 11 November 2026
 
-`GET /graph/{run}` returns 501 and says it is not built. The graph store was
-designed and never written, which is also why the Monday class diagram named
-components that do not exist.
+`GET /graph/{run}` returned 501 and said it was not built. So did the agent
+interface's `get_run_graph`, which is the one the team building the
+architect would call, and that is why this was done tonight rather than
+left. Neil: "the sentinel code is not complete without it, and the people
+developing the coordinator (architect) will have nothing to work with
+tomorrow."
+
+**The store was never needed.** The original design kept the graph of each
+run in a store of its own, which was never written. Everything the picture
+needs is already inside the crate the service hands back, so the work was
+reading that crate and rearranging it into a list of boxes and a list of
+lines. `sentinel_oo.graph.of(crate)` does it, and anybody holding a checked
+crate can call it with no service running at all.
+
+**Each box carries a role**, so a drawing can make the check, each finding,
+any value a model recovered, and whoever asked for the check stand out from
+the handover they are about.
+
+**One distinction that matters.** A box marked `missing` is pointed at by a
+plain name and described nowhere, which is a fault in the crate. A box
+marked `elsewhere` is pointed at by a web address, which says it lives
+elsewhere on purpose: the standard the crate follows, its licence. The
+first version called both missing, which would have told a reader that a
+sound crate was broken. The valid example crate now shows nothing missing,
+and the broken one shows exactly one, `sequencing-report.pdf`.
+
+16 tests of the module itself, plus the two interfaces. 303 tests pass.
 
 ### Test the agent interface against a real client - DONE, 11 November 2026
 

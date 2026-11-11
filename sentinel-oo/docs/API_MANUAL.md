@@ -42,7 +42,7 @@ examples below use `http://127.0.0.1:8080`.
 | `GET /contracts` | Which contracts this instance holds |
 | `GET /contracts/{name}` | One contract in full, and in plain words |
 | `GET /runs` | The runs this instance is still holding |
-| `GET /graph/{run}` | Not built. Returns 501 |
+| `GET /graph/{run}` | One run's crate as nodes and edges, ready to draw |
 | `GET /health` | The build, and which model if any |
 | `GET /openapi.json` | A description of the service, generated from the route table |
 
@@ -269,20 +269,90 @@ not a record.** The durable record is inside the crate that was returned.
 
 ## `GET /graph/{run}`
 
-Not built. It returns **501**, which in HTTP means the server does not
-support this.
+One run's crate as boxes and the lines between them, ready to draw.
+
+**What a graph of a crate is.** A crate is a set of things that point at
+each other. A plate well points at the construct that goes in it; that
+construct points at the protein it was designed from; a step points at the
+files it read and the files it produced. Draw each thing as a box and each
+pointer as a line and you have a picture of the whole handover, with the
+check that was run on it included in it.
 
 ```json
 {
-  "error": "not built yet",
-  "detail": "the working graph arrives with the graph store, at a later step of the build order. Nothing is served here rather than something that is not the graph."
+  "run": "b41918a9a71c",
+  "verdict": "ACCEPTED. Nothing was found.",
+  "nodes": [
+    {
+      "id": "#construct-CON-001",
+      "type": "ExpressionConstruct",
+      "name": "Expression construct CON-001",
+      "role": "the handover"
+    }
+  ],
+  "edges": [
+    { "from": "#well-A01", "to": "#construct-CON-001",
+      "property": "mainEntity", "packaging": false }
+  ],
+  "counts": {
+    "nodes": 111, "edges": 171, "missing": 0, "elsewhere": 2,
+    "by_role": { "the handover": 44, "a recorded value": 54, "a file": 11 }
+  },
+  "how_to_read_it": "..."
 }
 ```
 
-The endpoint exists so the shape of the interface is settled. It says so
-rather than returning an empty graph that would look like an answer.
+**Each node carries a role**, so a drawing can make the few things that
+matter stand out from the handover they are about:
 
-For a run the service is not holding, it returns **404** instead.
+| Role | What it is |
+|---|---|
+| `the handover` | Something the producing phase put in the crate |
+| `a recorded value` | A value hanging off one of those |
+| `a file` | A file the crate names |
+| `the check` | The action this service wrote when it checked the crate |
+| `what was checked` | The contract, its version, the checksums |
+| `the verdict` | One box carrying the verdict |
+| `a finding` | One requirement that failed, with the sentence its author wrote |
+| `a change made` | A value a model recovered and your rules confirmed |
+| `who asked` | Whoever was named in `?by=`, as their claim about themselves |
+| `the service` | sentinel-oo itself |
+| `missing` | Pointed at by a plain name and described nowhere. **A fault in the crate** |
+| `elsewhere` | Pointed at by a web address, so it lives elsewhere on purpose. Not a fault |
+
+**`missing` and `elsewhere` are different and the difference matters.** A
+web address says the thing is somewhere else by design: the standard the
+crate follows, its licence, a file kept in a repository. A plain name like
+`sequencing-report.pdf` is a claim that the thing is in this crate, and if
+nothing describes it the claim is false.
+
+**Edges marked `packaging` can be left out of a drawing.** They are the
+crate joined to its own parts, chiefly `hasPart` from the root to every
+file. Drawn, they turn any picture into a star with the root in the middle
+and nothing else visible.
+
+**For a run the service no longer holds it returns 404**, and says which
+runs it does still hold, so a caller can tell a wrong request from a broken
+service. This service keeps only the last few runs in memory.
+
+**The crate is the lasting copy, and you can build this yourself from it.**
+Anybody holding a checked crate gets the same answer with no service at
+all:
+
+```python
+from sentinel_oo.crate import Crate
+from sentinel_oo.graph import of
+
+print(of(Crate.from_path("some-checked-crate"))["counts"])
+```
+
+That still works when the service that made the crate has gone, which is
+the point of writing the record into the crate rather than keeping it
+somewhere.
+
+**Built on 11 November 2026.** Until then this address answered 501, "not
+built yet", because the original plan put the graph in a store that was
+never written. The store turned out not to be needed.
 
 ---
 
@@ -354,7 +424,7 @@ what to do.
 | 404 | No such run | `{"error": "no such run", "detail": "this service no longer holds that run, or never did. The durable record is in the crate that was returned."}` |
 | 405 | Wrong method for that path | `{"error": "wrong method", "detail": "/health answers GET, not PUT"}` |
 | 500 | The service failed while answering | `{"error": "the service failed while answering", "detail": "..."}` |
-| 501 | `/graph`, which is not built | |
+
 
 **A REFUSED verdict is status 200.** The request succeeded; the handover did
 not. Do not treat a refusal as an HTTP error.
@@ -521,7 +591,13 @@ checked.
 
 ### `get_run_graph`
 
-Takes `run`. Not built, and says so.
+Takes `run`. Returns the same answer as `GET /graph/{run}` above: the
+crate as nodes and edges, each node carrying a role so a drawing can make
+the check and its findings stand out from the handover.
+
+For a run the service no longer holds, it answers with an error naming the
+runs it does still hold. Built on 11 November 2026; it answered "not built
+yet" until then.
 
 ---
 
@@ -586,10 +662,10 @@ test fails.
 
 # Known limitations
 
-**`GET /graph/{run}` is not built**, and returns 501 rather than pretending.
-
-**The agent interface has not been tested against a real Model Context
-Protocol client.**
+**The agent interface is tested by a client that drives it from outside the
+process**, over standard input and output, written from the protocol rather
+than from this service's code. It has not been driven by one of the
+published client libraries.
 
 **There is no authentication of any kind.** Deploy it where only the things
 that should call it can reach it.

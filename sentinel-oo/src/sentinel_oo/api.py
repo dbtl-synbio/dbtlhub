@@ -30,6 +30,7 @@ from .engines import NO_MODEL
 from pathlib import Path
 
 from .crate import Crate, CrateMalformed
+from .graph import of as graph_of
 
 
 @dataclass(frozen=True)
@@ -288,26 +289,37 @@ class Api:
         }
 
     def graph(self, params, body):
-        """Not built yet, and saying so is better than pretending.
+        """One run's crate as boxes and the lines between them.
 
-        The working graph arrives with the step of the build order that
-        introduces a graph store. Until then this endpoint exists so that the
-        shape of the interface is settled, and it tells the truth about why
-        there is nothing behind it.
+        Built on 11 November 2026. This address had always answered "not
+        built yet", because the original plan put the graph in a store that
+        was never written. The store is not needed: everything the picture
+        needs is already inside the crate this service handed back, so the
+        work is reading that crate and rearranging it.
+
+        **The crate is still the lasting copy.** This service keeps only the
+        last few runs, and a caller holding a checked crate can build the
+        same picture with no service at all, by importing
+        `sentinel_oo.graph` and calling `of(crate)`.
         """
-        if self.runs is not None and self.runs.get(params["run"]) is None:
+        if self.runs is None:
+            return 404, {
+                "error": "this service keeps no runs",
+                "detail": "it was started without a run store. Build the "
+                          "graph from the crate you were handed instead: "
+                          "sentinel_oo.graph.of(crate).",
+            }
+        run = self.runs.get(params["run"])
+        if run is None:
             return 404, {
                 "error": "no such run",
                 "detail": "this service no longer holds that run, or never "
                           "did. The durable record is in the crate that was "
-                          "returned.",
+                          "returned, and sentinel_oo.graph.of(crate) builds "
+                          "this same answer from it.",
+                "runs_it_still_holds": self.runs.list(),
             }
-        return 501, {
-            "error": "not built yet",
-            "detail": "the working graph arrives with the graph store, at a "
-                      "later step of the build order. Nothing is served here "
-                      "rather than something that is not the graph.",
-        }
+        return 200, graph_of(run.crate, run=params["run"])
 
     def health(self, params, body):
         """Including which of three states the model is in.

@@ -394,6 +394,37 @@ in code and never taken from contract files.
 
 **A test fails if the two interfaces ever give different verdicts.**
 
+### The graph of a run
+
+Both ways in can hand back one run's crate as boxes and the lines between
+them: `GET /graph/{run}` on the web interface, `get_run_graph` on the agent
+interface, the same answer from both.
+
+A crate is a set of things that point at each other. A plate well points at
+the construct that goes in it; that construct points at the protein it was
+designed from; a step points at the files it read and the files it
+produced. Drawn as boxes and lines, that is a picture of the whole handover
+with the check included in it.
+
+**Nothing is computed and nothing is stored.** Every box and every line is
+already written inside the crate this service hands back, so the work is
+reading that crate and rearranging it. The original design had a store that
+kept the graph of each run; it was never written, and it is not needed. The
+same answer can be built by anybody holding a checked crate, with no
+service running at all, by calling `sentinel_oo.graph.of(crate)`.
+
+Each box carries a role, so a drawing can make the few things that matter
+stand out: the check itself, each finding, any value a model recovered, and
+who asked for the check. Two roles are worth telling apart. A box marked
+`missing` is pointed at by a plain name and described nowhere, which is a
+fault in the crate. A box marked `elsewhere` is pointed at by a web
+address, which says it lives elsewhere on purpose, such as the standard the
+crate follows or its licence. Calling those two the same thing would tell a
+reader a sound crate is broken.
+
+Built on 11 November 2026, after both interfaces had answered "not built
+yet" since the day they were designed.
+
 The web interface is built on Python's standard library rather than a web
 framework, which keeps the claim that the product runs with nothing installed
 true. Its route table is the single source of truth and the OpenAPI
@@ -521,16 +552,11 @@ still has this hole, and the plain-words summary warns about it.
 
 ### The service
 
-**`GET /graph/{run}` returns status 501**, which in HTTP means the server does
-not support this. The run graph is not built. It says so rather than
-returning an empty graph that looks like an answer.
-
-**The agent interface has not been tested against a real Model Context
-Protocol client**, only against the protocol as written down.
-
-**An action does not name a human or organisational agent.** Process Run
-Crate says it should. The service is not told, so it writes nothing rather
-than inventing a name.
+**The agent interface has not been driven by one of the published Model
+Context Protocol client libraries.** Since 11 November 2026 it is driven by
+a client written for the test suite, which starts the service as a
+subprocess and speaks the protocol over its standard input and output,
+written from the protocol rather than from this service's code.
 
 **A crate with no `@context` is read without complaint.** It is interpretable,
 so the reader accepts it. This is now expressible as a contract requirement,
@@ -540,9 +566,8 @@ so it is a line somebody should write.
 bioprospecting repository's address. That is true today, and a wrong address
 would be worse than an awkward one. `SENTINEL_URL` overrides it.
 
-**With no contracts mounted, `--list-contracts` prints an empty list followed
-by a checksum**, and that checksum is the SHA-256 of nothing at all. It
-should say it holds no contracts.
+**A crate with no `@context` is read without complaint**, which is listed
+above and is the one of these the contract language can already answer.
 
 ### Not built
 

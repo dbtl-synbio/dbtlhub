@@ -181,11 +181,37 @@ def test_a_run_that_was_never_held_is_not_found(api):
     assert status == 404
 
 
-def test_the_graph_says_it_is_not_built_rather_than_pretending(api, crate_bytes):
+def test_the_graph_is_the_crate_as_boxes_and_lines(api, crate_bytes):
+    """Built on 11 November 2026. This address answered "not built yet"
+    from the day the interface was designed, because the original plan put
+    the graph in a store that was never written. The store is not needed:
+    the crate the service hands back already holds all of it."""
     _, body = api.dispatch("POST", "/check/mixing_to_coating", crate_bytes)
     status, answer = api.dispatch("GET", f"/graph/{body['run']}", b"")
-    assert status == 501
-    assert "not built yet" in answer["error"]
+
+    assert status == 200
+    assert answer["run"] == body["run"]
+    assert answer["verdict"] == body["verdict"] or answer["verdict"]
+    assert answer["counts"]["nodes"] == len(answer["nodes"])
+    assert answer["counts"]["edges"] == len(answer["edges"])
+
+    # The check itself, and what it found, are marked so a drawing can make
+    # them stand out from the handover they are about.
+    roles = {n["role"] for n in answer["nodes"]}
+    assert "the check" in roles
+    assert "the verdict" in roles
+    assert "the handover" in roles
+
+
+def test_the_graph_of_a_run_it_no_longer_holds_says_what_it_does_hold(
+        api, crate_bytes):
+    """So a caller can tell "you asked for the wrong thing" apart from
+    "this service is broken"."""
+    api.dispatch("POST", "/check/mixing_to_coating", crate_bytes)
+    status, answer = api.dispatch("GET", "/graph/0123456789ab", b"")
+    assert status == 404
+    assert "runs_it_still_holds" in answer
+    assert answer["runs_it_still_holds"]
 
 
 def test_health_reports_the_build_and_the_engine(api):

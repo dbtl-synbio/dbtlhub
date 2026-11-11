@@ -38,6 +38,7 @@ from pathlib import Path
 
 from . import __version__
 from .contract import ContractNotFound
+from .graph import of as graph_of
 from .crate import Crate, CrateMalformed
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -238,18 +239,32 @@ class AgentInterface:
         }
 
     def get_run_graph(self, run: str) -> dict:
-        if self.runs is not None and self.runs.get(run) is None:
+        """One run's package as boxes and the lines between them.
+
+        Built on 11 November 2026, with the same answer as
+        `GET /graph/{run}` on the web interface. It had answered "not built
+        yet" until then, because the original plan put the graph in a store
+        that was never written. The store is not needed: everything the
+        picture needs is already inside the package this service handed
+        back.
+        """
+        if self.runs is None:
+            return {
+                "error": "this service keeps no runs",
+                "detail": "it was started without a run store, so it cannot "
+                          "look a run up. The package it handed back carries "
+                          "the whole record.",
+            }
+        held = self.runs.get(run)
+        if held is None:
             return {
                 "error": "no such run",
                 "detail": "this service no longer holds that run, or never "
                           "did. The durable record is inside the checked "
                           "package.",
+                "runs_it_still_holds": self.runs.list(),
             }
-        return {
-            "error": "not built yet",
-            "detail": "the working graph arrives with the graph store, at a "
-                      "later step of the build order.",
-        }
+        return graph_of(held.crate, run=run)
 
     # ------------------------------------------------------------ protocol
 
