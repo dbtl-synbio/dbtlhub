@@ -715,6 +715,78 @@ def _check_entity_value(package, check, errors, profile=None):
                     rule.get("why", ""), rule.get("severity", "flag")))
 
 
+def _check_references_resolve(package, check, errors, profile=None):
+    """Does every relative @id the crate mentions exist in the crate?
+
+    An absolute URI may point anywhere and is nobody's business here. A
+    RELATIVE one is a promise that the thing is in this crate, and a promise
+    that resolves to nothing is silent: the entity that makes it validates,
+    the graph simply has a hole where the other end should be.
+
+    Found by running this against a crate written elsewhere, where a
+    `hasPart` named a file that was never described and never shipped, and
+    every check passed.
+    """
+    nodes = _dig(package, check["of"]) or []
+    present = {n.get("@id") for n in nodes if isinstance(n, dict)}
+    seen: set[tuple[str, str]] = set()
+
+    def walk(node, owner):
+        if isinstance(node, dict):
+            ref = node.get("@id")
+            if len(node) == 1 and isinstance(ref, str):
+                if (not ref.startswith(("http://", "https://", "urn:"))
+                        and ref not in present):
+                    seen.add((owner, ref))
+            for value in node.values():
+                walk(value, owner)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, owner)
+
+    for entity in nodes:
+        if isinstance(entity, dict):
+            walk(entity, entity.get("@id", "?"))
+
+    for owner, ref in sorted(seen):
+        errors.append(Error(
+            f"{check['of']}[{owner}]", check.get("code", "dangling_reference"),
+            f"{ref!r}: {check.get('message', 'named here and nowhere in the crate')}",
+            check.get("fix_hint", ""), check.get("severity", "error")))
+
+
+def _check_root_declares(package, check, errors, profile=None):
+    """Does the ROOT say which profile the content follows?
+
+    The metadata descriptor says which version of RO-Crate the file follows.
+    That is a different statement, and having it is not having the other. A
+    crate whose root declares nothing can be parsed and cannot be interpreted,
+    and merging the two claims - which this framework did - makes the second
+    one look present when only the first is.
+    """
+    nodes = _dig(package, check["of"]) or []
+    index = {n.get("@id"): n for n in nodes if isinstance(n, dict)}
+    descriptor = index.get("ro-crate-metadata.json", {})
+    about = descriptor.get("about")
+    ref = about.get("@id") if isinstance(about, dict) else "./"
+    root = index.get(ref) or index.get("./")
+    if root is None:
+        return                      # a missing root is another check's business
+
+    claims = root.get(check.get("property", "conformsTo"))
+    claims = [claims] if isinstance(claims, dict) else (claims or [])
+    ids = [c.get("@id") if isinstance(c, dict) else c for c in claims]
+    wanted = check.get("contains", "")
+    if any(wanted in (i or "") for i in ids):
+        return
+    errors.append(Error(
+        f"{check['of']}[{ref}].{check.get('property', 'conformsTo')}",
+        check.get("code", "root_declares_no_profile"),
+        f"{check.get('message', 'the root declares no profile')}"
+        + (f" (it declares {ids})" if ids else " (it declares nothing)"),
+        check.get("fix_hint", ""), check.get("severity", "error")))
+
+
 def _check_empty(package, check, errors, profile=None):
     """A list that must be empty for the handover to be complete."""
     for item in _dig(package, check["of"]) or []:
@@ -766,6 +838,8 @@ CHECKS = {"unique": _check_unique, "cross_ref": _check_cross_ref,
           "required_provenance": _check_required_provenance,
           "entity_value": _check_entity_value,
           "within_limits": _check_within_limits,
+          "references_resolve": _check_references_resolve,
+          "root_declares": _check_root_declares,
           "accounted_for": _check_accounted_for,
           "empty": _check_empty}
 

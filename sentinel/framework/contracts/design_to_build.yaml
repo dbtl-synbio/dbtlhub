@@ -1,78 +1,32 @@
-# Design -> Build handover (generic), handover 1 of 4.
-#
-# This is the form `load_contract()` in framework/validator.py prefers. It
-# falls back to design_to_build.schema.json - the same contract with the
-# comments stripped - when PyYAML is not installed, so the framework still runs
-# with nothing but the standard library. Both files are therefore live: edit
-# this one and carry the change into the JSON, because a reader without PyYAML
-# gets the JSON and tests/test_framework.py reads the JSON too.
-#
-# Why YAML. A JSON Schema cannot carry a comment, so the reason a check exists
-# had to live either in a `description` the validator shows to a user or in a
-# commit message nobody reads. Here the reason sits beside the rule. Everything
-# below that is not a comment is the same contract, field for field.
-#
-# Naming, for convergence with `sentinel-oo` (dbtlhub/sentinel-oo), which is
-# the deployable service built from these ideas and whose contracts are YAML
-# already:
-#
-#     ours                      sentinel-oo
-#     $id                       contract + version
-#     x-handover.name           description
-#     x-dbtl-checks[].code      requires[].name
-#     x-dbtl-checks[].message   requires[].message
-#     severity: error | flag    severity: refuse | flag
-#
-# `x-pattern` is not a JSON Schema keyword. It names a regex that the active
-# use-case profile supplies, and `_bind()` replaces it with `pattern` at load
-# time. Without a profile the structure is still checked and the formats are
-# not.
-
-'$schema': 'https://json-schema.org/draft/2020-12/schema'
-'$id': 'dbtl:design_to_build/0.1.0'
-
-# -------------------------------------------------------------------
-# Which handover this is. The use case numbers them, so the number is
-# carried here rather than inferred from the file name.
-# -------------------------------------------------------------------
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: dbtl:design_to_build/0.1.0
 x-handover:
   number: 1
   name: construct specification
   from: design
   to: build
-  source: >-
-    Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov
-    2026
-  note: >-
-    The use case numbers its handovers. Carrying that number in the contract
-    means two teams arguing about 'the Design handover' are provably arguing
-    about the same one.
-title: 'Design -> Build handover (generic)'
-description: >-
-  This handover has two faces and that is the whole point. The ORDER is what
-  leaves the building: a flat list of sequences and the well each goes in,
-  which is all a synthesis provider needs or should receive. The CRATE is what
-  stays: an RO-Crate describing how every one of those sequences came to
-  exist, back to a physical sample in a freezer. The contract binds the two,
-  so stripping the metadata for the provider is a projection rather than a
-  loss. Profiles bind identifier formats and declare which provenance a
-  handover is incomplete without.
+  source: Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov 2026
+  note: The use case numbers its handovers. Carrying that number in the contract means two teams arguing
+    about 'the Design handover' are provably arguing about the same one.
+title: Design -> Build handover (generic)
+description: 'This handover has two faces and that is the whole point. The ORDER is what leaves the building:
+  a flat list of sequences and the well each goes in, which is all a synthesis provider needs or should
+  receive. The CRATE is what stays: an RO-Crate describing how every one of those sequences came to exist,
+  back to a physical sample in a freezer. The contract binds the two, so stripping the metadata for the
+  provider is a projection rather than a loss. Profiles bind identifier formats and declare which provenance
+  a handover is incomplete without.'
 type: object
 required:
-  - contract
-  - contract_version
-  - profile
-  - run_id
-  - produced_by
-  - produced_at
-  - crate_ref
-  - crate
-  - order
-  - bindings
-
-# -------------------------------------------------------------------
-# The shape of the package.
-# -------------------------------------------------------------------
+- contract
+- contract_version
+- profile
+- run_id
+- produced_by
+- produced_at
+- crate_ref
+- crate
+- order
+- bindings
 properties:
   contract:
     const: design_to_build
@@ -81,20 +35,20 @@ properties:
   profile:
     type: string
     enum:
-      - bioprospecting
-      - biomanufacturing
+    - bioprospecting
+    - biomanufacturing
   run_id:
     type: string
-    pattern: '^[A-Za-z0-9._-]+$'
+    pattern: ^[A-Za-z0-9._-]+$
   produced_at:
     type: string
-    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+    pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T
   produced_by:
     type: object
     required:
-      - agent
-      - tool
-      - engine
+    - agent
+    - tool
+    - engine
     properties:
       agent:
         type: string
@@ -104,87 +58,75 @@ properties:
         type: string
   crate_ref:
     type: object
-    description: >-
-      Where the crate lives and which profiles it claims to follow.
-      'conforms_to' is not decoration: a reader that does not know the profile
-      cannot interpret the crate, and a crate that claims a profile it does
-      not satisfy is worse than one that claims none.
+    description: 'Where the crate lives and which profiles it claims to follow. ''conforms_to'' is not
+      decoration: a reader that does not know the profile cannot interpret the crate, and a crate that
+      claims a profile it does not satisfy is worse than one that claims none.'
     required:
-      - path
-      - conforms_to
-      - root
-      - checksum
+    - path
+    - conforms_to
+    - root
+    - checksum
     properties:
       path:
         type: string
-        pattern: 'ro-crate-metadata\.json$'
+        pattern: ro-crate-metadata\.json$
       conforms_to:
         type: array
         minItems: 1
         items:
           type: string
-          pattern: '^https?://'
-
-      # Always "./" - the RO-Crate root. Fixed rather than free so that two
-      # crates written by two teams can be compared at all.
+          pattern: ^https?://
       root:
-        const: './'
+        const: ./
       checksum:
         type: string
-        pattern: '^sha256:[0-9a-f]{64}$'
+        pattern: ^sha256:[0-9a-f]{64}$
   crate:
     type: object
-    description: >-
-      The crate's metadata descriptor, inlined so the contract can be checked
-      as one document. This is metadata, not data - the sequences and reads
-      stay where they are. Local keys must already be aligned to terms:
-      alignment happens before validation, never after.
+    description: 'The crate''s metadata descriptor, inlined so the contract can be checked as one document.
+      This is metadata, not data - the sequences and reads stay where they are. Local keys must already
+      be aligned to terms: alignment happens before validation, never after.'
     required:
-      - '@context'
-      - '@graph'
+    - '@context'
+    - '@graph'
     properties:
       '@context':
         type:
-          - array
-          - object
-          - string
-
-      # At least three entities: the descriptor, the root, and one thing the
-      # crate is actually about. A crate of two is a crate that describes
-      # nothing.
+        - array
+        - object
+        - string
       '@graph':
         type: array
         minItems: 3
         items:
           type: object
           required:
-            - '@id'
-            - '@type'
+          - '@id'
+          - '@type'
           properties:
             '@id':
               type: string
             '@type':
               type:
-                - string
-                - array
+              - string
+              - array
   order:
     type: object
-    description: >-
-      The provider-facing projection. Deliberately poor: anything in here is
-      something we have decided to send to a third party.
+    description: 'The provider-facing projection. Deliberately poor: anything in here is something we
+      have decided to send to a third party.'
     required:
-      - provider
-      - format
-      - container_id
-      - items
+    - provider
+    - format
+    - container_id
+    - items
     properties:
       provider:
         type: string
       format:
         enum:
-          - fasta
-          - genbank
-          - sbol
+        - fasta
+        - genbank
+        - sbol
       container_id:
         type: string
       items:
@@ -193,11 +135,11 @@ properties:
         items:
           type: object
           required:
-            - order_item_id
-            - position
-            - design_item_id
-            - sequence_type
-            - sequence_sha256
+          - order_item_id
+          - position
+          - design_item_id
+          - sequence_type
+          - sequence_sha256
           properties:
             order_item_id:
               type: string
@@ -210,32 +152,29 @@ properties:
               x-pattern: design_item_id
             sequence_type:
               enum:
-                - dna
-                - rna
-                - protein
+              - dna
+              - rna
+              - protein
             length_bp:
               type: integer
               minimum: 1
             sequence_sha256:
               type: string
-              description: >-
-                The identity of the sequence, not its text. What comes back
-                from the provider is checked against this; a sequence that
-                does not hash to its order line is not the thing we ordered.
-              pattern: '^sha256:[0-9a-f]{64}$'
+              description: The identity of the sequence, not its text. What comes back from the provider
+                is checked against this; a sequence that does not hash to its order line is not the thing
+                we ordered.
+              pattern: ^sha256:[0-9a-f]{64}$
   bindings:
     type: array
     minItems: 1
-    description: >-
-      The bridge. One row per ordered item, pointing at the crate entity it
-      was projected from. Without this the order and the crate are two
-      documents about the same thing with no way to join them, which is the
-      state most labs are actually in.
+    description: The bridge. One row per ordered item, pointing at the crate entity it was projected from.
+      Without this the order and the crate are two documents about the same thing with no way to join
+      them, which is the state most labs are actually in.
     items:
       type: object
       required:
-        - design_item_id
-        - crate_entity
+      - design_item_id
+      - crate_entity
       properties:
         design_item_id:
           type: string
@@ -244,14 +183,12 @@ properties:
           type: string
   alignment:
     type: object
-    description: >-
-      The agent's report on the vocabulary. 'unaligned' must be empty: a key
-      nobody has mapped is a key nobody can query, so it is a failed handover
-      and not a warning.
+    description: 'The agent''s report on the vocabulary. ''unaligned'' must be empty: a key nobody has
+      mapped is a key nobody can query, so it is a failed handover and not a warning.'
     required:
-      - confirmed
-      - proposed
-      - unaligned
+    - confirmed
+    - proposed
+    - unaligned
     properties:
       confirmed:
         type: array
@@ -270,75 +207,66 @@ properties:
     items:
       type: object
       required:
-        - name
-        - inchikey
+      - name
+      - inchikey
       properties:
         name:
           type: string
         inchikey:
           type: string
-          pattern: '^[A-Z]{14}-[A-Z]{10}-[A-Z]$'
+          pattern: ^[A-Z]{14}-[A-Z]{10}-[A-Z]$
         role:
           enum:
-            - substrate
-            - product
-            - intermediate
-            - byproduct
+          - substrate
+          - product
+          - intermediate
+          - byproduct
   crate_ref_missing_files:
     type: array
-    description: >-
-      Relative @ids the crate names that are not present on disk. Must be
-      empty: in RO-Crate a relative identifier is a promise, and a dangling
-      one is invisible to a profile validator.
+    description: 'Relative @ids the crate names that are not present on disk. Must be empty: in RO-Crate
+      a relative identifier is a promise, and a dangling one is invisible to a profile validator.'
     items:
       type: string
   reads:
     type: array
-    description: >-
-      Crates or packages this handover READ but did not produce. Information
-      in this framework normally flows one way, from the phase that made
-      something to the phase that receives it. This is the other direction: a
-      receiving phase states what it can do, and the sending phase has to have
-      looked. Referenced, never inlined - the package stays small and the
-      graph joins the crates by their identifiers.
+    description: 'Crates or packages this handover READ but did not produce. Information in this framework
+      normally flows one way, from the phase that made something to the phase that receives it. This is
+      the other direction: a receiving phase states what it can do, and the sending phase has to have
+      looked. Referenced, never inlined - the package stays small and the graph joins the crates by their
+      identifiers.'
     items:
       type: object
       required:
-        - crate
-        - role
+      - crate
+      - role
       properties:
         crate:
           type: string
-          description: 'The crate''s identifier or path.'
+          description: The crate's identifier or path.
         role:
           enum:
-            - constraints
-            - context
-            - upstream
-          description: >-
-            constraints: limits this package had to respect. context: read to
-            interpret something. upstream: where the material came from.
+          - constraints
+          - context
+          - upstream
+          description: 'constraints: limits this package had to respect. context: read to interpret something.
+            upstream: where the material came from.'
         checksum:
           type: string
-          description: >-
-            Which version was read. A shared crate grows between rounds, so
-            'the Build crate' is not a unique thing to have read.
+          description: Which version was read. A shared crate grows between rounds, so 'the Build crate'
+            is not a unique thing to have read.
   limits:
     type: array
-    description: >-
-      Limits this package was built to respect, lifted out of the crates named
-      in 'reads'. Carried here rather than left in the crate so that a check
-      can compare against them, and 'from' says which crate each one came out
-      of. A limit is not a use-case constant and does not belong in the
-      profile: it is this run's equipment and this round's budget, and it
-      changes between rounds.
+    description: 'Limits this package was built to respect, lifted out of the crates named in ''reads''.
+      Carried here rather than left in the crate so that a check can compare against them, and ''from''
+      says which crate each one came out of. A limit is not a use-case constant and does not belong in
+      the profile: it is this run''s equipment and this round''s budget, and it changes between rounds.'
     items:
       type: object
       required:
-        - quantity
-        - value
-        - unit
-        - from
+      - quantity
+      - value
+      - unit
+      - from
       properties:
         quantity:
           type: string
@@ -352,164 +280,101 @@ properties:
           description: The crate this limit was read out of.
         stated_by:
           type: string
-          description: >-
-            Who or what put it there - a researcher seeding the crate before
-            round 1, or a phase recording its own equipment.
-
-# ===================================================================
-# What a JSON Schema cannot say.
-#
-# Each entry names a `kind` implemented in framework/validator.py.
-# `fix_hint` beginning "not auto-fixable" is load-bearing: it is what
-# stops a repair engine patching the error, and a test fails if a check
-# is patchable without saying so.
-# ===================================================================
+          description: Who or what put it there - a researcher seeding the crate before round 1, or a
+            phase recording its own equipment.
 x-dbtl-checks:
-
-  # Two sequences in one well. The provider's robot has no way to report
-  # this: it fills the well once and the second sequence is simply never
-  # made, which looks like a synthesis failure months later.
-  - kind: unique
-    of: order.items
-    fields:
-      - position
-    code: double_booked_position
-    message: two ordered sequences claim the same well of the order plate
-    fix_hint: >-
-      not auto-fixable: the provider would synthesise one and silently drop
-      the other
-
-  # The same design item ordered twice. Cheap to detect, expensive to
-  # miss: it is a well spent on a duplicate rather than on a candidate,
-  # and the two results are then treated as independent evidence.
-  - kind: unique
-    of: order.items
-    fields:
-      - design_item_id
-    code: duplicate_order_item
-    message: this design item is ordered twice
-
-  # Every order line must appear in `bindings`. The order is the thing
-  # that leaves the building and it carries no provenance at all, so a
-  # line with no binding is a sequence whose origin exists nowhere.
-  - kind: cross_ref
-    of: order.items
-    field: design_item_id
-    against: 'bindings[].design_item_id'
-    code: unbound_order_item
-    message: 'ordered, but nothing says which crate entity it came from'
-    fix_hint: 'not auto-fixable: an unbound order line is a sequence with no origin'
-
-  # The other end of the same bridge: a binding must point at an entity
-  # the crate really contains. A dangling @id is invisible to a profile
-  # validator, because in RO-Crate a relative identifier is a promise
-  # and nothing checks that it was kept.
-  - kind: cross_ref
-    of: bindings
-    field: crate_entity
-    against: 'crate.@graph[].@id'
-    code: missing_crate_entity
-    message: the binding points at an entity the crate does not contain
-
-  # The check this whole contract exists for. A FASTA that reaches the
-  # synthesis provider while its chain of derivation stops in mid-air is
-  # a sequence with no origin: it can be synthesised, but no result
-  # obtained from it can ever be defended.
-  #
-  # It is a graph traversal, not a field test. The walk follows the
-  # profile's `follow` properties, a CreateAction's `object`, and a
-  # reverse index of `result`, so a Process Run Crate and a PROV-style
-  # crate are both walked without the contract knowing which it has.
-  - kind: provenance_chain
-    of: bindings
-    field: crate_entity
-    in: 'crate.@graph'
-    from_profile: required_provenance.design_to_build
-    code: broken_provenance_chain
-    message: no path of derivation from this sequence back to a physical sample
-    fix_hint: >-
-      not auto-fixable: inventing the missing step would fabricate the origin
-      of a sequence. Either the step is recorded, or the candidate is dropped
-      from the order
-
-  # Which context the crate is incomplete without, per kind of entity.
-  # The list is in the profile, not here, because what counts as enough
-  # provenance differs between bioprospecting and biomanufacturing while
-  # the mechanism does not.
-  - kind: required_provenance
-    of: 'crate.@graph'
-    from_profile: required_provenance.design_to_build.entities
-    code: missing_provenance
-    message: the profile requires this property on this kind of entity
-
-  # `alignment.unaligned` must be empty. A key nobody has mapped to a
-  # term is a key nobody can query, so it fails the handover rather than
-  # warning about it: a warning here would be a term quietly lost.
-  - kind: empty
-    of: alignment.unaligned
-    code: unaligned_key
-    message: 'no term has been agreed for this key, so nothing can query it'
-    fix_hint: >-
-      one reviewed line in vocabulary/labs/<lab>.json if it is only this
-      site's spelling for a term we already have, or a pull request against
-      vocabulary/core.json if it is a new term. The engine may propose; a
-      human decides, once, and every partner gets it
-
-  # The checksum must match the crate, not merely be present. A missing
-  # checksum is a fixable error, so some engine will supply one - and an
-  # engine that is wrong, or hostile, can supply a plausible string that
-  # satisfies "present" while the crate's integrity claim becomes a lie.
-  # The claim has to be checked, not the field.
-  - kind: derived
-    of: crate_ref.checksum
-    function: crate_checksum
-    code: checksum_mismatch
-    message: the checksum does not match the crate it is supposed to attest
-    fix_hint: >-
-      not auto-fixable: a checksum that does not match is not a formatting
-      problem. Either the crate changed after the checksum was taken, or the
-      checksum was fabricated. Recompute it from the crate, or find out which
-
-  # Every relative @id the crate names must be a file that is there.
-  # This is the fault no RO-Crate profile validator catches, because the
-  # metadata is well formed either way.
-  - kind: empty
-    of: crate_ref_missing_files
-    code: missing_file
-    message: the crate names this file and it is not there
-    fix_hint: >-
-      not auto-fixable: the file is either found and added to the crate, or
-      the entity that names it is removed. An agent cannot create the data.
-
-  # Do the values mean what Build expects? A gene called with open ends
-  # may be a truncated fragment, and the crate says so honestly, per
-  # protein. The crate is not wrong and must not be refused - but Build
-  # cannot be sent a right partial sequence without being told. Hence a
-  # flag, whose severity the profile sets per rule.
-  - kind: entity_value
-    of: bindings
-    field: crate_entity
-    in: 'crate.@graph'
-    from_profile: accepted_values.design_to_build
-    code: flagged_entity
-    message: the crate states something about this entity that Build has to act on
-    fix_hint: >-
-      not auto-fixable, and not a defect in the crate: the crate is telling
-      the truth. Either the candidate is dropped from the order, or Build is
-      told and accepts it knowingly
-
-  # Is what arrived buildable by the phase that has to build it? Every
-  # other check here asks whether the package is complete. This one
-  # compares it against a limit the receiving phase stated in its own
-  # crate, carried in `limits` with `from` naming the crate it came out
-  # of, so the claim is checkable and attributable.
-  - kind: within_limits
-    of: order.items
-    measure: count
-    quantity: library_size
-    code: exceeds_stated_limit
-    message: more constructs ordered than the receiving phase said it can build
-    fix_hint: >-
-      not auto-fixable: dropping candidates to fit is a scientific choice
-      about which ones to lose. Either Build raises the limit in its own
-      crate, or Design selects a smaller panel and says which ones it dropped
+- kind: unique
+  of: order.items
+  fields:
+  - position
+  code: double_booked_position
+  message: two ordered sequences claim the same well of the order plate
+  fix_hint: 'not auto-fixable: the provider would synthesise one and silently drop the other'
+- kind: unique
+  of: order.items
+  fields:
+  - design_item_id
+  code: duplicate_order_item
+  message: this design item is ordered twice
+- kind: cross_ref
+  of: order.items
+  field: design_item_id
+  against: bindings[].design_item_id
+  code: unbound_order_item
+  message: ordered, but nothing says which crate entity it came from
+  fix_hint: 'not auto-fixable: an unbound order line is a sequence with no origin'
+- kind: cross_ref
+  of: bindings
+  field: crate_entity
+  against: crate.@graph[].@id
+  code: missing_crate_entity
+  message: the binding points at an entity the crate does not contain
+- kind: provenance_chain
+  of: bindings
+  field: crate_entity
+  in: crate.@graph
+  from_profile: required_provenance.design_to_build
+  code: broken_provenance_chain
+  message: no path of derivation from this sequence back to a physical sample
+  fix_hint: 'not auto-fixable: inventing the missing step would fabricate the origin of a sequence. Either
+    the step is recorded, or the candidate is dropped from the order'
+- kind: required_provenance
+  of: crate.@graph
+  from_profile: required_provenance.design_to_build.entities
+  code: missing_provenance
+  message: the profile requires this property on this kind of entity
+- kind: empty
+  of: alignment.unaligned
+  code: unaligned_key
+  message: no term has been agreed for this key, so nothing can query it
+  fix_hint: one reviewed line in vocabulary/labs/<lab>.json if it is only this site's spelling for a term
+    we already have, or a pull request against vocabulary/core.json if it is a new term. The engine may
+    propose; a human decides, once, and every partner gets it
+- kind: derived
+  of: crate_ref.checksum
+  function: crate_checksum
+  code: checksum_mismatch
+  message: the checksum does not match the crate it is supposed to attest
+  fix_hint: 'not auto-fixable: a checksum that does not match is not a formatting problem. Either the
+    crate changed after the checksum was taken, or the checksum was fabricated. Recompute it from the
+    crate, or find out which'
+- kind: empty
+  of: crate_ref_missing_files
+  code: missing_file
+  message: the crate names this file and it is not there
+  fix_hint: 'not auto-fixable: the file is either found and added to the crate, or the entity that names
+    it is removed. An agent cannot create the data.'
+- kind: entity_value
+  of: bindings
+  field: crate_entity
+  in: crate.@graph
+  from_profile: accepted_values.design_to_build
+  code: flagged_entity
+  message: the crate states something about this entity that Build has to act on
+  fix_hint: 'not auto-fixable, and not a defect in the crate: the crate is telling the truth. Either the
+    candidate is dropped from the order, or Build is told and accepts it knowingly'
+- kind: within_limits
+  of: order.items
+  measure: count
+  quantity: library_size
+  code: exceeds_stated_limit
+  message: more constructs ordered than the receiving phase said it can build
+  fix_hint: 'not auto-fixable: dropping candidates to fit is a scientific choice about which ones to lose.
+    Either Build raises the limit in its own crate, or Design selects a smaller panel and says which ones
+    it dropped'
+- kind: references_resolve
+  of: crate.@graph
+  code: dangling_reference
+  message: named here and nowhere in the crate
+  fix_hint: 'not auto-fixable: a relative identifier is a promise that the thing is in this crate. Either
+    it is added, or the reference to it is removed. Inventing the entity would be describing something
+    nobody has.'
+- kind: root_declares
+  of: crate.@graph
+  property: conformsTo
+  contains: /ro/wfrun/
+  code: root_declares_no_profile
+  message: the root data entity declares no workflow-run profile
+  fix_hint: 'not auto-fixable: the descriptor''s own conformsTo says which version of RO-Crate the file
+    follows, which is a different statement. A crate whose root declares nothing can be parsed and cannot
+    be interpreted.'

@@ -166,12 +166,17 @@ def design_crate(n: int = 6, seed: int = 7, faults: set[str] | None = None) -> d
         "@context": ["https://w3id.org/ro/crate/1.1/context",
                      {k: v for k, v in _crate_context().items()}],
         "@graph": [
+            # The descriptor says which version of RO-Crate the FILE follows.
+            # Which profile the CONTENT follows is a different statement and
+            # belongs on the root: a reader that has only the first one can
+            # parse the crate and cannot interpret it. Both were on the
+            # descriptor here until a contract check said so.
             {"@id": "ro-crate-metadata.json", "@type": "schema:CreativeWork",
-             "conformsTo": _ref("https://w3id.org/ro/crate/1.1",
-                                "https://w3id.org/ro/wfrun/process/0.5"),
+             "conformsTo": _ref("https://w3id.org/ro/crate/1.1"),
              "about": _ref("./")},
             {"@id": "./", "@type": "schema:Dataset",
              "name": "bioprospecting Design handover, panel of %d candidates" % n,
+             "conformsTo": _ref("https://w3id.org/ro/wfrun/process/0.5"),
              "datePublished": "2026-11-10",
              "license": _ref("https://spdx.org/licenses/CC-BY-4.0"),
              "hasPart": _ref(*[it["crate_entity"] for it in items]),

@@ -445,6 +445,22 @@
       "code": "exceeds_stated_limit",
       "message": "more constructs ordered than the receiving phase said it can build",
       "fix_hint": "not auto-fixable: dropping candidates to fit is a scientific choice about which ones to lose. Either Build raises the limit in its own crate, or Design selects a smaller panel and says which ones it dropped"
+    },
+    {
+      "kind": "references_resolve",
+      "of": "crate.@graph",
+      "code": "dangling_reference",
+      "message": "named here and nowhere in the crate",
+      "fix_hint": "not auto-fixable: a relative identifier is a promise that the thing is in this crate. Either it is added, or the reference to it is removed. Inventing the entity would be describing something nobody has."
+    },
+    {
+      "kind": "root_declares",
+      "of": "crate.@graph",
+      "property": "conformsTo",
+      "contains": "/ro/wfrun/",
+      "code": "root_declares_no_profile",
+      "message": "the root data entity declares no workflow-run profile",
+      "fix_hint": "not auto-fixable: the descriptor's own conformsTo says which version of RO-Crate the file follows, which is a different statement. A crate whose root declares nothing can be parsed and cannot be interpreted."
     }
   ]
 }
