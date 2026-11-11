@@ -300,9 +300,14 @@ def _slug(text: str) -> str:
 # 3. asking the graph something
 # --------------------------------------------------------------------------- #
 
-def provenance_of(crate: dict, entity: str,
-                  follow=("prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used")
-                  ) -> list[dict]:
+# Both real crates in this project say "this came from that" in schema.org
+# terms as well as in PROV, so the default follows both. A caller that wants
+# only one dialect passes its own list.
+FOLLOW = ("prov:wasDerivedFrom", "prov:wasGeneratedBy", "prov:used",
+          "isBasedOn", "isPartOf")
+
+
+def provenance_of(crate: dict, entity: str, follow=FOLLOW) -> list[dict]:
     """The chain behind one sequence, nearest first.
 
     This is the answer to the only question that matters in six months: where did
@@ -311,6 +316,19 @@ def provenance_of(crate: dict, entity: str,
     """
     index = {n["@id"]: n for n in crate.get("@graph", [])
              if isinstance(n, dict) and "@id" in n}
+
+    # RO-Crate has no property pointing from a thing to the action that made
+    # it, so a Process Run Crate is walked backwards: find the action whose
+    # `result` contains the entity, then take that action's `object`. The
+    # validator has done this since it first met somebody else's crate; this
+    # helper had not, so the demos could check a crate they could not walk.
+    produced_by: dict[str, list[str]] = {}
+    for node in index.values():
+        if "CreateAction" not in _type_list(node):
+            continue
+        for made in _id_list(node.get("result")):
+            produced_by.setdefault(made, []).append(node["@id"])
+
     chain, seen, queue = [], {entity}, [entity]
     while queue:
         node = index.get(queue.pop(0))
@@ -319,14 +337,32 @@ def provenance_of(crate: dict, entity: str,
         types = node.get("@type")
         chain.append({"id": node["@id"], "name": node.get("name", ""),
                       "type": types if isinstance(types, str) else "/".join(types or [])})
-        for prop in follow:
-            ref = node.get(prop)
-            for target in ([ref] if isinstance(ref, dict) else (ref or [])):
-                tid = target.get("@id") if isinstance(target, dict) else target
-                if tid and tid not in seen:
-                    seen.add(tid)
-                    queue.append(tid)
+
+        nxt = [t for prop in follow for t in _id_list(node.get(prop))]
+        nxt += produced_by.get(node["@id"], [])
+        if "CreateAction" in _type_list(node):
+            nxt += _id_list(node.get("object"))
+        for tid in nxt:
+            if tid and tid not in seen:
+                seen.add(tid)
+                queue.append(tid)
     return chain
+
+
+def _type_list(node: dict) -> list[str]:
+    value = node.get("@type")
+    return value if isinstance(value, list) else [value] if value else []
+
+
+def _id_list(value) -> list[str]:
+    if isinstance(value, dict):
+        return [value["@id"]] if "@id" in value else []
+    if isinstance(value, list):
+        out = []
+        for item in value:
+            out.extend(_id_list(item))
+        return out
+    return [value] if isinstance(value, str) else []
 
 
 # The same questions as SPARQL, for when the graph goes into a real store
