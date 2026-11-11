@@ -59,20 +59,32 @@ has and still be useless to the phase receiving it.
 
 ## Try it in two minutes
 
-Everything below runs from this folder and needs only Python 3.
+**You need Python 3.11 or later.** On a Mac that is usually `python3` rather
+than `python`. Docker is not needed for this part; it is needed to deploy,
+further down.
+
+Everything below runs from this folder. Install it first, into a virtual
+environment so nothing else on your machine is touched:
+
+```
+python3 -m venv .venv
+source .venv/bin/activate          # on Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+That installs PyYAML, which the service needs, and puts `sentinel_oo` on the
+path so the commands below work without setting `PYTHONPATH`.
 
 ```
 export SENTINEL_CONTRACTS=examples/contracts
 
-PYTHONPATH=src python -m sentinel_oo examples/coating-test/valid \
-    --contract mixing_to_coating
+python -m sentinel_oo examples/coating-test/valid --contract mixing_to_coating
 ```
 
 That accepts. Now one that does not:
 
 ```
-PYTHONPATH=src python -m sentinel_oo \
-    examples/coating-test/invalid/missing-conformsto \
+python -m sentinel_oo examples/coating-test/invalid/missing-conformsto \
     --contract mixing_to_coating
 ```
 
@@ -86,11 +98,17 @@ PYTHONPATH=src python -m sentinel_oo \
 
 That sentence came from a contract file, not from the code.
 
+To see what is in a crate, which is the list a contract has to match:
+
+```
+python -m sentinel_oo --describe examples/coating-test/valid
+```
+
 To read a contract in plain words, which is what you send to the team that
 produces the handover:
 
 ```
-PYTHONPATH=src python -m sentinel_oo --show-contract mixing_to_coating
+python -m sentinel_oo --show-contract mixing_to_coating
 ```
 
 The worked example is a coating laboratory, deliberately not a DBTL cycle,
@@ -161,13 +179,17 @@ one document, the API manual, and the system manual. Rebuild them with
 ## Running the tests
 
 ```
+pip install -e ".[test]"
 python -m pytest
 ```
 
-200 tests. Three of them skip unless `rocrate-validator` is installed, and
-those three matter most, because they ask a third party program whether the
-crate we returned is still a valid RO-Crate. In the container it is
-installed, so there they always run.
+214 tests. Three of them skip unless the third party RO-Crate validator is
+installed, and those three matter most, because they ask a program that
+knows nothing about this service whether the crate we returned is still
+valid. The command above installs it along with pytest. **Its package is
+called `roc-validator` and its command is `rocrate-validator`**, which
+nobody would guess. In the container it is always installed, so there the
+three always run.
 
 ```
 docker build -t sentinel-oo:dev .

@@ -268,3 +268,72 @@ class Crate:
 
     def __repr__(self) -> str:
         return f"<Crate {len(self._entities)} entities {self._checksum[:14]}...>"
+
+
+def describe(crate) -> str:
+    """What is in a crate, as the list somebody needs to write a contract.
+
+    A requirement names an entity type and a value, and both names have to
+    match what is actually in the crate. Until 12 November 2026 there was no
+    way to find out what those were: the service could check a crate, list
+    its contracts and print a contract in plain words, and could not say
+    what a crate contains. The only options were to read the raw JSON of a
+    file with a hundred or more entities, or write a throwaway script.
+
+    Found twice. Once by walking through what a new user does, where it is
+    the second thing they do. Once by a deployment trial, where the
+    tutorial's first step reads as though it provides this and does not.
+
+    It also catches the commonest mistake before it is made. Types are
+    compared as plain text, so a crate saying `CoatingRecipe` against a
+    contract saying `Recipe` means every requirement matches nothing and
+    passes in silence.
+    """
+    from collections import Counter
+
+    from .rules import named_values_of, types_of, values_of
+
+    kinds = Counter()
+    values_by_kind: dict[str, Counter] = {}
+
+    for entity in crate:
+        for kind in types_of(entity):
+            kinds[kind] += 1
+            seen = values_by_kind.setdefault(kind, Counter())
+            # Every PropertyValue this entity points at, which is how a
+            # crate following Process Run Crate records most numbers and
+            # strings.
+            for key in entity:
+                if key.startswith("@"):
+                    continue
+                for reference in values_of(entity, key):
+                    target = crate.get(reference)
+                    if target is None:
+                        continue
+                    if "PropertyValue" not in types_of(target):
+                        continue
+                    name = str(target.get("name", "")).strip()
+                    if name:
+                        seen[name] += 1
+
+    lines = [
+        f"{len(list(crate))} entities.",
+        "",
+        "Entity types, as a contract must spell them in `applies_to`:",
+        "",
+    ]
+    for kind, count in sorted(kinds.items(), key=lambda p: (-p[1], p[0])):
+        lines.append(f"  {kind:34} {count:4}")
+        for name, seen in sorted(values_by_kind.get(kind, {}).items()):
+            lines.append(f"      named value: {name!r} on {seen} of them")
+
+    lines += [
+        "",
+        "A requirement names one of those types and either a property "
+        "written on it",
+        "or one of its named values. The names must match exactly: they are "
+        "compared",
+        "as plain text, so a contract saying `Recipe` against a crate saying",
+        "`CoatingRecipe` matches nothing and passes in silence.",
+    ]
+    return "\n".join(lines)

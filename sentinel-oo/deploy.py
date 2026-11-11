@@ -62,6 +62,35 @@ from sentinel_oo.contract import ContractError, ContractRegistry  # noqa: E402
 DEFAULT_IMAGE = "sentinel-oo:dev"
 DEFAULT_PORT = 8080
 
+# The model container. Started by this program unless the deployment points
+# somewhere else, because the model is on by default and a deployment that
+# cannot reach one is a deployment doing none of what it was deployed to do.
+#
+# Found by a deployment trial on 11 November 2026: the deployment guide
+# labelled `python deploy.py <contracts>` as giving "a model beside it", and
+# it started only the sentinel container. Its own stage 4 then reported
+# "configured but not answering", which was correct and unhelpful.
+MODEL_IMAGE = "ollama/ollama:0.5.7"
+MODEL_PORT = 11434
+DEFAULT_MODEL = "qwen2.5:14b"
+
+# The model server image, before any model is downloaded into it. Announced
+# and timed separately, because `docker run` pulls it first and a 300 second
+# limit is not enough for a gigabyte and a half on conference wifi. Found on
+# 12 November 2026 by running this with nothing cached.
+MODEL_IMAGE_GB = 2
+
+# Roughly, for the models likely to be asked for, so somebody on hackathon
+# wifi is told before several gigabytes start moving rather than after.
+# Only used when the model is not already downloaded.
+MODEL_SIZES_GB = {
+    "qwen2.5:14b": 9,
+    "qwen2.5-coder:14b": 9,
+    "qwen2.5:7b": 5,
+    "llama3.1:8b": 5,
+    "llama3.3:70b": 43,
+}
+
 
 class Failed(Exception):
     """Something went wrong and the deployment stopped. Carries the reason."""
@@ -154,19 +183,177 @@ def image_exists(image: str) -> bool:
 
 
 def stop_instance(name: str, quiet: bool = False) -> None:
-    run(["docker", "rm", "-f", name], timeout=120)
+    """Remove the sentinel, the model beside it, and the network they share.
+
+    All three, because this program created all three. Leaving a model
+    container running after a stop is a 9 gigabyte surprise on somebody's
+    laptop.
+    """
+    for container in (name, model_name(name)):
+        run(["docker", "rm", "-f", container], timeout=120)
+    run(["docker", "network", "rm", network_name(name)], timeout=60)
     if not quiet:
-        print(f"   stopped and removed {name}")
+        print(f"   stopped and removed {name}, {model_name(name)} "
+              f"and the network between them")
+
+
+def model_name(name: str) -> str:
+    return f"{name}-model"
+
+
+def network_name(name: str) -> str:
+    return f"{name}-net"
+
+
+def model_already_there(container: str, model: str) -> bool:
+    """Is the model already downloaded into this container's volume?"""
+    found = run(["docker", "exec", container, "ollama", "list"], timeout=60)
+    return found.returncode == 0 and model.split(":")[0] in found.stdout
+
+
+def agree_to_download(wanted, yes: bool) -> bool:
+    """Say what is about to be downloaded and how big it is, then ask.
+
+    Nobody should find out after the event that several gigabytes have
+    started moving, least of all on conference wifi. Without a terminal to
+    ask in, this stops rather than guessing, and says how to proceed.
+    """
+    total = sum(size or 0 for _, size in wanted)
+    print()
+    print("   This deployment needs to download:")
+    for what, size in wanted:
+        amount = f"about {size} GB" if size else "size unknown"
+        print(f"       {what:46} {amount}")
+    known = all(size for _, size in wanted)
+    print(f"   {'Total: about ' + str(total) + ' GB' if known else 'Total: at least ' + str(total) + ' GB'}, "
+          "which on a hotel or conference connection takes a long time.")
+    print()
+
+    if yes:
+        print("   Proceeding, because --yes was given.")
+        return True
+    if not sys.stdin.isatty():
+        raise Failed(
+            "this deployment needs to download "
+            f"{'about ' + str(total) if known else 'at least ' + str(total)} "
+            "GB and there is nobody to ask.\n"
+            "Run again with --yes to agree to it, or with --model-url '' to "
+            "deploy without a model."
+        )
+    return input("   Download now? [y/N] ").strip().lower() in ("y", "yes")
+
+
+def start_model(name: str, model: str, yes: bool) -> str:
+    """Start a model container beside the sentinel and return its address.
+
+    Returns the address the sentinel should use, which is the container
+    name on their shared network rather than a port on this machine.
+    """
+    container = model_name(name)
+    network = network_name(name)
+
+    # Everything that may have to be downloaded, totalled before anything
+    # starts, so one question covers the whole wait rather than two.
+    need_image = not image_exists(MODEL_IMAGE)
+    wanted = []
+    if need_image:
+        wanted.append((f"the model server, {MODEL_IMAGE}", MODEL_IMAGE_GB))
+
+    size = MODEL_SIZES_GB.get(model)
+    # Whether the model itself is already there cannot be known until the
+    # container runs, so it is assumed to be needed when the image is not
+    # there either: a fresh image has an empty store.
+    if need_image:
+        wanted.append((model, size))
+
+    if wanted and not agree_to_download(wanted, yes):
+        raise Failed(
+            "the download was declined, so nothing was started.\n"
+            "Deploy without a model with --model-url '', or point at one you "
+            "already have with --model-url <address>."
+        )
+
+    if need_image:
+        print(f"   downloading {MODEL_IMAGE}")
+        pulled = run(["docker", "pull", MODEL_IMAGE], timeout=3600)
+        if pulled.returncode != 0:
+            raise Failed(
+                f"{MODEL_IMAGE} could not be downloaded:\n\n"
+                + (pulled.stdout + pulled.stderr).strip()[-800:]
+            )
+
+    run(["docker", "network", "create", network], timeout=60)
+
+    started = run([
+        "docker", "run", "-d",
+        "--name", container,
+        "--network", network,
+        # Named after the deployment, so two deployments do not fight over
+        # one download and removing one does not take the other's model.
+        "-v", f"{container}-store:/root/.ollama",
+        MODEL_IMAGE,
+    ], timeout=300)
+    if started.returncode != 0:
+        raise Failed(
+            "the model container did not start:\n\n"
+            + (started.stdout + started.stderr).strip()
+            + "\n\nTo deploy without a model, pass --model-url ''"
+        )
+    print(f"   {container} started from {MODEL_IMAGE}")
+
+    # Wait for it to answer before asking it for anything.
+    for _ in range(60):
+        if run(["docker", "exec", container, "ollama", "list"],
+               timeout=30).returncode == 0:
+            break
+        time.sleep(1)
+
+    if model_already_there(container, model):
+        print(f"   {model} is already downloaded")
+    else:
+        if not need_image and not agree_to_download([(model, size)], yes):
+            raise Failed(
+                "the download was declined, so nothing was started.\n"
+                "Deploy without a model with --model-url '', or point at one "
+                "you already have with --model-url <address>."
+            )
+        print(f"   downloading {model}. This is the slow part.")
+        pulled = run(["docker", "exec", container, "ollama", "pull", model],
+                     timeout=7200)
+        if pulled.returncode != 0:
+            raise Failed(
+                f"{model} could not be downloaded:\n\n"
+                + (pulled.stdout + pulled.stderr).strip()[-800:]
+            )
+        print(f"   {model} downloaded")
+
+    return f"http://{container}:{MODEL_PORT}"
 
 
 def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
-                   port: int, model_url: str | None, model: str | None) -> None:
+                   port: int, model_url: str | None, model: str | None,
+                   network: str | None = None,
+                   reachable_from_network: bool = False) -> None:
     stop_instance(name, quiet=True)
 
     command = [
         "docker", "run", "-d",
         "--name", name,
-        "-p", f"{port}:{port}",
+        # The loopback interface only, unless asked otherwise.
+        #
+        # Before 12 November 2026 this published on every interface, so on
+        # shared wifi anyone on the same network could send the instance
+        # requests. There is no password of any kind. The API manual warned
+        # against exactly that and this program did it by default, which is
+        # the wrong way round. Found by a deployment trial on 11 November
+        # 2026 at a hackathon.
+        "-p", f"{'' if reachable_from_network else '127.0.0.1:'}{port}:{port}",
+    ]
+    if network:
+        # The same network as the model beside it, so the sentinel reaches
+        # it by container name rather than by a port on this machine.
+        command += ["--network", network]
+    command += [
         # The whole of the tailoring, and read only: a service that checks
         # handovers has no business editing the contract it checks against.
         "-v", f"{contracts.resolve()}:/contracts:ro",
@@ -195,6 +382,14 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
             + (started.stdout + started.stderr).strip()
         )
     print(f"   container {name} started from {image}")
+    if reachable_from_network:
+        print("   WARNING: reachable from your whole network, and the "
+              "service has no password.")
+        print("            On shared wifi anyone on it can send this "
+              "instance requests.")
+    else:
+        print("   reachable from this machine only. Pass "
+              "--reachable-from-network to change that")
     print(f"   contracts mounted read only from {contracts}")
 
 
@@ -293,11 +488,30 @@ def deploy(args) -> int:
     else:
         build_image(args.image)
 
-    say("3. Starting the instance")
-    start_instance(name, args.image, contracts, crates, args.port,
-                   args.model_url, args.model)
+    model = args.model or DEFAULT_MODEL
+    network = None
+    model_url = args.model_url
 
-    say("4. Checking the instance serves what was validated")
+    if model_url is None:
+        # Nothing was said, so this program provides the model, which is
+        # what "the model is on by default" has to mean for the one command
+        # the documents tell people to use.
+        say("3. Starting the model beside it")
+        model_url = start_model(name, model, args.yes)
+        network = network_name(name)
+    elif model_url == "":
+        say("3. The model", "   none: --model-url was empty, so this "
+                            "deployment runs without one")
+    else:
+        say("3. The model",
+            f"   not started here: {model_url} was given, so the model is "
+            "somebody else's to run")
+
+    say("4. Starting the instance")
+    start_instance(name, args.image, contracts, crates, args.port,
+                   model_url, model, network, args.reachable_from_network)
+
+    say("5. Checking the instance serves what was validated")
     health = wait_until_answering(name, args.port)
     print(f"   answering on http://127.0.0.1:{args.port}")
     print(f"   image {health.get('image_tag')}, commit {health.get('git_commit')}")
@@ -351,9 +565,10 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"the port to serve on, default {DEFAULT_PORT}")
     parser.add_argument(
         "--model-url", default=os.environ.get("SENTINEL_MODEL_URL"),
-        help=("where the model is, such as http://gpu-box.lan:11434. The "
-              "model runs in its own container and does not have to be on "
-              "this machine. Pass an empty value for no model at all"),
+        help=("where the model is, such as http://gpu-box.lan:11434. Leave "
+              "it out and a model container is started beside the service. "
+              "Give an address and that model is used instead, and nothing "
+              "is started here. Give an empty value for no model at all"),
     )
     parser.add_argument(
         "--model", default=os.environ.get("SENTINEL_MODEL"),
@@ -363,6 +578,19 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"the image to build and run, default {DEFAULT_IMAGE}")
     parser.add_argument("--name",
                         help="the container name, default sentinel-<folder>")
+    parser.add_argument(
+        "--yes", action="store_true",
+        help=("agree in advance to downloading the model, which is several "
+              "gigabytes. Without it you are asked, and without a terminal "
+              "to ask in the deployment stops"),
+    )
+    parser.add_argument(
+        "--reachable-from-network", action="store_true",
+        help=("let other machines on your network reach this instance. Off "
+              "by default, because the service asks for no password of any "
+              "kind, so on shared wifi this means anyone on it can send it "
+              "requests"),
+    )
     parser.add_argument("--no-build", action="store_true",
                         help="use the existing image instead of building")
     parser.add_argument("--check-only", action="store_true",

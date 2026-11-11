@@ -54,12 +54,21 @@ class Repairer:
         self.rules = rules
 
     def repair(self, crate: Crate, report, contract, engine, budget: int):
-        """Try to repair up to `budget` violations. Returns a crate and the
-        changes that survived."""
+        """Try to repair up to `budget` violations.
+
+        Returns the crate, the changes that survived, and how many times the
+        model was asked anything.
+
+        The count is not the same as the number of changes. A model can be
+        asked and answer nothing, or answer something the rules then throw
+        away. The record has to be able to say "asked three times, kept
+        nothing", which is a different run from "never asked".
+        """
         if budget <= 0 or engine is None:
-            return crate, ()
+            return crate, (), 0
 
         changes = []
+        asked = 0
         working = crate
 
         for violation in report.violations:
@@ -70,6 +79,7 @@ class Repairer:
             if not violation.requirement.repairable:
                 continue
 
+            asked += 1
             proposed = engine.propose_value(working, violation, contract)
             if proposed is None:
                 continue
@@ -110,7 +120,7 @@ class Repairer:
             ))
             working = candidate
 
-        return working, tuple(changes)
+        return working, tuple(changes), asked
 
     # ----------------------------------------------------------- writing
 

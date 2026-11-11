@@ -9,3 +9,8 @@ __pycache__/
 out/
 
 .DS_Store
+
+# Left in the source tree by `pip install -e .`, which the front page now
+# tells everybody to run.
+*.egg-info/
+.venv/

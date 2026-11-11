@@ -53,6 +53,26 @@ class Blessing:
     contract_source: ContractSource = ContractSource.NONE
     engine_used: str = NO_ENGINE
 
+    # What actually happened with the model, which is three separate facts.
+    #
+    # Before 12 November 2026 the record carried only the engine's name, and
+    # wrote it whether the model had answered, had never been asked, or could
+    # not be reached. A crate refused on a repairable requirement, with no
+    # model anywhere, carried "model engine: qwen2.5:14b at
+    # http://model:11434" and "0 change(s)". Anybody reading that later would
+    # conclude a model looked for the value and found nothing. No model was
+    # reached and the sentence holding the value was never read.
+    #
+    # The record is the thing this service exists to produce and the thing
+    # people are asked to trust. It must not say that.
+    #
+    # Reachable and asked are different. A model can be there and never asked,
+    # because no failing requirement was marked repairable, and that is a
+    # perfectly good run.
+    model_reachable: bool | None = None
+    model_asked: int = 0
+    model_unreachable_detail: str | None = None
+
     # None means nothing was checked, which is not the same as being accepted.
     # Step 1 of the build order has no rules at all, so every blessing it writes
     # carries None here. Anything that reports a verdict must get it from a
@@ -80,9 +100,38 @@ class Blessing:
             ("service image tag", self.build.image_tag),
             ("service commit", self.build.git_commit),
             ("rules checksum", self.build.rules_checksum),
-            ("model engine", self.engine_used),
+            ("model", self.model_text()),
             ("checksum of the crate as received", self.input_checksum),
         ]
+
+    def model_text(self) -> str:
+        """What happened with the model, as one line a person can read.
+
+        Four cases, and the fourth is the one the old record could not say.
+        """
+        if self.engine_used == NO_ENGINE:
+            return "none configured"
+
+        if self.model_reachable is False:
+            detail = self.model_unreachable_detail or "no reason recorded"
+            return (
+                f"{self.engine_used}, NOT REACHED: {detail}. "
+                "No value was recovered from free text, and nothing it "
+                "might have found is in this record"
+            )
+
+        if self.model_asked == 0:
+            return (
+                f"{self.engine_used}, reachable, not asked: no failing "
+                "requirement was marked repairable"
+            )
+
+        kept = len(self.changes)
+        times = "once" if self.model_asked == 1 else f"{self.model_asked} times"
+        return (
+            f"{self.engine_used}, reachable, asked {times}, "
+            f"{kept} change(s) kept"
+        )
 
     def verdict_text(self) -> str:
         if self.verdict is None:

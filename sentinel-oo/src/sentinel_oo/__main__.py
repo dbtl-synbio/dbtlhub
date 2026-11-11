@@ -69,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
         help="how many recent runs to keep, as a count rather than a time",
     )
     parser.add_argument(
+        "--describe", metavar="CRATE",
+        help=("say what is in a crate: its entity types with counts, and the "
+              "named values hanging off them. That is the list a contract "
+              "has to match"),
+    )
+    parser.add_argument(
         "--list-contracts",
         action="store_true",
         help="say what this service knows how to check, and stop",
@@ -100,6 +106,16 @@ def main(argv: list[str] | None = None) -> int:
         from . import serve
         serve(contracts=args.contracts, host=args.host, port=args.port,
               runs_held=args.runs_held)
+        return 0
+
+    if args.describe:
+        from .crate import describe
+
+        try:
+            print(describe(Crate.from_path(args.describe)))
+        except CrateMalformed as exc:
+            print(f"not a crate: {exc}", file=sys.stderr)
+            return 2
         return 0
 
     if args.list_contracts:

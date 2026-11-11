@@ -355,3 +355,88 @@ class TestHttpEngine:
                      self.engine(url="http://nowhere.invalid:11434"))
         assert run.verdict.value == "REFUSED"
         assert run.blessing.changes == ()
+
+
+# ------------------------------------------- what the record says happened
+
+
+class TestTheRecordSaysWhatHappened:
+    """Finding 26 of the deployment trial, 11 November 2026, and the worst
+    of the 26.
+
+    A crate was refused on a requirement marked `repairable`, so the model
+    should have been asked. No model was reachable. The record written into
+    the returned crate said:
+
+        model engine: qwen2.5:14b at http://model:11434
+        ... Verdict: REFUSED. 1 finding(s), 0 change(s).
+
+    Anybody reading that later concludes a model looked for the value and
+    found nothing. No model was reached and the sentence holding the value
+    was never read. The record misstated what happened, in the place this
+    service exists to produce and asks people to trust.
+
+    Four states, and the old record could say only one of them.
+    """
+
+    def test_no_model_configured(self, writer, registry):
+        run = run_on(IN_PROSE, writer, registry, NullEngine())
+        assert run.blessing.model_text() == "none configured"
+
+    def test_a_model_that_could_not_be_reached_says_so(self, writer, registry):
+        """The fault itself. This is the line that was missing."""
+        from sentinel_oo.engines import HttpEngine
+
+        run = run_on(IN_PROSE, writer, registry,
+                     HttpEngine(url="http://nowhere.invalid:11434"))
+        said = run.blessing.model_text()
+
+        assert "NOT REACHED" in said
+        assert "nowhere.invalid" in said
+        # It says why, and what follows from it, so a reader is not left to
+        # work out whether the value was looked for.
+        assert "URLError" in said or "Error" in said
+        assert "No value was recovered from free text" in said
+
+    def test_it_reaches_the_crate_and_not_only_the_terminal(self, writer, registry):
+        """deploy.py warned about this once, at start-up, and that warning
+        is in no record. The record is the durable thing."""
+        from sentinel_oo.engines import HttpEngine
+
+        run = run_on(IN_PROSE, writer, registry,
+                     HttpEngine(url="http://nowhere.invalid:11434"))
+        assert "NOT REACHED" in run.crate.to_json()
+
+    def test_reachable_but_never_asked_is_a_different_state(self, writer, registry):
+        """A model can be there and not asked, because no failing
+        requirement was marked repairable. That is a good run, and it must
+        not read like a model that looked and found nothing."""
+        engine = ScriptedEngine({})
+        engine.available = lambda: True
+        run = service(writer, registry, engine).check(
+            Crate.from_path(BROKEN / "missing-conformsto"),
+            contract_name="mixing_to_coating",
+        )
+        said = run.blessing.model_text()
+        assert "not asked" in said
+        assert "no failing requirement was marked repairable" in said
+
+    def test_asked_and_kept_nothing_is_not_the_same_as_not_asked(
+        self, writer, registry
+    ):
+        """The distinction the count exists for. A model that answered
+        wrongly was asked; a model that was never consulted was not."""
+        engine = ScriptedEngine({"drying atmosphere": "humid"})
+        engine.available = lambda: True
+        run = run_on(IN_PROSE, writer, registry, engine)
+
+        said = run.blessing.model_text()
+        assert "asked once" in said
+        assert "0 change(s) kept" in said
+        assert run.verdict.value == "REFUSED"
+
+    def test_asked_and_kept_something(self, writer, registry):
+        engine = ScriptedEngine({"drying atmosphere": "dry"})
+        engine.available = lambda: True
+        run = run_on(IN_PROSE, writer, registry, engine)
+        assert "asked once, 1 change(s) kept" in run.blessing.model_text()

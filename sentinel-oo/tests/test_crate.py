@@ -183,3 +183,62 @@ def test_descriptor_about_an_absent_entity_is_refused():
             entity["about"] = {"@id": "#nowhere"}
     with pytest.raises(CrateMalformed):
         Crate.from_bytes(json.dumps(body).encode()).root
+
+
+# ------------------------------------------------- saying what is in a crate
+
+
+class TestDescribe:
+    """The list somebody needs in order to write their first contract.
+
+    A requirement names an entity type and a value, and both names have to
+    match what is in the crate exactly, because types are compared as plain
+    text. Until 12 November 2026 there was no way to find out what those
+    names were without reading the raw JSON of a file with a hundred or
+    more entities.
+
+    Found twice: by walking through what a new user does, where this is the
+    second thing they do, and by a deployment trial, where the tutorial's
+    first step reads as though it provides this and does not.
+    """
+
+    def described(self, crate):
+        from sentinel_oo.crate import describe
+
+        return describe(crate)
+
+    def test_it_counts_the_entities(self, published):
+        assert self.described(published).startswith("28 entities.")
+
+    def test_it_names_every_type_a_contract_could_use(self, published):
+        said = self.described(published)
+        for kind in ("CoatingRecipe", "RackSlot", "IntendedRackLayout",
+                     "ThicknessReading", "DryingStep"):
+            assert kind in said, f"{kind} is in the crate and not in the list"
+
+    def test_it_names_the_values_hanging_off_them(self, published):
+        """The half that cannot be guessed. A property written on an entity
+        is visible in the JSON; a value hanging off it as a separate entity
+        is not, and most numbers in a Process Run Crate are recorded that
+        way."""
+        said = self.described(published)
+        assert "'film thickness'" in said
+        assert "'drying atmosphere'" in said
+        assert "'coverage'" in said
+
+    def test_it_says_which_entities_carry_each_value(self, published):
+        """Because a contract's `applies_to` has to name the right one."""
+        said = self.described(published)
+        assert "named value: 'drying atmosphere' on 1 of them" in said
+
+    def test_it_warns_that_names_are_compared_as_plain_text(self, published):
+        """The commonest mistake, caught before it is made: a contract
+        saying `Recipe` against a crate saying `CoatingRecipe` matches
+        nothing and passes in silence."""
+        said = self.described(published)
+        assert "compared" in said and "plain text" in said
+
+    def test_it_works_on_a_crate_with_nothing_in_it(self, minimal):
+        said = self.described(minimal)
+        assert "entities." in said
+        assert "Dataset" in said

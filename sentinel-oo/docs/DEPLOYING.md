@@ -75,7 +75,8 @@ sentinel-oo: deploying a tailored instance
 
 4. Checking the instance serves what was validated
    answering on http://127.0.0.1:8080
-   image dev, commit c0525b0, model engine none
+   image dev, commit c0525b0
+   model: reachable  (qwen2.5:14b at http://model:11434)
    2 contract(s) served, checksum matches what was validated
 
 Deployed.
@@ -93,7 +94,9 @@ Deployed.
 | `--image <n>` | The image to build and run. The default is `sentinel-oo:dev` |
 | `--model-url <url>` | Where the model is. An empty value means no model |
 | `--model <name>` | Which model to use, pinned by name |
-| `--stop` | Stop and remove the instance |
+| `--reachable-from-network` | Let other machines reach it. Off by default |
+| `--yes` | Agree in advance to downloading the model |
+| `--stop` | Stop and remove the instance, the model beside it, and the network between them |
 
 ## Using it once it is running
 
@@ -208,6 +211,25 @@ value sits inside a command line, a 14 billion parameter model recovered it
 and the handover was accepted in about half a second. Given a crate where
 the value is not present at all, it wrote nothing and the handover was
 refused.
+
+## Who can reach it
+
+**By default, only this machine.** The port is published on the loopback
+interface, so other machines on your network cannot send it requests.
+
+**The service asks for no password of any kind.** That is why the default is
+what it is. Before 12 November 2026 it published on every interface, which
+on shared wifi at a conference means anyone on that network could use it.
+
+To let other machines reach it:
+
+```
+python deploy.py <contracts> --reachable-from-network
+```
+
+It says so when it starts, in those words, because somebody doing it by
+accident should find out immediately. Put it behind something that
+authenticates before you use it anywhere you do not control.
 
 ## What your deployment folder needs
 

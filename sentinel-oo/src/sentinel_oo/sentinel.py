@@ -19,6 +19,7 @@ from .blessing import Blessing, ContractSource
 from .contract import Contract, ContractRegistry
 from .crate import Crate
 from .identity import BuildIdentity
+from .blessing import NO_ENGINE
 from .engines import Engine, HttpEngine, NullEngine
 
 # How many violations a model may be asked about in one check.
@@ -131,9 +132,10 @@ class Sentinel:
         # The repair path. Nothing is attempted without a budget, and with a
         # budget of zero the model is never asked anything at all.
         changes = ()
+        asked = 0
         returned = crate
         if report is not None and repair_budget > 0 and self.repairer is not None:
-            returned, changes = self.repairer.repair(
+            returned, changes, asked = self.repairer.repair(
                 crate, report, contract, self.engine, repair_budget
             )
             if changes:
@@ -153,6 +155,16 @@ class Sentinel:
             contract_checksum=contract.checksum if contract else None,
             contract_source=source,
             engine_used=self.engine.name,
+            # Asked once, not per question, so a run makes one extra call at
+            # most. Only asked when the model was actually used or could
+            # have been: there is nothing to report about a model nobody
+            # wanted.
+            model_reachable=(
+                None if self.engine.name == NO_ENGINE
+                else self.engine.available()
+            ),
+            model_asked=asked,
+            model_unreachable_detail=getattr(self.engine, "last_error", None),
             verdict=report.verdict if report else None,
             violations=report.violations if report else (),
             changes=changes,

@@ -311,13 +311,43 @@ it.
 | The contract's name, version and checksum | So a refusal can be argued about with the exact rules in hand |
 | **Where the contract came from** | "Checked against the published rules" and "checked against rules the sender supplied" are different claims and must not look alike |
 | Which build of the service ran | The image tag, the commit, and a checksum over the contracts |
-| Which model, if any | `none` is a recorded fact, not an absence |
+| What happened with the model | Which of four things: none configured; reachable and asked, with how many times and how many changes kept; reachable and not asked, because no failing requirement was repairable; or configured and NOT REACHED, with the reason |
 | Every finding | Including flags, not only refusals |
 | Every change a model's proposal survived | With the value before, the value after, which engine proposed it, and which requirement confirmed it |
 
 The action is recorded as failed rather than completed when the handover was
 refused, so a reader who looks only at the action status still gets the right
 answer.
+
+### What the record must never let a reader conclude wrongly
+
+**A model that was not reached must not read as a model that found
+nothing.** Until 12 November 2026 the record named the engine and said how
+many changes were kept, whatever had happened. A crate refused on a
+repairable requirement, with no model anywhere, carried `model engine:
+qwen2.5:14b at http://model:11434` and `0 change(s)`. Anybody reading that
+later would conclude a model with 14 billion parameters looked for the value
+and found nothing. No model was reached and the sentence holding the value
+was never read.
+
+It was found by a deployment trial on 11 November 2026, in which somebody
+deployed the service from the documents alone and had no model running. The
+command line was equally silent, and only the deployment program warned,
+once, at start-up, in a terminal, in no record.
+
+The record now says which of four things happened, and the fourth is the one
+it could not say:
+
+| | |
+|---|---|
+| `none configured` | Nobody asked for a model |
+| `..., reachable, asked once, 1 change(s) kept` | It was asked and something survived the rules |
+| `..., reachable, not asked: no failing requirement was marked repairable` | A good run in which the model had nothing to do |
+| `..., NOT REACHED: <why>. No value was recovered from free text` | A model was wanted and was not there |
+
+Reachable and asked are separate facts, and so are asked and kept. A model
+can answer three times and have all three answers thrown away by the rules,
+which is a different run from one that was never consulted.
 
 ---
 

@@ -67,8 +67,12 @@ nothing in the product looks as if it belongs to somebody's use case.
 ## Step 1: look at what you have been given
 
 ```
-PYTHONPATH=src python -m sentinel_oo examples/coating-test/valid --out /tmp/out
+python -m sentinel_oo --describe examples/coating-test/valid
 ```
+
+It prints every entity type in the crate with a count, and the named values
+hanging off each. **That is the list your contract has to match**, because a
+requirement names a type and a value and both are compared as plain text.
 
 That crate has 28 entities. The ones that matter for this tutorial are:
 
