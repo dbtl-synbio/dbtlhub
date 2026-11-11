@@ -93,17 +93,12 @@ md("""
 
 ## Settings
 
-Everything the rest of the notebook uses. The project name has the date in
-it so that running this twice does not collide.
-
-**Your billing account is looked up when this runs**, not written into this
-notebook. A machine cannot start without one, and the account belongs to
-whoever is running this rather than to the notebook, which is in a public
-repository.
+Names and numbers the rest of the notebook uses. Nothing here talks to
+Google Cloud, so this cell cannot fail.
 """)
 
 code("""
-import datetime, json, subprocess, textwrap, time
+import datetime, json, os, subprocess, textwrap, time
 
 # A project name nobody else in the world has used.
 STAMP     = datetime.datetime.now().strftime("%Y%m%d-%H%M")
@@ -115,29 +110,17 @@ MODEL     = "qwen2.5:14b"                # 14 billion parameters, about 9 GB
 DEPLOY    = "sentinel-demo"              # what the deployment is called
 REPO      = "https://github.com/dbtl-synbio/dbtlhub.git"
 
-# The billing account is looked up when this runs, rather than written
-# down here. This notebook is in a public repository, and an account
-# number belongs to whoever is running it, not to the notebook.
-accounts = subprocess.run(
-    ["gcloud", "billing", "accounts", "list",
-     "--filter=open=true", "--format=value(name,displayName)"],
-    capture_output=True, text=True).stdout.strip().splitlines()
 
-if not accounts:
-    raise SystemExit(
-        "No open billing account on this login. A machine cannot start "
-        "without one. Check you signed in as the right person.")
-if len(accounts) > 1:
-    print("More than one open billing account:")
-    for line in accounts:
-        print("   ", line.split("\\t")[-1])
-    print("Using the first. Set BILLING by hand if that is the wrong one.")
+# Runs one gcloud command and hands back everything it said, including
+# what it complained about. An earlier version looked only at what gcloud
+# printed and treated silence as an answer, so a command that failed for
+# one reason was reported as a different thing entirely.
+def gcloud(*arguments):
+    return subprocess.run(["gcloud", *arguments], capture_output=True,
+                          text=True)
 
-BILLING = accounts[0].split("\\t")[0]
-BILLING_NAME = accounts[0].split("\\t")[-1]
 
 print(f"project : {PROJECT}")
-print(f"billing : {BILLING_NAME}")
 print(f"machine : {VM} ({MACHINE}) in {ZONE}")
 print(f"model   : {MODEL}")
 """)
@@ -149,17 +132,68 @@ md("""
 
 # 1. Sign in to Google Cloud
 
-Colab asks which Google account you are. A window opens, you choose the
-account, and from then on this notebook may create things in your Google
-Cloud account.
+Colab asks which Google account you are. A window opens and you choose the
+account.
+
+**Then one extra step, which is not obvious.** Signing in that way gives
+your credentials to Python's own Google libraries. It does not give them to
+the `gcloud` command line tool, which is what the rest of this notebook
+uses, and `gcloud` will say it has no account at all. So this cell takes
+the token Colab just got for you and hands it to `gcloud` through the
+setting it reads for exactly that. No second sign-in and nothing to paste.
+
+That token lasts about an hour. `refresh()` gets a new one, and is worth
+running if a later cell suddenly says you are not signed in.
+
+Finally it finds your billing account. A machine cannot start without one.
+**The number is looked up here rather than written into this notebook**,
+which is in a public repository, and only its name is printed.
 
 Nothing is created by this step and nothing is charged.
 """)
 
 code("""
 from google.colab import auth
+import google.auth
+import google.auth.transport.requests
+
 auth.authenticate_user()
-print("signed in")
+
+
+def refresh():
+    \"\"\"Hand gcloud a fresh token from the sign-in above.\"\"\"
+    credentials, _ = google.auth.default()
+    credentials.refresh(google.auth.transport.requests.Request())
+    os.environ["CLOUDSDK_AUTH_ACCESS_TOKEN"] = credentials.token
+    return credentials
+
+
+credentials = refresh()
+print("signed in, and gcloud has been given the same credentials")
+
+# Proof rather than assumption: ask gcloud to do something that needs them.
+listed = gcloud("billing", "accounts", "list",
+                "--filter=open=true", "--format=value(name,displayName)")
+accounts = listed.stdout.strip().splitlines()
+
+if not accounts:
+    print("\\nNo open billing account came back.")
+    print("What gcloud said:\\n", listed.stderr or "(nothing)")
+    raise SystemExit(
+        "A machine cannot start without a billing account. Either the "
+        "account you chose in the sign-in window is not the one that has "
+        "the billing, or the credentials did not reach gcloud. The lines "
+        "above say which.")
+
+if len(accounts) > 1:
+    print("\\nMore than one open billing account:")
+    for line in accounts:
+        print("   ", line.split("\\\\t")[-1])
+    print("Using the first. Set BILLING by hand if that is the wrong one.")
+
+BILLING = accounts[0].split("\\\\t")[0]
+BILLING_NAME = accounts[0].split("\\\\t")[-1]
+print(f"billing : {BILLING_NAME}")
 """)
 
 # ------------------------------------------------------------- 2 the project
