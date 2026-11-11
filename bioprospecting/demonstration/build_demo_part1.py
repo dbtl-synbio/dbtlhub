@@ -198,6 +198,26 @@ if len(accounts) > 1:
 BILLING = accounts[0]["name"].split("/")[-1]
 BILLING_NAME = accounts[0]["displayName"]
 print(f"billing : {BILLING_NAME}")
+
+# Anything left behind by an earlier run of this notebook.
+#
+# A billing account can only have so many projects attached at once, and a
+# run that stops halfway leaves its project attached. On 12 November 2026
+# two such projects filled the last slot, the next run could not attach
+# billing at all, and each of them still had a machine running and
+# billing. So this says so before you start rather than after you fail.
+leftovers = json.loads(gcloud(
+    "projects", "list", "--filter=projectId:dbtl-sentinel-*",
+    "--format=json").stdout or "[]")
+
+if leftovers:
+    print("\\nProjects left behind by earlier runs of this notebook:")
+    for each in leftovers:
+        print("   ", each["projectId"])
+    print("\\nEach one holds a billing slot, and may still have a machine "
+          "running\\nand charging. Delete them with:\\n")
+    for each in leftovers:
+        print(f"    !gcloud projects delete {each['projectId']} --quiet")
 """)
 
 # ------------------------------------------------------------- 2 the project
@@ -219,9 +239,34 @@ Takes about half a minute.
 """)
 
 code("""
-!gcloud projects create {PROJECT} --name="DBTL sentinel demonstration" --quiet
-!gcloud billing projects link {PROJECT} --billing-account={BILLING} --quiet
-!gcloud services enable compute.googleapis.com --project={PROJECT} --quiet
+# Each step is checked. An earlier version ran these three as shell lines
+# and looked at none of their exit codes: attaching billing failed because
+# the billing account had its full number of projects attached already,
+# switching on Compute Engine then failed because of that, and the cell
+# still printed "project is ready" and carried on to make a machine that
+# could not be made.
+def must(what, *arguments):
+    done = gcloud(*arguments)
+    if done.returncode != 0:
+        print(f"{what}: FAILED\\n")
+        print(done.stderr or done.stdout)
+        raise SystemExit(f"Stopped at: {what}")
+    print(f"{what}: done")
+    return done
+
+
+must("make the project",
+     "projects", "create", PROJECT,
+     "--name=DBTL sentinel demonstration", "--quiet")
+
+must("attach billing",
+     "billing", "projects", "link", PROJECT,
+     f"--billing-account={BILLING}", "--quiet")
+
+must("switch on Compute Engine",
+     "services", "enable", "compute.googleapis.com",
+     f"--project={PROJECT}", "--quiet")
+
 print(f"\\nproject {PROJECT} is ready")
 """)
 
@@ -253,13 +298,16 @@ touch /var/tmp/ready
 '''
 open("startup.sh", "w").write(startup)
 
-!gcloud compute instances create {VM} \\
-    --project={PROJECT} --zone={ZONE} \\
-    --machine-type={MACHINE} \\
-    --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \\
-    --boot-disk-size=100GB \\
-    --metadata-from-file=startup-script=startup.sh \\
-    --quiet
+must("make the machine",
+     "compute", "instances", "create", VM,
+     f"--project={PROJECT}", f"--zone={ZONE}",
+     f"--machine-type={MACHINE}",
+     "--image-family=ubuntu-2404-lts-amd64",
+     "--image-project=ubuntu-os-cloud",
+     "--boot-disk-size=100GB",
+     "--metadata-from-file=startup-script=startup.sh",
+     "--quiet")
+
 
 def on_the_machine(command, quiet=False):
     \"\"\"Run one command on that machine and return what it printed.\"\"\"
