@@ -31,6 +31,8 @@ python3 architect/specification.py    # what is agreed vs what cannot be negotia
 python3 architect/conversation.py     # findings turned into something a person can decide
 python3 architect/route.py            # the policy over a scripted sequence, loop caught
 python3 architect/memory.py           # adopting the two real crates in this project
+python3 architect/interface.py        # the questions put to a person, scripted
+python3 architect/wiring.py           # the real phase agents and sentinels, under it
 ```
 
 ## The rules worth knowing before reading the code
@@ -67,13 +69,12 @@ a profile is declared, and what it could not interpret.
 
 ## What is not done
 
-- **No phase agent is wired in.** The demo scripts the runners and the
-  verdicts. Connecting `framework/agents/phase_*_crate.py` and the four
-  sentinels is the next step, and it is a small one — the seams are the two
-  callables `run_phase` takes.
-- **No interface.** Ingredient 1 produces questions and consumes answers as
-  values. Something has to put them in front of a person: a terminal prompt, a
-  web page, a chat. None exists.
+- **The interface is a terminal only.** `interface.py` shows a question and
+  reads an answer, and is driven by injected `input_fn`/`output_fn` so it can
+  be scripted. There is no web page and no chat.
+- **No run has been driven by a person end to end.** `wiring.py` connects the
+  four real phase agents and the four real sentinels, but the questions in it
+  are not answered — they are collected and counted.
 - **The researcher is a string.** Approvals are recorded as text, not as a
   signed act. Anybody can type anybody's name.
 - **A model is nowhere, deliberately.** Each part names the seam where one

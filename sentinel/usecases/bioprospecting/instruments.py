@@ -63,7 +63,10 @@ def ot2_worklist(panel: list[dict], container: str = "PLATE-1", seed: int = 7,
 
     if "unknown_item" in faults and rows:
         # Build labelled a sample with a candidate Design never committed to.
-        rows[5]["design_item_id"] = "CAND-999"
+        # The last row, not a fixed index: `dropped_well` may have removed one
+        # already, and a fault injector that crashes on a small panel is a
+        # fault injector nobody runs on a small panel.
+        rows[-1]["design_item_id"] = "CAND-999"
         log.append("NOTE operator relabelled one tube by hand")
 
     log.append("OT-2 run complete")

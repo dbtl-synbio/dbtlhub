@@ -65,10 +65,18 @@ class PhaseResult:
     `entities` and `action` go into the crate. `package` is what the sentinel
     will check. A phase run by a person fills the same fields - that is the
     whole reason this is a plain dataclass and not an agent interface.
+
+    `make_package` exists because of an ordering that is easy to get wrong: a
+    handover package carries the crate, and the crate does not contain this
+    phase's work until the Architect has recorded it. A package built inside
+    the runner therefore carries a crate without the very entities it is
+    handing over. So a phase may hand back a callable instead of a package,
+    and the Architect calls it once the recording has succeeded.
     """
     entities: list[dict] = field(default_factory=list)
     action: dict | None = None
     package: dict | None = None
+    make_package: Callable[[], dict | None] | None = None
     by: str = "unknown"
     notes: list[str] = field(default_factory=list)
 
@@ -147,6 +155,11 @@ class Architect:
                 self._step(phase, result.by, None, decision,
                            notes=[str(report.summary())])
                 return decision
+
+        # Built now, not in the runner: the crate is only complete once the
+        # recording above has gone in.
+        if result.make_package is not None:
+            result.package = result.make_package()
 
         if result.package is None or checker is None:
             decision = Decision(move=Move.GO_ON, target_phase=phase,
