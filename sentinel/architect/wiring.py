@@ -47,18 +47,23 @@ PHASE_AGENTS = {"design": DesignPhaseAgent, "build": BuildPhaseAgent,
 #  The four phase agents, as runners
 # --------------------------------------------------------------------------- #
 def phase_runner(profile: str = "bioprospecting", lab: str | None = None,
-                 **phase_inputs):
+                 engine=None, **phase_inputs):
     """A `Runner` that drives the real phase agent for whichever phase is asked.
 
     `phase_inputs` carries whatever a particular phase needs that the Architect
     does not know about - a panel, an upstream package. The Architect does not
     interpret them, which is the point: it must not need to understand the
     science to orchestrate it.
+
+    `engine` is whichever model the person chose, or None for the default
+    `RulesEngine`: deterministic, offline, and enough to check every handover.
+    It is passed to the phase agent, not to the sentinel - the sentinel's
+    verdict is the validator's, and a model has no vote in it.
     """
     made: dict[str, object] = {}
 
     def run(phase: str, arch) -> PhaseResult:
-        agent = PHASE_AGENTS[phase](profile=profile, lab=lab)
+        agent = PHASE_AGENTS[phase](profile=profile, lab=lab, engine=engine)
         agent.sentinel = None          # the Architect does the checking
 
         task = Task(goal=f"run {phase}",

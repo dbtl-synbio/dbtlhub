@@ -68,9 +68,21 @@ from architect.architect import Architect                             # noqa: E4
 from architect.contract import Move, PHASES, Question                 # noqa: E402
 from architect.interface import (SKIPPED, STOPPED, Interface,         # noqa: E402
                                  Stopped)
+from architect.web import setup as setup_mod                          # noqa: E402
 
 STATIC = HERE / "static"
 COOKIE_NAME = "dbtl_session"
+
+# A form POST is a few kilobytes of text. Anything larger is either a mistake
+# or an attempt to make this process allocate until it dies, and `rfile.read`
+# will happily do that if it is handed a large Content-Length.
+MAX_BODY = 256 * 1024
+
+# The names a POST may claim to be addressed to. Loopback only by default, so
+# another name resolving to this machine cannot drive the interface. `main()`
+# adds the bind address when it is told to listen somewhere else, because a
+# deliberate `--host` should not lock the person out of their own server.
+ALLOWED_HOSTS = {"127.0.0.1", "::1", "localhost"}
 ANSWER_TIMEOUT_S = 1800        # a question nobody answers must not park a
                                # thread for ever; after this the run stops
                                # itself, which is what `stop` means anyway.
@@ -452,6 +464,10 @@ class Session:
 
     def __init__(self, session_id: str):
         self.id = session_id
+        # Asked before the form, because a person who fills in a panel of 96
+        # enzymes and only then learns that no model is reachable has spent
+        # the interesting part of their attention on the boring failure.
+        self.setup = setup_mod.Setup()
         self.filled = Filled(form=FORM)
         self.log: list[dict] = []
         self.crate_growth: list[dict] = []
@@ -743,8 +759,16 @@ def _cycle(session: Session) -> None:
                      state="accepted_with_flags")
 
     lab, _ = wanted(values, "lab")
+    # What the setup screen chose. `engine_object()` falls back to RulesEngine
+    # and says so in its notes rather than raising: an unreachable model is a
+    # reason to run deterministically, not a reason not to run.
+    engine = session.setup.engine_object()
+    for line in session.setup.notes[-2:]:
+        session.note(line, kind="note")
+    session.note(f"the engine for this run: {engine.name}", kind="architect")
     runner = phase_runner(profile=profile or "bioprospecting",
-                          lab=(str(lab) if lab else None), **inputs)
+                          lab=(str(lab) if lab else None),
+                          engine=engine, **inputs)
     checker = sentinel_checker(profile=profile or "bioprospecting")
 
     # ---- the four phases --------------------------------------------------
@@ -1043,12 +1067,99 @@ def render_crate(session: Session) -> str:
             f'</tbody></table>')
 
 
+def render_setup(session: Session) -> str:
+    """The questions that come before the form: what will do the thinking.
+
+    Every option says what it needs and whether it is reachable from this
+    machine, probed now rather than claimed - so "not ready" is information
+    the person can act on instead of a failure they meet later.
+    """
+    state = session.setup.state()
+    out = [f'<form method="post" action="/setup" id="setup-form">']
+
+    for question in session.setup.questions():
+        out.append(f'<fieldset><legend>{esc(question["headline"])}</legend>')
+        out.append(f'<p class="intent">{esc(question["why"])}</p>')
+
+        if question["kind"] == "secret":
+            if question["present"]:
+                out.append('<p class="hint">A key is already in this '
+                           'process. Leave this empty to keep it.</p>')
+            out.append(
+                '<label>paste it here'
+                '<input type="password" name="api_key" autocomplete="off" '
+                'spellcheck="false" placeholder="sk-ant-..."></label>'
+                '<p class="hint">It goes into this process\'s environment and '
+                'nowhere else: not to disk, not into the crate, not into the '
+                'ledger, and never back into this page. It dies when the '
+                'server stops.</p>')
+        elif question["kind"] == "choice":
+            for option in question["options"]:
+                checked = ' checked' if option["key"] == question["value"] else ''
+                mark = (f'<span class="ok">{icon("accepted")}ready</span>'
+                        if option["ready"] else
+                        f'<span class="no">{icon("refused")}not ready</span>')
+                where = ("stays on this machine" if not option["leaves_machine"]
+                         else "prompts leave this machine")
+                out.append(
+                    f'<label class="choice"><input type="radio" name="engine" '
+                    f'value="{esc(option["key"])}"{checked}> '
+                    f'<strong>{esc(option["label"])}</strong> {mark}'
+                    f'<span class="hint">{esc(option["needs"])}</span>'
+                    f'<span class="hint">{esc(option["detail"])}'
+                    + (f' &middot; fix: {esc(option["fix"])}' if option["fix"] else '')
+                    + f' &middot; {esc(where)}</span></label>')
+        else:                                   # choice_or_text
+            for option in question["options"]:
+                checked = ' checked' if option["key"] == question["value"] else ''
+                out.append(
+                    f'<label class="choice"><input type="radio" name="model" '
+                    f'value="{esc(option["key"])}"{checked}> '
+                    f'<code>{esc(option["label"])}</code>'
+                    f'<span class="hint">{esc(option["needs"])}</span></label>')
+            out.append('<label>or type another model id'
+                       '<input type="text" name="model_typed" '
+                       'autocomplete="off" placeholder="any id the engine '
+                       'accepts"></label>')
+        out.append('</fieldset>')
+
+    out.append('<p class="actions"><button type="submit">Use this</button>'
+               '<span class="hint">nothing runs yet: this only decides what '
+               'would</span></p></form>')
+
+    # What is settled, and the one thing a probe cannot tell you.
+    out.append('<div class="chosen">')
+    out.append(f'<p>chosen: <strong>{esc(state["engine_label"])}</strong>'
+               + (f' &middot; <code>{esc(state["model"])}</code>'
+                  if state["model"] else '')
+               + f' &middot; {esc(state["detail"])}</p>')
+    if state["fix"]:
+        out.append(f'<p class="hint">fix: {esc(state["fix"])}</p>')
+    if state["engine"] != "rules":
+        out.append(
+            '<form method="post" action="/verify">'
+            '<button type="submit">Test it with one real call</button>'
+            '<span class="hint">a probe knows a key is present; only a call '
+            'knows it works</span></form>')
+    if state["verified"]:
+        bad = state["verified"].startswith("FAILED")
+        out.append(f'<p class="{"no" if bad else "ok"}">'
+                   f'{icon("refused") if bad else icon("accepted")}'
+                   f'{esc(state["verified"])}</p>')
+    out.append('</div>')
+    return "".join(out)
+
+
 def render_page(session: Session) -> str:
     items = missing_report(session.filled)
     palette = "".join(f"  --{key}: {value};\n"
                       for key, value in theme.PALETTE.items())
     status = ("a run is going" if session.running else
               "the run has ended" if session.finished else "nothing running")
+    rest = (_rest_of_page(session, items) if session.setup.answered else
+            '<p class="hint">The specification form, the cycle and the crate '
+            'appear once this is answered. Pick the first option and nothing '
+            'leaves this machine.</p>')
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -1076,6 +1187,33 @@ def render_page(session: Session) -> str:
     from <code>{esc(FORM_SOURCE)}</code></p>
 </header>
 <main>
+<section class="panel" id="setup-panel">
+  <h2>{icon("architect")}{'Before anything runs' if not session.setup.answered
+                          else 'What will do the thinking'}</h2>
+  {render_setup(session)}
+</section>
+{rest}
+</main>
+<footer>
+  <p class="hint">State lives on the server, one Architect per session. If this
+    process restarts, the form and the log are gone; the crate and the ledger
+    are on disk under <code>runs/{esc(session.run_id)}/</code>.</p>
+</footer>
+<script src="/static/app.js" defer></script>
+</body>
+</html>
+"""
+
+
+def _rest_of_page(session: Session, items: list[dict]) -> str:
+    """Everything after the setup questions: the form, the run, the crate.
+
+    Held back until the setup is answered, because the first screen has to be
+    one decision. A page that opens with a 20-field specification form AND a
+    model chooser invites someone to fill in the form and discover the engine
+    question afterwards, which is the order this was built to avoid.
+    """
+    return f"""
 {render_question(session)}
 <section class="panel" id="missing-panel">
   <h2>What is still missing</h2>
@@ -1118,15 +1256,6 @@ def render_page(session: Session) -> str:
   <p class="hint">The ledger carries the reason for every decision verbatim,
     as <code>route.py</code> wrote it.</p>
 </section>
-</main>
-<footer>
-  <p class="hint">State lives on the server, one Architect per session. If this
-    process restarts, the form and the log are gone; the crate and the ledger
-    are on disk under <code>runs/{esc(session.run_id)}/</code>.</p>
-</footer>
-<script src="/static/app.js" defer></script>
-</body>
-</html>
 """
 
 
@@ -1158,13 +1287,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        # Everything this page needs is served from this origin: two static
+        # files and inline styles. Saying so costs four headers and takes away
+        # the whole class of "something else got onto the page" - which matters
+        # more now that a page here can be holding an API key in a form field.
+        self.send_header("Content-Security-Policy",
+                         "default-src 'self'; style-src 'self' 'unsafe-inline'; "
+                         "script-src 'self'; img-src 'self' data:; "
+                         "form-action 'self'; frame-ancestors 'none'; "
+                         "base-uri 'none'")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         if new_session:
             self.send_header("Set-Cookie",
                              f"{COOKIE_NAME}={new_session}; Path=/; "
                              f"HttpOnly; SameSite=Lax")
         if download:
+            # Re-sanitised here even though every caller builds it from a
+            # `safe_run_id`. A header assembled by string interpolation should
+            # not depend on a promise made somewhere else in the file.
+            clean = "".join(c for c in str(download)
+                            if c.isalnum() or c in "-_.") or "download"
             self.send_header("Content-Disposition",
-                             f'attachment; filename="{download}"')
+                             f'attachment; filename="{clean[:120]}"')
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
@@ -1183,10 +1328,72 @@ class Handler(BaseHTTPRequestHandler):
                              f"HttpOnly; SameSite=Lax")
         self.end_headers()
 
-    def _body(self) -> dict[str, list[str]]:
-        length = int(self.headers.get("Content-Length") or 0)
+    def _body(self) -> dict[str, list[str]] | None:
+        """The posted form, or None when the request is not one.
+
+        Returns None after answering the request itself, so a caller does
+        exactly nothing more. `int()` on a header the client controls raises,
+        and an unbounded Content-Length is an invitation to allocate until this
+        process dies - neither should reach the routing table.
+        """
+        raw_length = (self.headers.get("Content-Length") or "0").strip()
+        try:
+            length = int(raw_length)
+        except ValueError:
+            self._send(b"a Content-Length that is not a number\n",
+                       "text/plain; charset=utf-8", HTTPStatus.BAD_REQUEST)
+            return None
+        if length < 0 or length > MAX_BODY:
+            self._send(f"a form here is a few kilobytes; "
+                       f"{MAX_BODY // 1024} KB is the limit\n".encode(),
+                       "text/plain; charset=utf-8",
+                       HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            return None
         raw = self.rfile.read(length).decode("utf-8", "replace") if length else ""
         return parse_qs(raw, keep_blank_values=True)
+
+    def _drain(self) -> None:
+        """Read and throw away the body of a request being refused."""
+        try:
+            length = min(int(self.headers.get("Content-Length") or 0), MAX_BODY)
+        except ValueError:
+            length = 0
+        if length > 0:
+            self.rfile.read(length)
+
+    def _not_from_this_machine(self) -> str:
+        """Empty when the POST is fine; otherwise why it is being refused.
+
+        A reason rather than a boolean, because this rejects a legitimate
+        request as readily as a hostile one and a person meeting it needs to
+        know which header was wrong.
+
+        A cookie with `SameSite=Lax` is sent on a cross-site POST in some
+        browsers' reading of it, and `/run` here starts real agents while
+        `/setup` accepts an API key. So the Origin, when the browser sends one,
+        has to be this server's own; and the Host has to be the loopback name
+        the page was loaded from, which is what stops another name resolving to
+        127.0.0.1 and driving this interface.
+        """
+        host = (self.headers.get("Host") or "").strip()
+        name = host.rsplit(":", 1)[0].strip("[]").lower()
+        if name not in ALLOWED_HOSTS:
+            return f"Host {host!r} is not one of {sorted(ALLOWED_HOSTS)}"
+        origin = (self.headers.get("Origin") or "").strip().rstrip("/")
+        if not origin or origin == "null":
+            return ""            # no Origin header: a plain form POST
+        if origin in (f"http://{host}", f"https://{host}"):
+            return ""
+        # The same machine under one of its other loopback names is still this
+        # machine. A page served from localhost:8765 posting to 127.0.0.1:8765
+        # is the single most likely way a person meets this check, and calling
+        # that cross-site would be a lie.
+        port = host.rsplit(":", 1)[1] if ":" in host else ""
+        here = {f"{scheme}://{n}{':' + port if port else ''}"
+                for scheme in ("http", "https") for n in ALLOWED_HOSTS}
+        if origin in here:
+            return ""
+        return f"Origin {origin!r} is not this server"
 
     # ---- GET --------------------------------------------------------------
     def do_GET(self) -> None:                                  # noqa: N802
@@ -1264,9 +1471,58 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         session, is_new = self._session()
         cookie = session.id if is_new else None
-        posted = self._body()
 
-        if path == "/save":
+        refused = self._not_from_this_machine()
+        if refused:
+            # The body has to go somewhere even when the request is refused.
+            # This is HTTP/1.1 with keep-alive: a body left in the socket is
+            # read as the START of the next request, so the refusal would
+            # corrupt whatever the browser asked for next. Found exactly that
+            # way - a 403 followed by a 501 on "engine=apiGET /state".
+            self._drain()
+            self.log_message('refused a POST: %s', refused)
+            self._send(f"this interface only accepts posts from the machine it "
+                       f"runs on, and only under the name the page was loaded "
+                       f"from ({refused}). /run starts real agents and /setup "
+                       f"accepts a key, so a request from anywhere else is "
+                       f"refused.\n".encode(),
+                       "text/plain; charset=utf-8", HTTPStatus.FORBIDDEN)
+            return
+
+        posted = self._body()
+        if posted is None:
+            return                      # _body answered the request itself
+
+        if path == "/setup":
+            setup_mod.apply(session.setup, {
+                "engine": (posted.get("engine") or [""])[0],
+                "model": (posted.get("model_typed") or [""])[0].strip()
+                         or (posted.get("model") or [""])[0],
+                "api_key": (posted.get("api_key") or [""])[0],
+            }, client_host=self.client_address[0])
+            # The key is now in the environment or was refused; `posted` still
+            # holds the string the browser sent, so it goes before anything
+            # else can keep a reference to it.
+            posted = {}
+            state = session.setup.state()
+            session.note(f"engine: {state['engine_label']}"
+                         + (f", model {state['model']}" if state["model"] else "")
+                         + (" - stays on this machine" if not state["leaves_machine"]
+                            else " - prompts leave this machine"),
+                         kind="architect")
+            for line in session.setup.notes[-3:]:
+                session.note(line, kind="note")
+            self._redirect("/#setup-panel", new_session=cookie)
+        elif path == "/verify":
+            # One real, minimal call. A probe knows a key is present; only a
+            # call knows it works, and the researcher asked to be able to test
+            # their own key, so the button exists and nothing presses it for
+            # them.
+            said = session.setup.verify()
+            session.note(f"verified the engine: {said}", kind="note",
+                         state=("refused" if said.startswith("FAILED") else ""))
+            self._redirect("/#setup-panel", new_session=cookie)
+        elif path == "/save":
             session.filled.values = values_from_post(posted)
             session.filled.provenance = {
                 key: {"source": "web form", "at": now_iso(),
@@ -1310,6 +1566,15 @@ def main() -> None:
                              "here and /run executes real agents")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
+
+    # A deliberate `--host` must not lock the person out of their own server:
+    # posts are refused unless the Host header is one of these names, and the
+    # default set is loopback only. Said out loud, because widening it is a
+    # real decision - in a container this is how the published port works.
+    if args.host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.add(args.host)
+        print(f"\n  posts will also be accepted for the name {args.host!r}. "
+              f"There is no authentication here.")
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"\n  {theme.PROJECT} - {theme.TAGLINE}")

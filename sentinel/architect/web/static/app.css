@@ -105,6 +105,61 @@ ul.missing a { display: block; }
 .stops { display: block; color: var(--fg_dim); font-size: 0.85rem; }
 
 .ok { color: var(--fg_bright); }
+.no { color: var(--refuse); }
+
+/* ---- the setup questions, before anything runs ------------------------- */
+/* One option per row, each one carrying its own two lines of small print:
+   what it needs, and what this machine actually found. A reachable option and
+   an unreachable one have to be told apart at a glance, which is the only
+   reason `.ok` and `.no` appear here. */
+label.choice {
+  display: block;
+  padding: 0.55rem 0 0.55rem 1.7rem;
+  text-indent: -1.7rem;
+  border-bottom: 1px dotted var(--grid);
+  line-height: 1.5;
+}
+
+label.choice:last-of-type { border-bottom: 0; }
+label.choice .hint { display: block; text-indent: 0; margin-left: 1.7rem; }
+
+/* The key box and the "type another model id" box each get their own line.
+   Left inline they sit flush against their own label, which reads as one
+   run-on string - and the one box on this page that must be unmistakable is
+   the one a key goes into. */
+#setup-panel label:not(.choice) {
+  display: block;
+  margin: 0.9rem 0 0;
+  color: var(--fg_bright);
+}
+
+#setup-panel input[type="password"],
+#setup-panel input[type="text"] {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  font-family: var(--font);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--fg_dim);
+}
+
+#setup-panel input[type="password"]:focus,
+#setup-panel input[type="text"]:focus {
+  outline: 1px solid var(--fg);
+  border-color: var(--fg);
+}
+
+.chosen {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--fg_dim);
+  background: var(--bg_panel);
+}
+
+.chosen form { display: inline; }
 
 /* ---- the form ---------------------------------------------------------- */
 fieldset { border: 1px solid var(--grid); margin: 0 0 1.4rem; padding: 1rem; }
