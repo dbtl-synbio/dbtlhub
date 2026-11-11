@@ -150,7 +150,7 @@ the file named, rather than when somebody posts a crate.
 ## A known cost, written down so nobody is surprised
 
 **Every change rewrites and re-hashes the whole graph.** At the size of the
-worked example, 28 entities, that is immeasurable. It is recorded here so
+worked example, 109 entities, that is immeasurable. It is recorded here so
 nobody is surprised by it at a hundred times the size.
 
 ---

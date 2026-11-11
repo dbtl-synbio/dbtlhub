@@ -1,5 +1,5 @@
 contract: design_to_build
-version: 0.10.0
+version: 0.11.0
 
 description: >
   What the Design phase must hand to the Build phase in the bioprospecting
@@ -298,3 +298,29 @@ requires:
   # against another value on a different entity. That is a genuine gap, and
   # the first requirement met so far that is out of reach rather than merely
   # unwritten.
+
+  # ---------------------------------------------------------------
+  # Two more, added 11 November 2026. Between them these use the two
+  # verbs the rest of this contract does not, so the whole language is
+  # exercised by one real handover.
+
+  - name: construct_length_is_plausible
+    applies_to: ExpressionConstruct
+    named_value: coding sequence length
+    must: be a number between
+    between: [300, 3000]
+    severity: flag
+    message: >-
+      This construct's coding sequence length, in base pairs, is outside the
+      range a single bacterial enzyme usually falls in, which is 300 to 3000
+      base pairs. It may be right, and a flag rather than a refusal is why
+      somebody looks at it rather than the handover stopping.
+
+  - name: every_file_holds_data
+    applies_to: File
+    must: hold data
+    severity: refuse
+    message: >-
+      This file is named in the crate and holds nothing, so the step that
+      was meant to produce it produced no data. A file identified by a web
+      address is not looked at, because the crate does not carry it.

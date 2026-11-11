@@ -25,16 +25,27 @@ from sentinel_oo.rules import ContractChecks, Report, RuleEngine, Severity, Viol
 PRODUCT = Path(__file__).resolve().parents[1]
 EXAMPLES = PRODUCT / "examples"
 
-# The product's own worked example: a coating laboratory, deliberately not a
-# DBTL cycle, so nobody reading the product can mistake its example for
-# somebody's use case. It is built by examples/make_example.py, and it is
-# short enough to read: 28 entities.
-PUBLISHED = EXAMPLES / "coating-test" / "valid" / "ro-crate-metadata.json"
+# The test suite's own fixtures, which are a coating laboratory: recipes
+# blended, applied to metal panels in numbered slots on a rack, dried, and
+# their film thickness measured.
+#
+# **Why the tests use a domain the documents never mention.** Nothing in the
+# service knows anything about any domain, and these fixtures are how that
+# is held in place: the same code that checks a bioprospecting handover in
+# the worked example checks a coating line here, with no change but the
+# contract file. They were the worked example until 11 November 2026, when
+# they moved in here, because the people this product is for are biologists
+# and a coating laboratory made the tutorial harder to read for no gain.
+#
+# They are built by tests/fixtures/make_example.py and are short enough to
+# read: 28 entities.
+FIXTURES = PRODUCT / "tests" / "fixtures"
+PUBLISHED = FIXTURES / "coating-test" / "valid" / "ro-crate-metadata.json"
 
 
 # The crates built on 10 November 2026 to be broken in one way each. All
 # three pass rocrate-validator and all three are refused by the contract.
-BROKEN = EXAMPLES / "coating-test" / "invalid"
+BROKEN = FIXTURES / "coating-test" / "invalid"
 
 
 @pytest.fixture(autouse=True)
@@ -101,7 +112,7 @@ def writer() -> ProvenanceWriter:
     return ProvenanceWriter(service_version="0.1.0-test")
 
 
-CONTRACTS = EXAMPLES / "contracts"
+CONTRACTS = FIXTURES / "contracts"
 
 
 @pytest.fixture

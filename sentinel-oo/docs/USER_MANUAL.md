@@ -56,33 +56,48 @@ Everything below is run from the `sentinel-oo` folder.
 # Part 1: a tutorial
 
 **You can run every command here.** The tutorial builds a contract one
-requirement at a time against the worked example that ships with the product,
-and the output shown is the output you will get.
+requirement at a time against the worked example that ships with the
+product, and the output shown is the output you will get.
 
-The worked example is a coating laboratory. Recipes are blended, applied to
-metal panels held in numbered slots on a rack, dried, and their film
-thickness measured in micrometres. It is deliberately not biology, so that
-nothing in the product looks as if it belongs to somebody's use case.
+## The worked example
+
+It is a handover from the Design phase to the Build phase of a
+bioprospecting cycle. Bioprospecting means searching genomes and metagenomes
+for enzymes that might be useful industrially.
+
+The Design phase finishes with a panel of candidate proteins chosen from a
+metagenome, a synthetic gene designed for each one, and a plate layout
+saying which well each gene goes into. The Build phase orders those genes
+from a synthesis company and spends money, so anything Build cannot judge
+from the crate is a well that may be wasted.
+
+**Nothing in the service knows what a protein or a plate is.** Every type
+name and value name below comes out of the contract file and the crate. The
+same image, unmodified, checks a coating line or a chemical plant.
+
+All the sequence data in the example is simulated, and each sequence says so
+in its own line.
 
 ## Step 1: look at what you have been given
 
 ```
-python -m sentinel_oo --describe examples/coating-test/valid
+python -m sentinel_oo --describe examples/plate-test/valid
 ```
 
 It prints every entity type in the crate with a count, and the named values
 hanging off each. **That is the list your contract has to match**, because a
 requirement names a type and a value and both are compared as plain text.
 
-That crate has 28 entities. The ones that matter for this tutorial are:
+That crate has 109 entities. The ones this tutorial uses are:
 
 | Entity type | What it is | How many |
 |---|---|---|
-| `CoatingRecipe` | A recipe to be applied | 3 |
-| `RackSlot` | A numbered position on the rack | 3 |
-| `IntendedRackLayout` | The rack itself | 1 |
-| `ThicknessReading` | A measurement | 3 |
-| `DryingStep` | The process step that dried the panels | 1 |
+| `PlateWell` | One numbered position on the plate | 4 |
+| `ExpressionConstruct` | A synthetic gene designed for one protein | 4 |
+| `Protein` | A candidate enzyme found in the metagenome | 4 |
+| `IntendedPlateLayout` | The plate itself | 1 |
+| `GeneCallingStep` | The step that predicted genes in the assembled DNA | 1 |
+| `File` | A file the crate names, carried or elsewhere | 11 |
 
 ## Step 2: ask the question, then write one requirement
 
@@ -93,8 +108,8 @@ If a requirement has no answer to that, it is a preference rather than a
 requirement. Preferences accumulate until a contract is too irritating to
 use, and then people route around it, and then it protects nothing.
 
-Here is one with an answer. If a slot has no position, nobody can find it on
-the physical rack.
+Here is one with an answer. If a well has no position, nobody can find it on
+the physical plate.
 
 Make a folder and put this in it as `my_handover.yaml`:
 
@@ -103,35 +118,37 @@ contract: my_handover
 version: 0.1.0
 
 requires:
-  - name: slot_has_a_position
-    applies_to: RackSlot
+  - name: well_has_a_position
+    applies_to: PlateWell
     property: name
     must: be recorded
     severity: refuse
     message: >-
-      This slot has no position, so nobody can find it on the physical rack.
+      This well has no position, so nobody can find it on the physical plate.
 ```
 
 Run it:
 
 ```
 SENTINEL_CONTRACTS=<your folder> \
-  PYTHONPATH=src python -m sentinel_oo examples/coating-test/valid \
+  PYTHONPATH=src python -m sentinel_oo examples/plate-test/valid \
   --contract my_handover
 ```
 
 ```
-  28 entities in, 41 out
+  109 entities in, 122 out
   verdict                                ACCEPTED
 ```
 
-Every slot has a position, so it passes.
+Every well has a position, so it passes. The crate goes in with 109 entities
+and comes out with 122, because the service wrote the record of this check
+into it.
 
 ## Step 3: the trap, which you should walk into on purpose
 
 Send it a crate from a completely different domain. One ships with the
-product for exactly this purpose: a library catalogue, which has no slots,
-no recipes and no drying step in it at all.
+product for exactly this purpose: a library catalogue, which has no wells,
+no constructs and no gene calling step in it at all.
 
 ```
 SENTINEL_CONTRACTS=<your folder> \
@@ -140,16 +157,17 @@ SENTINEL_CONTRACTS=<your folder> \
 ```
 
 ```
+  9 entities in, 22 out
   verdict                                ACCEPTED
 ```
 
 **It accepted a crate it knows nothing about.** Your requirement is about
-`RackSlot`, that crate contains no `RackSlot`, so the requirement matched
+`PlateWell`, that crate contains no `PlateWell`, so the requirement matched
 nothing and passed.
 
-The requirement is behaving correctly. A rule about a type should say nothing
-about a crate with none of that type. The problem is the verdict drawn from
-its silence.
+The requirement is behaving correctly. A rule about a type should say
+nothing about a crate with none of that type. The problem is the verdict
+drawn from its silence.
 
 **This is the worst thing the service can do**, and it is worth
 understanding before you write anything else. Refusing something good is
@@ -158,17 +176,18 @@ and looks like success.
 
 ## Step 4: tell the contract what it is for
 
-Add an `expects` block listing the entity types your contract is written for:
+Add an `expects` block listing the entity types your contract is written
+for:
 
 ```yaml
 contract: my_handover
 version: 0.2.0
 
 expects:
-  - RackSlot
+  - PlateWell
 
 requires:
-  - name: slot_has_a_position
+  - name: well_has_a_position
     ...
 ```
 
@@ -177,7 +196,7 @@ and 3:
 
 ```
 SENTINEL_CONTRACTS=<your folder> \
-  PYTHONPATH=src python -m sentinel_oo examples/coating-test/valid \
+  PYTHONPATH=src python -m sentinel_oo examples/plate-test/valid \
   --contract my_handover
 
 SENTINEL_CONTRACTS=<your folder> \
@@ -186,9 +205,9 @@ SENTINEL_CONTRACTS=<your folder> \
 ```
 
 ```
-  the coating crate     ACCEPTED
+  the plate crate       ACCEPTED
   the other domain      REFUSED
-                        REFUSE  nothing of type RackSlot is in this crate,
+                        REFUSE  nothing of type PlateWell is in this crate,
                                 and the contract my_handover is written for
                                 crates that contain it
 ```
@@ -197,14 +216,13 @@ SENTINEL_CONTRACTS=<your folder> \
 
 ## Step 5: build up the requirements about your own entities
 
-**Raise the version number each time you change the contract**, from
-`0.2.0` to `0.3.0` here, and once more at each of steps 6, 7 and 8. That is
-what makes the printout at step 9 read `version 0.8.0`. The service does not
+**Raise the version number each time you change the contract**, from `0.2.0`
+to `0.3.0` here, and once more at each of steps 6, 7 and 8. That is what
+makes the printout at step 9 read `version 0.6.0`. The service does not
 force this on you: it reads whatever number is in the file. It matters
 because the version is copied into the lasting record inside every crate the
 service checks, so a crate checked last month says which wording of the
-contract it was checked against. Two different contracts sharing one version
-number make those records untrustworthy.
+contract it was checked against.
 
 Add the rest. Notice that references come in pairs: one requirement that the
 reference is recorded at all, and a second that it lands on something real.
@@ -213,156 +231,185 @@ impossible to say.
 
 ```yaml
 expects:
-  - RackSlot
-  - CoatingRecipe
-  - DryingStep
+  - PlateWell
+  - ExpressionConstruct
 
 requires:
-  - name: slot_has_a_position
-    applies_to: RackSlot
-    property: name
-    must: be recorded
-    severity: refuse
-    message: >-
-      This slot has no position, so nobody can find it on the physical rack.
 
-  - name: one_slot_per_position
-    applies_to: RackSlot
+  - name: well_has_a_position
+    ...
+
+  - name: one_well_per_position
+    applies_to: PlateWell
     property: name
     must: be unique
     severity: refuse
     message: >-
-      Two slots claim the same position, so what is in that position is
-      undefined.
+      Two wells claim the same position on the plate, so what is physically
+      in that position is undefined.
 
-  - name: slot_names_a_recipe
-    applies_to: RackSlot
+  - name: well_names_a_construct
+    applies_to: PlateWell
     property: mainEntity
     must: be recorded
     severity: refuse
     message: >-
-      This slot does not say which recipe goes on it.
+      This well does not say which construct is meant to go in it, so nothing
+      measured from it later can be attributed to a sequence.
 
-  - name: slot_names_a_real_recipe
-    applies_to: RackSlot
+  - name: well_names_a_real_construct
+    applies_to: PlateWell
     property: mainEntity
     must: point at something in the crate
-    of_type: CoatingRecipe
+    of_type: ExpressionConstruct
     severity: refuse
     message: >-
-      This slot names something that is not a recipe in this crate.
+      This well names something that is not a construct in this crate, so
+      whatever is in it cannot be identified.
 ```
+
+Run the valid crate and two of the broken ones:
+
+```
+  valid                          ACCEPTED
+  invalid/dangling-reference     ACCEPTED
+  invalid/missing-conformsto     ACCEPTED
+```
+
+Two broken crates passed. Hold that thought until step 8.
 
 ## Step 6: a flag rather than a refusal
 
-Not everything should stop a handover. The coating line cannot run below 5
-micrometres or above 500 micrometres, where a micrometre is one thousandth of
-a millimetre. But a recipe outside that range may be intended for a different
-line, which is a judgment for a person rather than a reason to stop.
+Not everything worth saying should stop a handover. `severity: flag` records
+a finding and lets the crate through.
 
 ```yaml
-  - name: recipe_thickness_is_in_range
-    applies_to: CoatingRecipe
-    named_value: film thickness
+  - name: construct_length_is_plausible
+    applies_to: ExpressionConstruct
+    named_value: coding sequence length
     must: be a number between
-    between: [5, 500]
+    between: [300, 3000]
     severity: flag
     message: >-
-      This recipe's film thickness, in micrometres, is outside what the
-      coating line can run, which is 5 to 500 micrometres.
+      This construct's coding sequence length, in base pairs, is outside the
+      range a single bacterial enzyme usually falls in, which is 300 to 3000
+      base pairs.
 ```
 
-`severity: refuse` stops the handover. `severity: flag` records the finding
-and lets it through. There is nothing in between, on purpose: a severity
-nobody can act on is a severity nobody reads.
+`named_value` rather than `property`. A property sits directly on an entity.
+A named value is a separate entity carrying a name and a value, which the
+first one points at. Crates following the Process Run Crate profile record
+most numbers that way, and the four constructs here are 1053, 1080, 1101 and
+1179 base pairs.
 
-**State the units in every message.** The contract has no field for them, and
-a number with no unit in a finding is an invitation to compare a thickness
-against a temperature.
+The valid crate still comes back `ACCEPTED`, because all four are in range.
+A crate with one construct of 41000 base pairs comes back like this:
+
+```
+  verdict                                ACCEPTED_WITH_FLAGS
+
+  FLAG  This construct's coding sequence length, in base pairs, is outside
+        the range a single bacterial enzyme usually falls in, which is 300
+        to 3000 base pairs.
+```
+
+The handover is not stopped. Somebody is told.
 
 ## Step 7: a value a model may be asked to recover
 
 ```yaml
-  - name: drying_atmosphere_is_recorded
-    applies_to: DryingStep
-    named_value: drying atmosphere
+expects:
+  - PlateWell
+  - ExpressionConstruct
+  - GeneCallingStep
+
+requires:
+  ...
+
+  - name: edge_handling_is_recorded
+    applies_to: GeneCallingStep
+    named_value: edge handling
     must: be recorded
     repairable: true
     severity: refuse
     message: >-
-      The drying step does not say what atmosphere it ran in, so these
-      thickness readings cannot be compared with each other.
+      The gene calling step does not say how it treated the edges of contigs,
+      so nobody can tell whether any sequence in this panel may be a fragment.
+
+  - name: edge_handling_is_closed
+    applies_to: GeneCallingStep
+    named_value: edge handling
+    must: be recorded
+    one_of: ["closed"]
+    severity: refuse
+    message: >-
+      This contract is written for a panel called with closed ends. A panel
+      called any other way may contain fragments, and needs a contract that
+      says what to do about them.
 ```
+
+**What edge handling is.** Gene calling means running a program over
+assembled DNA to predict where the protein-coding genes are. When a
+predicted gene runs off the end of a DNA fragment, the program either keeps
+the partial gene or refuses to call it. `closed` means the second. It
+matters to the Build phase because a partial gene ordered as a construct
+makes a protein that is missing one end.
 
 `repairable: true` means a model is asked one question when this fails: is
 the value already written down somewhere in the record, including inside
 free text? Everything it answers is checked by your rules before it counts,
-which is what makes having it on safe. A model runs in its own container
-and is called by default.
-
-Now run all five example crates. Each is a separate command, the same shape
-as before, with the crate folder changed:
-
-```
-for crate in coating-test/valid \
-             coating-test/invalid/missing-conformsto \
-             coating-test/invalid/dangling-reference \
-             coating-test/invalid/missing-atmosphere \
-             coating-test/invalid/atmosphere-in-prose
-do
-  SENTINEL_CONTRACTS=<your folder> \
-    PYTHONPATH=src python -m sentinel_oo examples/$crate \
-    --contract my_handover
-done
-```
+which is what makes having it on safe. A model runs in its own container and
+is called by default.
 
 **With no model reachable**, which is what you get if you have not set one
-up, all five come back like this:
+up:
 
 ```
-  valid                          ACCEPTED
-  invalid/missing-conformsto     ACCEPTED
-  invalid/dangling-reference     ACCEPTED
-  invalid/missing-atmosphere     REFUSED
-  invalid/atmosphere-in-prose    REFUSED
+  valid                                ACCEPTED
+  invalid/missing-gene-calling-mode    REFUSED
+  invalid/edge-handling-in-prose       REFUSED
+  invalid/mode-in-prose                REFUSED
 ```
 
-**With a model reachable**, the last line changes, and that change is the
-whole point of this step:
+**With a model reachable**, one of those three changes:
 
 ```
-  invalid/atmosphere-in-prose    ACCEPTED_WITH_FLAGS
+  invalid/edge-handling-in-prose       ACCEPTED_WITH_FLAGS
 
-  FLAG  The drying atmosphere was not recorded on this entity. The value
-        'dry' was recovered from the text already in the crate by
+  FLAG  The edge handling was not recorded on this entity. The value
+        'closed' was recovered from the text already in the crate by
         qwen2.5:14b, and confirmed by the requirement
-        drying_atmosphere_is_recorded. A value somebody wrote down and a
-        value something read out of prose are not equally trustworthy, so
-        somebody should check it and ask the producing step to record it
-        properly.
-         at #act-drying
+        edge_handling_is_recorded.
 ```
 
-That crate does not record the drying atmosphere as a value, but the word
-is sitting in the text of a command inside it, written as
-`dryer --panels rack-A1 --atmosphere dry --hold 20 -q`. The model was asked
-one question, found `dry`, proposed it, and your own requirement checked the
-proposal before it was kept.
+In that crate the gene calling step's description says, in ordinary words,
+"contig edges were treated as closed, so no partial genes were kept". The
+model was asked one question, read that sentence, proposed `closed`, and
+your own requirement checked the proposal before it was kept. On a laptop
+that run took about 9 seconds.
 
-`invalid/missing-atmosphere` stays `REFUSED` with a model, because in that
-crate the atmosphere is not written anywhere at all. Nothing is invented.
+**The other two do not change, and that is the point.**
 
-**The verdict is `ACCEPTED_WITH_FLAGS` rather than `ACCEPTED` on purpose.**
-The handover goes through. The flag is there because the crate itself
-records that this value was read out of prose rather than stated outright,
-and because the team producing the handover should know their step is
-leaving out something a model had to go and find.
+In `missing-gene-calling-mode` the value is not in the crate at all, so
+there is nothing to find and nothing is invented.
+
+In `mode-in-prose` the value is in the crate, but only as the flag `-c`
+inside the command line `prodigal -i contigs.fasta -a proteins.faa -p meta
+-c -q`. Recovering it means knowing what that program's flags mean. Two
+models of 14 billion parameters each were asked to do exactly that on
+10 November 2026, and both stated a wrong meaning without hedging. Your
+rules threw the answer out, the crate stayed refused, and nothing was
+written.
+
+So the model helps when the value is in the text in words, and fails safely
+when it is not.
 
 ## Step 8: the second lesson
 
-Two broken crates were accepted. **A contract catches only what it asks
-about**, and yours asks nothing about the packaging: whether the crate says
-which profile it follows, or whether it lists files it never describes.
+Two broken crates were accepted back at step 5. **A contract catches only
+what it asks about**, and yours asks nothing about the packaging: whether
+the crate says which profile it follows, whether it lists files it never
+describes, or whether the files it carries hold anything.
 
 Add those:
 
@@ -384,24 +431,35 @@ Add those:
     message: >-
       The crate lists a file as part of itself that is described nowhere in
       it. Whoever receives this will look for it and not find it.
+
+  - name: every_file_holds_data
+    applies_to: File
+    must: hold data
+    severity: refuse
+    message: >-
+      This file is named in the crate and holds nothing, so the step that was
+      meant to produce it produced no data.
 ```
 
 `applies_to: root` means the entity describing the crate as a whole.
 
-With no model reachable:
+`hold data` opens the files themselves rather than reading the description.
+A file named by a web address is left alone, because the crate does not
+carry it.
+
+With no model reachable, all six example crates now give this:
 
 ```
-  valid                          ACCEPTED
-  invalid/missing-conformsto     REFUSED
-  invalid/dangling-reference     REFUSED
-  invalid/missing-atmosphere     REFUSED
-  invalid/atmosphere-in-prose    REFUSED
+  valid                                ACCEPTED
+  invalid/dangling-reference           REFUSED
+  invalid/missing-conformsto           REFUSED
+  invalid/missing-gene-calling-mode    REFUSED
+  invalid/mode-in-prose                REFUSED
+  invalid/edge-handling-in-prose       REFUSED
 ```
 
-With a model reachable, `invalid/atmosphere-in-prose` is
-`ACCEPTED_WITH_FLAGS` instead, for the reason given in step 7. The other
-four are unchanged: a model is only ever asked about a requirement marked
-`repairable: true`, and only the drying atmosphere is marked that way.
+With a model reachable, `invalid/edge-handling-in-prose` is
+`ACCEPTED_WITH_FLAGS` instead, for the reason given in step 7.
 
 And a refusal reads like this:
 
@@ -414,8 +472,7 @@ And a refusal reads like this:
          at ./
 ```
 
-The sentence is yours. Write the message you would want to receive at four
-o'clock on a Friday.
+Every sentence in that came from your contract file, not from the code.
 
 ## Step 9: read your contract back in plain words
 
@@ -424,25 +481,27 @@ PYTHONPATH=src python -m sentinel_oo --show-contract my_handover
 ```
 
 ```
-my_handover version 0.8.0
+my_handover version 0.6.0
 
-It is for crates containing all of: RackSlot, CoatingRecipe, DryingStep
-A crate containing none of those is refused rather than accepted without
-being checked.
+It is for crates containing all of: PlateWell, ExpressionConstruct,
+GeneCallingStep
+Each one that is missing is refused on its own, because a crate without it
+cannot be checked by the requirements about it.
 
-8 requirement(s):
+10 requirement(s):
 
-  declares_a_profile
-    root must record conformsTo
+  well_has_a_position
+    PlateWell must record name
     failing it refuses the handover
-    The crate does not say which profile it follows, so nothing can be
-    agreed about what its contents mean.
+    This well has no position, so nobody can find it on the physical plate.
+
   ...
 ```
 
 **This is what you send to the team that produces the handover**, so they
-can check themselves before they are checked. It is not YAML and they do not
-need to read YAML.
+can check themselves before they are checked. It ends with a short
+explanation of each RO-Crate word it used, and it marks any requirement a
+model may help with.
 
 ## Step 10: deploy it
 
@@ -511,16 +570,32 @@ for f in r['findings']:
     print(' ', f['requirement'], '|', f['message'])"
 ```
 
-For the `missing-atmosphere` crate and the contract built in this tutorial,
-that prints (the sentence is one long line in the terminal; it is wrapped
-here to fit the page):
+For the `missing-gene-calling-mode` crate and the contract built in this
+tutorial, that prints (each sentence is one long line in the terminal; they
+are wrapped here to fit the page):
 
 ```
 REFUSED
-  drying_atmosphere_is_recorded | The drying step does not say what
-      atmosphere it ran in, so nobody can tell whether these thickness
-      readings are comparable with each other.
+  edge_handling_is_recorded | The gene calling step does not say how it
+      treated the edges of contigs, so nobody can tell whether any sequence
+      in this panel may be a fragment.
+  edge_handling_is_closed | This contract is written for a panel called
+      with closed ends. A panel called any other way may contain fragments,
+      and needs a contract that says what to do about them.
+  every_file_holds_data | The data file 'panel.faa' was not sent, so
+      whether it holds anything could not be checked, and a check that
+      could not run is refused rather than passed. Send the whole crate as
+      a zip rather than ro-crate-metadata.json on its own.
+  every_file_holds_data | ... the same for constructs.json
+  every_file_holds_data | ... and for plate-layout.csv
 ```
+
+The last three are there because only the description file was posted. The
+three files the crate carries never arrived, so the requirement that they
+hold data could not be answered, and a check that could not run is refused
+rather than passed. Send the whole crate as a zip and those three go away.
+The eight files the crate names by web address are not mentioned at all,
+because the crate was never carrying them.
 
 The reply has four fields: `run`, a twelve character identifier for this
 check; `verdict`; `findings`, one entry per requirement that failed, each
@@ -587,8 +662,8 @@ asks about. Step 8 of the tutorial is this mistake.
 
 **The type name does not match.** Types are compared as plain text, and
 nothing knows that schema.org considers one type a kind of another. If your
-crate says `CoatingRecipe` and your contract says `Recipe`, the requirement
-matches nothing and passes.
+crate says `ExpressionConstruct` and your contract says `Construct`, the
+requirement matches nothing and passes.
 
 **You have no `expects` block.** Run `--show-contract`. If it warns that the
 contract does not say what it is for, that is the cause.

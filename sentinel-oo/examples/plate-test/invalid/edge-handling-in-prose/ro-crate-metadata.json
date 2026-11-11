@@ -1,0 +1,1374 @@
+{
+  "@context": [
+    "https://w3id.org/ro/crate/1.3/context",
+    "https://w3id.org/ro/terms/workflow-run/context"
+  ],
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/crate/1.3"
+      },
+      "about": {
+        "@id": "./"
+      }
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "Design to Build handover, ene-reductase panel AB-12, with the edge handling written in prose",
+      "description": "The output of one Design run for the bioprospecting use case: a panel of 96 candidate proteins, the constructs specified from them, and the intended plate layout, together with a record of every step that produced them, back to the environmental sample. ALL DATA IN THIS CRATE IS SIMULATED. The sequences are randomly generated and are not real proteins. The accessions are placeholders under example.org and resolve to nothing.",
+      "datePublished": "2026-11-10",
+      "license": {
+        "@id": "https://spdx.org/licenses/CC0-1.0"
+      },
+      "hasPart": [
+        {
+          "@id": "panel.faa"
+        },
+        {
+          "@id": "constructs.json"
+        },
+        {
+          "@id": "plate-layout.csv"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/reads/"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/reads/trimmed/"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/files/proteins.faa"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/files/annotations.tsv"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/files/clusters.tsv"
+        }
+      ],
+      "mentions": [
+        {
+          "@id": "#act-sampling"
+        },
+        {
+          "@id": "#act-dna-extraction"
+        },
+        {
+          "@id": "#act-library-prep"
+        },
+        {
+          "@id": "#act-sequencing"
+        },
+        {
+          "@id": "#act-read-qc"
+        },
+        {
+          "@id": "#act-assembly"
+        },
+        {
+          "@id": "#act-gene-calling"
+        },
+        {
+          "@id": "#act-annotation"
+        },
+        {
+          "@id": "#act-clustering"
+        },
+        {
+          "@id": "#act-panel-selection"
+        },
+        {
+          "@id": "#act-construct-design"
+        },
+        {
+          "@id": "#plate-AB-12-01"
+        },
+        {
+          "@id": "#protein-ENR-001"
+        },
+        {
+          "@id": "#protein-ENR-002"
+        },
+        {
+          "@id": "#protein-ENR-003"
+        },
+        {
+          "@id": "#protein-ENR-004"
+        },
+        {
+          "@id": "#construct-CON-001"
+        },
+        {
+          "@id": "#construct-CON-002"
+        },
+        {
+          "@id": "#construct-CON-003"
+        },
+        {
+          "@id": "#construct-CON-004"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A1"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A2"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A3"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A4"
+        }
+      ],
+      "about": [
+        {
+          "@id": "https://example.org/bioprospecting/study/STUDY-001"
+        }
+      ],
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/wfrun/process/0.6"
+      }
+    },
+    {
+      "@id": "https://w3id.org/ro/wfrun/process/0.6",
+      "@type": [
+        "CreativeWork",
+        "Profile"
+      ],
+      "name": "Process Run Crate",
+      "version": "0.6"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/study/STUDY-001",
+      "@type": "ResearchProject",
+      "name": "Bioprospecting for ene-reductases in hot spring sediment",
+      "identifier": "STUDY-001",
+      "description": "Stands in for a sequence archive study record. In a real crate this would be an ENA or NCBI BioProject accession."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/sample/SAMPLE-AB-12",
+      "@type": [
+        "Sample",
+        "CreativeWork"
+      ],
+      "name": "Hot spring sediment, site AB, station 12",
+      "identifier": "SAMPLE-AB-12",
+      "description": "Stands in for a BioSample record. Field names below follow MIxS, the Minimum Information about any Sequence standard, so they do not have to be invented here.",
+      "isPartOf": {
+        "@id": "https://example.org/bioprospecting/study/STUDY-001"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-collection-date"
+        },
+        {
+          "@id": "#pv-geo-loc"
+        },
+        {
+          "@id": "#pv-env-medium"
+        },
+        {
+          "@id": "#pv-depth"
+        },
+        {
+          "@id": "#pv-temperature"
+        },
+        {
+          "@id": "#pv-ph"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-collection-date",
+      "@type": "PropertyValue",
+      "name": "collection_date",
+      "value": "2026-03-02"
+    },
+    {
+      "@id": "#pv-geo-loc",
+      "@type": "PropertyValue",
+      "name": "geo_loc_name",
+      "value": "Iceland: Hveragerdi"
+    },
+    {
+      "@id": "#pv-env-medium",
+      "@type": "PropertyValue",
+      "name": "env_medium",
+      "value": "hot spring sediment"
+    },
+    {
+      "@id": "#pv-depth",
+      "@type": "PropertyValue",
+      "name": "depth",
+      "value": "0.15",
+      "unitText": "metres below sediment surface"
+    },
+    {
+      "@id": "#pv-temperature",
+      "@type": "PropertyValue",
+      "name": "temp",
+      "value": "68.4",
+      "unitText": "degrees Celsius"
+    },
+    {
+      "@id": "#pv-ph",
+      "@type": "PropertyValue",
+      "name": "ph",
+      "value": "6.8",
+      "unitText": "pH units, 0 to 14"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/extract/DNA-AB-12",
+      "@type": [
+        "Sample",
+        "CreativeWork"
+      ],
+      "name": "Metagenomic DNA extract from sample AB-12",
+      "identifier": "DNA-AB-12",
+      "isPartOf": {
+        "@id": "https://example.org/bioprospecting/sample/SAMPLE-AB-12"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-dna-concentration"
+        },
+        {
+          "@id": "#pv-dna-volume"
+        },
+        {
+          "@id": "#pv-dna-purity"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-dna-concentration",
+      "@type": "PropertyValue",
+      "name": "DNA concentration",
+      "value": "42.6",
+      "unitText": "nanograms per microlitre"
+    },
+    {
+      "@id": "#pv-dna-volume",
+      "@type": "PropertyValue",
+      "name": "DNA volume",
+      "value": "50",
+      "unitText": "microlitres"
+    },
+    {
+      "@id": "#pv-dna-purity",
+      "@type": "PropertyValue",
+      "name": "A260/A280 purity ratio",
+      "value": "1.84",
+      "unitText": "ratio of absorbance at 260 and 280 nanometres"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/library/LIB-AB-12",
+      "@type": [
+        "Sample",
+        "CreativeWork"
+      ],
+      "name": "Shotgun metagenomic library from DNA-AB-12",
+      "identifier": "LIB-AB-12",
+      "isPartOf": {
+        "@id": "https://example.org/bioprospecting/extract/DNA-AB-12"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-library-strategy"
+        },
+        {
+          "@id": "#pv-insert-size"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-library-strategy",
+      "@type": "PropertyValue",
+      "name": "library_strategy",
+      "value": "WGS",
+      "description": "whole genome shotgun, as an INSDC term"
+    },
+    {
+      "@id": "#pv-insert-size",
+      "@type": "PropertyValue",
+      "name": "insert size",
+      "value": "350",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/",
+      "@type": "Collection",
+      "name": "Paired-end shotgun reads for sample AB-12",
+      "hasPart": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/AB-12_R1.fastq.gz"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/reads/AB-12_R2.fastq.gz"
+        }
+      ],
+      "mainEntity": {
+        "@id": "https://example.org/bioprospecting/reads/AB-12_R1.fastq.gz"
+      },
+      "description": "Held outside the crate because of size. In a real crate these would be the archive's run accession."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/AB-12_R1.fastq.gz",
+      "@type": "File",
+      "name": "AB-12 reads, R1",
+      "encodingFormat": "application/gzip",
+      "alternateName": "AB-12_R1.fastq.gz"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/AB-12_R2.fastq.gz",
+      "@type": "File",
+      "name": "AB-12 reads, R2",
+      "encodingFormat": "application/gzip",
+      "alternateName": "AB-12_R2.fastq.gz"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/trimmed/",
+      "@type": "Collection",
+      "name": "Trimmed paired-end reads for sample AB-12",
+      "hasPart": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/trimmed/AB-12_R1.trimmed.fastq.gz"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/reads/trimmed/AB-12_R2.trimmed.fastq.gz"
+        }
+      ],
+      "mainEntity": {
+        "@id": "https://example.org/bioprospecting/reads/trimmed/AB-12_R1.trimmed.fastq.gz"
+      },
+      "description": "Adapters and low quality bases removed. Held outside the crate because of size."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/trimmed/AB-12_R1.trimmed.fastq.gz",
+      "@type": "File",
+      "name": "AB-12 trimmed reads, R1",
+      "encodingFormat": "application/gzip",
+      "alternateName": "AB-12_R1.trimmed.fastq.gz"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/reads/trimmed/AB-12_R2.trimmed.fastq.gz",
+      "@type": "File",
+      "name": "AB-12 trimmed reads, R2",
+      "encodingFormat": "application/gzip",
+      "alternateName": "AB-12_R2.trimmed.fastq.gz"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/files/contigs.fasta",
+      "@type": "File",
+      "name": "Assembled contigs",
+      "encodingFormat": "text/x-fasta",
+      "description": "47,812 contigs, a count"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/files/proteins.faa",
+      "@type": "File",
+      "name": "All predicted proteins",
+      "encodingFormat": "text/x-fasta",
+      "description": "1,612,043 predicted protein sequences, a count"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/files/annotations.tsv",
+      "@type": "File",
+      "name": "Domain annotations",
+      "encodingFormat": "text/tab-separated-values"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/files/clusters.tsv",
+      "@type": "File",
+      "name": "Sequence clusters",
+      "encodingFormat": "text/tab-separated-values"
+    },
+    {
+      "@id": "panel.faa",
+      "@type": "File",
+      "name": "The selected panel",
+      "encodingFormat": "text/x-fasta",
+      "description": "96 selected protein sequences, a count. SIMULATED."
+    },
+    {
+      "@id": "constructs.json",
+      "@type": "File",
+      "name": "Construct designs",
+      "encodingFormat": "application/json",
+      "description": "96 construct designs, a count. SIMULATED."
+    },
+    {
+      "@id": "plate-layout.csv",
+      "@type": "File",
+      "name": "Intended plate layout",
+      "encodingFormat": "text/csv",
+      "description": "The layout requested from the synthesis vendor. Not a record of the plate that arrives."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/equipment/sediment-corer",
+      "@type": "SoftwareApplication",
+      "name": "Sterile sediment corer",
+      "url": "https://example.org/bioprospecting/equipment/sediment-corer",
+      "softwareVersion": "1",
+      "version": "1",
+      "description": "A hand corer. It is not software and it has no version; the value 1 is there only because RO-Crate requires one. Naming it honestly is better than borrowing another step's instrument."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/kit/dneasy-powersoil-pro",
+      "@type": "SoftwareApplication",
+      "name": "DNeasy PowerSoil Pro Kit",
+      "url": "https://example.org/bioprospecting/kit/dneasy-powersoil-pro",
+      "softwareVersion": "47016",
+      "version": "47016",
+      "description": "A physical extraction kit, not software. RO-Crate requires a version on every SoftwareApplication, so the catalogue number stands in for one. This is the strain showing. See the README."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/service/novogene-shotgun",
+      "@type": "SoftwareApplication",
+      "name": "Novogene shotgun metagenomic sequencing service",
+      "url": "https://example.org/bioprospecting/service/novogene-shotgun",
+      "softwareVersion": "2026-03",
+      "version": "2026-03",
+      "description": "A sequencing service, not software. The version is the month the service ran. Same caveat as above."
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/read-trimmer",
+      "@type": "SoftwareApplication",
+      "name": "read trimmer",
+      "url": "https://example.org/bioprospecting/tool/read-trimmer",
+      "softwareVersion": "0.39",
+      "version": "0.39"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/assembler",
+      "@type": "SoftwareApplication",
+      "name": "metagenome assembler",
+      "url": "https://example.org/bioprospecting/tool/assembler",
+      "softwareVersion": "1.4.2",
+      "version": "1.4.2"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/gene-caller",
+      "@type": "SoftwareApplication",
+      "name": "gene caller",
+      "url": "https://example.org/bioprospecting/tool/gene-caller",
+      "softwareVersion": "2.6.3",
+      "version": "2.6.3"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/domain-scanner",
+      "@type": "SoftwareApplication",
+      "name": "domain scanner",
+      "url": "https://example.org/bioprospecting/tool/domain-scanner",
+      "softwareVersion": "5.72",
+      "version": "5.72"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/clustering-tool",
+      "@type": "SoftwareApplication",
+      "name": "clustering tool",
+      "url": "https://example.org/bioprospecting/tool/clustering-tool",
+      "softwareVersion": "2.0",
+      "version": "2.0"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/panel-designer",
+      "@type": "SoftwareApplication",
+      "name": "panel designer",
+      "url": "https://example.org/bioprospecting/tool/panel-designer",
+      "softwareVersion": "0.9",
+      "version": "0.9"
+    },
+    {
+      "@id": "https://example.org/bioprospecting/tool/codon-optimiser",
+      "@type": "SoftwareApplication",
+      "name": "codon optimiser",
+      "url": "https://example.org/bioprospecting/tool/codon-optimiser",
+      "softwareVersion": "2.1",
+      "version": "2.1"
+    },
+    {
+      "@id": "#operator",
+      "@type": "Person",
+      "name": "Simulated operator"
+    },
+    {
+      "@id": "#pv-sequencing-platform",
+      "@type": "PropertyValue",
+      "name": "sequencing platform",
+      "value": "Illumina NovaSeq X Plus"
+    },
+    {
+      "@id": "#pv-read-layout",
+      "@type": "PropertyValue",
+      "name": "read layout",
+      "value": "paired end"
+    },
+    {
+      "@id": "#pv-read-length",
+      "@type": "PropertyValue",
+      "name": "read length",
+      "value": "150",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-yield",
+      "@type": "PropertyValue",
+      "name": "sequencing yield",
+      "value": "61.4",
+      "unitText": "gigabases"
+    },
+    {
+      "@id": "#pv-min-contig-length",
+      "@type": "PropertyValue",
+      "name": "minimum contig length",
+      "value": "500",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-assembly-n50",
+      "@type": "PropertyValue",
+      "name": "assembly N50",
+      "value": "3140",
+      "unitText": "base pairs, the contig length at which half the assembly sits in contigs this long or longer"
+    },
+    {
+      "@id": "#pv-identity-threshold",
+      "@type": "PropertyValue",
+      "name": "sequence identity threshold",
+      "value": "0.90",
+      "unitText": "fraction of identical residues, 0 to 1 where 1 is identical"
+    },
+    {
+      "@id": "#pv-annotation-db",
+      "@type": "PropertyValue",
+      "name": "annotation reference database release",
+      "value": "2026-02"
+    },
+    {
+      "@id": "#pv-panel-size",
+      "@type": "PropertyValue",
+      "name": "panel size",
+      "value": "96",
+      "unitText": "sequences"
+    },
+    {
+      "@id": "#act-sampling",
+      "@type": "CreateAction",
+      "additionalType": "SamplingStep",
+      "name": "Collect the environmental sample",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/equipment/sediment-corer"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/study/STUDY-001"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/sample/SAMPLE-AB-12"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-02T11:40:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus",
+      "description": "Sediment collected by hand into a sterile tube and frozen on site. Recorded here only so that the chain is unbroken."
+    },
+    {
+      "@id": "#act-dna-extraction",
+      "@type": "CreateAction",
+      "additionalType": "DnaExtractionStep",
+      "name": "Extract metagenomic DNA",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/kit/dneasy-powersoil-pro"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/sample/SAMPLE-AB-12"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/extract/DNA-AB-12"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-05T14:05:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-library-prep",
+      "@type": "CreateAction",
+      "additionalType": "LibraryPreparationStep",
+      "name": "Prepare the shotgun library",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/service/novogene-shotgun"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/extract/DNA-AB-12"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/library/LIB-AB-12"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-09T09:00:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-sequencing",
+      "@type": "CreateAction",
+      "additionalType": "SequencingStep",
+      "name": "Sequence the library",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/service/novogene-shotgun"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/library/LIB-AB-12"
+        },
+        {
+          "@id": "#pv-sequencing-platform"
+        },
+        {
+          "@id": "#pv-read-layout"
+        },
+        {
+          "@id": "#pv-read-length"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/"
+        },
+        {
+          "@id": "#pv-yield"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-11T22:15:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus",
+      "description": "Novogene shotgun metagenomic sequencing service. The yield is a result of the run, not something it consumed."
+    },
+    {
+      "@id": "#act-read-qc",
+      "@type": "CreateAction",
+      "additionalType": "ReadTrimmingStep",
+      "name": "Trim and quality filter the reads",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/read-trimmer"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/trimmed/"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-12T08:30:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus",
+      "description": "Adapters and low quality bases removed. The trimmed reads are a separate entity, so the chain does not loop."
+    },
+    {
+      "@id": "#act-assembly",
+      "@type": "CreateAction",
+      "additionalType": "AssemblyStep",
+      "name": "Assemble the reads into contigs",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/assembler"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/reads/trimmed/"
+        },
+        {
+          "@id": "#pv-min-contig-length"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+        },
+        {
+          "@id": "#pv-assembly-n50"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-13T19:52:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-gene-calling",
+      "@type": "CreateAction",
+      "additionalType": "GeneCallingStep",
+      "name": "Predict protein coding genes",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/gene-caller"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/files/proteins.faa"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-14T09:21:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus",
+      "description": "Gene calling was run over the assembled contigs. Contig edges were treated as closed, so no partial genes were kept: a predicted gene running off the end of a contig was discarded rather than reported truncated. The operator wrote this in the notes and never recorded it as a value of its own, which is how most real records look before anybody tidies them up."
+    },
+    {
+      "@id": "#act-annotation",
+      "@type": "CreateAction",
+      "additionalType": "AnnotationStep",
+      "name": "Annotate the predicted proteins",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/domain-scanner"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/files/proteins.faa"
+        },
+        {
+          "@id": "#pv-annotation-db"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/files/annotations.tsv"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-15T06:03:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-clustering",
+      "@type": "CreateAction",
+      "additionalType": "ClusteringStep",
+      "name": "Cluster the annotated proteins",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/clustering-tool"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/files/proteins.faa"
+        },
+        {
+          "@id": "https://example.org/bioprospecting/files/annotations.tsv"
+        },
+        {
+          "@id": "#pv-identity-threshold"
+        }
+      ],
+      "result": [
+        {
+          "@id": "https://example.org/bioprospecting/files/clusters.tsv"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-15T15:48:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-panel-selection",
+      "@type": "CreateAction",
+      "additionalType": "PanelSelectionStep",
+      "name": "Select the panel",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/panel-designer"
+      },
+      "object": [
+        {
+          "@id": "https://example.org/bioprospecting/files/clusters.tsv"
+        },
+        {
+          "@id": "#pv-panel-size"
+        }
+      ],
+      "result": [
+        {
+          "@id": "panel.faa"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-16T10:12:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus",
+      "description": "A person chose the final members. The tool ranked candidates; it did not decide. See the README on human steps."
+    },
+    {
+      "@id": "#act-construct-design",
+      "@type": "CreateAction",
+      "additionalType": "ConstructDesignStep",
+      "name": "Specify the constructs",
+      "instrument": {
+        "@id": "https://example.org/bioprospecting/tool/codon-optimiser"
+      },
+      "object": [
+        {
+          "@id": "panel.faa"
+        }
+      ],
+      "result": [
+        {
+          "@id": "constructs.json"
+        },
+        {
+          "@id": "plate-layout.csv"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-03-17T13:30:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#plate-AB-12-01",
+      "@type": "CreativeWork",
+      "additionalType": "IntendedPlateLayout",
+      "name": "Intended plate layout for panel AB-12",
+      "identifier": "PLATE-AB-12-01",
+      "description": "What Design asked the synthesis vendor for. It is NOT a record of the plate that arrives. Build records that separately, and the difference between the two is the synthesis failures.",
+      "additionalProperty": [
+        {
+          "@id": "#pv-plate-format"
+        }
+      ],
+      "hasPart": [
+        {
+          "@id": "#well-PLATE-AB-12-01-A1"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A2"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A3"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A4"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-plate-format",
+      "@type": "PropertyValue",
+      "name": "plate format",
+      "value": "96",
+      "unitText": "wells"
+    },
+    {
+      "@id": "#protein-ENR-001",
+      "@type": "Protein",
+      "identifier": "ENR-001",
+      "name": "Candidate ene-reductase ENR-001",
+      "description": "SIMULATED sequence. Not a real protein.",
+      "isBasedOn": {
+        "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-ENR-001-seq"
+        },
+        {
+          "@id": "#pv-ENR-001-contig"
+        },
+        {
+          "@id": "#pv-ENR-001-complete"
+        },
+        {
+          "@id": "#pv-ENR-001-cluster"
+        },
+        {
+          "@id": "#pv-ENR-001-distance"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-ENR-001-seq",
+      "@type": "PropertyValue",
+      "name": "amino acid sequence",
+      "value": "MGWSNMGVMIMVVPVFNWRPIGWSVHFGHKDDLSCDGPISGDHVRQDYFADKNFHSLFDHCWLWAYMARHIRPGRHRAKALMQGTNCCARCFDQDAITWFWPCSVIGIMPDRDCEVPIIMEDPYHQWEHGYDVSWIGQCGPTAICVNDNMSWQQFPKTDIVSIKCCLTFTLNLIDPTRSEPYTLVRDAASPINCQPFAYWRIHHQGVEKFQQGEWITYHPYPPKETLECSQLIAHGCTADNRIAQVRQMSWTTHMSEYWQGQVFWGFNYGMCEHVTQNVDEGVIMLNYSTACFEFPWFVPLSGFKMQRKIPQLSAHWAWWDSGFDGQWESYAFNKMTCKYMQGEACSNHMQCSEWWPMN",
+      "unitText": "one letter amino acid codes"
+    },
+    {
+      "@id": "#pv-ENR-001-contig",
+      "@type": "PropertyValue",
+      "name": "source contig",
+      "value": "contig_28512"
+    },
+    {
+      "@id": "#pv-ENR-001-complete",
+      "@type": "PropertyValue",
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
+    },
+    {
+      "@id": "#pv-ENR-001-cluster",
+      "@type": "PropertyValue",
+      "name": "cluster identifier",
+      "value": "cluster_001",
+      "description": "cluster size 12 sequences"
+    },
+    {
+      "@id": "#pv-ENR-001-distance",
+      "@type": "PropertyValue",
+      "name": "distance to cluster centre",
+      "value": "0.171",
+      "unitText": "1 minus fractional identity, 0 to 1 where 0 is the cluster centre itself"
+    },
+    {
+      "@id": "#protein-ENR-002",
+      "@type": "Protein",
+      "identifier": "ENR-002",
+      "name": "Candidate ene-reductase ENR-002",
+      "description": "SIMULATED sequence. Not a real protein.",
+      "isBasedOn": {
+        "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-ENR-002-seq"
+        },
+        {
+          "@id": "#pv-ENR-002-contig"
+        },
+        {
+          "@id": "#pv-ENR-002-complete"
+        },
+        {
+          "@id": "#pv-ENR-002-cluster"
+        },
+        {
+          "@id": "#pv-ENR-002-distance"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-ENR-002-seq",
+      "@type": "PropertyValue",
+      "name": "amino acid sequence",
+      "value": "MDMASFWEDPKYIHEKGYFEVLRIHQCPKKPQKDRNPQCCEWCKNPMHLCIVYYTQELSGVFVQHSNGAIYGSLPHTCACRGVFGAHNFCHISETFVVSYIAMGVGRRCKQRPNQQFPIKSWYMVWRMDFLSQCCKVYIGRNYGVAWKQGNAEEMNIIAPQKLMGDLTCRFWRTQDAWVMDVMSMGSKFQTQEILKMKACEYRQYCYAWSVWLWCLEACAGLMREMGESQRSTATPVGKEQAAKLKREIWPYNQGCKQTGGKANALRSCMSESNPQCPAKFIYMFAVHHQEMLIFARRVHTYIAWHPNLKTRQTDYFIVMTRQNSKAGNAIQKWYDLKEGPTAVRMLDFENGPWLDCGFFFGRDTC",
+      "unitText": "one letter amino acid codes"
+    },
+    {
+      "@id": "#pv-ENR-002-contig",
+      "@type": "PropertyValue",
+      "name": "source contig",
+      "value": "contig_18010"
+    },
+    {
+      "@id": "#pv-ENR-002-complete",
+      "@type": "PropertyValue",
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
+    },
+    {
+      "@id": "#pv-ENR-002-cluster",
+      "@type": "PropertyValue",
+      "name": "cluster identifier",
+      "value": "cluster_002",
+      "description": "cluster size 25 sequences"
+    },
+    {
+      "@id": "#pv-ENR-002-distance",
+      "@type": "PropertyValue",
+      "name": "distance to cluster centre",
+      "value": "0.048",
+      "unitText": "1 minus fractional identity, 0 to 1 where 0 is the cluster centre itself"
+    },
+    {
+      "@id": "#protein-ENR-003",
+      "@type": "Protein",
+      "identifier": "ENR-003",
+      "name": "Candidate ene-reductase ENR-003",
+      "description": "SIMULATED sequence. Not a real protein.",
+      "isBasedOn": {
+        "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-ENR-003-seq"
+        },
+        {
+          "@id": "#pv-ENR-003-contig"
+        },
+        {
+          "@id": "#pv-ENR-003-complete"
+        },
+        {
+          "@id": "#pv-ENR-003-cluster"
+        },
+        {
+          "@id": "#pv-ENR-003-distance"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-ENR-003-seq",
+      "@type": "PropertyValue",
+      "name": "amino acid sequence",
+      "value": "MTIDQHYAASFHIATTLNCCRSQYLLVDCLMCLSWYNPQFFQYEGCIAFNDMIYILMGTAVNSQYNWIIRFACIWGCRGTLRARKWTADHFAEWCEEFFCSSTLEWNDQRWLVMWRYTMSYQSLARVHISIAEFYWHPQASKEFIDWQQHSWLCVAKQWHLIQPFHDHLIFSPLTIKMPADTRHGVEGLRAEWLAKLAKIEKVYYTSWKITWRDVRIHRKVGTQECQFDRKSPSPARCPCYHKCKLDYSGPYDVCDEVTDICAAQWQFIIIIFFVWKYQSIIIMVRICYVKKRIHPIDKSSYFPAIYPGKIFACMDRATDAWQSECKGKTRCVQICCEHVEKLCWNESVF",
+      "unitText": "one letter amino acid codes"
+    },
+    {
+      "@id": "#pv-ENR-003-contig",
+      "@type": "PropertyValue",
+      "name": "source contig",
+      "value": "contig_05715"
+    },
+    {
+      "@id": "#pv-ENR-003-complete",
+      "@type": "PropertyValue",
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
+    },
+    {
+      "@id": "#pv-ENR-003-cluster",
+      "@type": "PropertyValue",
+      "name": "cluster identifier",
+      "value": "cluster_003",
+      "description": "cluster size 24 sequences"
+    },
+    {
+      "@id": "#pv-ENR-003-distance",
+      "@type": "PropertyValue",
+      "name": "distance to cluster centre",
+      "value": "0.032",
+      "unitText": "1 minus fractional identity, 0 to 1 where 0 is the cluster centre itself"
+    },
+    {
+      "@id": "#protein-ENR-004",
+      "@type": "Protein",
+      "identifier": "ENR-004",
+      "name": "Candidate ene-reductase ENR-004",
+      "description": "SIMULATED sequence. Not a real protein.",
+      "isBasedOn": {
+        "@id": "https://example.org/bioprospecting/files/contigs.fasta"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-ENR-004-seq"
+        },
+        {
+          "@id": "#pv-ENR-004-contig"
+        },
+        {
+          "@id": "#pv-ENR-004-complete"
+        },
+        {
+          "@id": "#pv-ENR-004-cluster"
+        },
+        {
+          "@id": "#pv-ENR-004-distance"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-ENR-004-seq",
+      "@type": "PropertyValue",
+      "name": "amino acid sequence",
+      "value": "MCESHSPAMNKHGEFWCEIPACDQWILPAPELSEKYMGPFDVCEGGRMAAFVTCIYKQIYKDNTPHHCVNMYHMLRPIFMQPEDQYIPAESERLWALIIMAFAWGFRDCDTHNFCLWRGPKIRICTQFDTRWYQPGNWKIFCSMTCQWCGQWRHAHEPTEIPGGGCYDIDFTYQGQMIICYQWVFVYRQLYIRTANMGAFHNDYHHRNSDFDTPMNIPHLVSNVNNWHGCYVYPRYMMVQSWRTMVDVYIEMSPPLNARSGSWRKPVTVMTQHIVQYATRRHPACPVYHWLYHTHNSNDSTAVSQRRDVQWSAWLSPKLAAYPPYIFQPRREGKVGMETMRMGWYSNIHQTNLMGILLQQKETVCPFMHWSLCTLSMCANRLSKHDSPVRRI",
+      "unitText": "one letter amino acid codes"
+    },
+    {
+      "@id": "#pv-ENR-004-contig",
+      "@type": "PropertyValue",
+      "name": "source contig",
+      "value": "contig_44900"
+    },
+    {
+      "@id": "#pv-ENR-004-complete",
+      "@type": "PropertyValue",
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
+    },
+    {
+      "@id": "#pv-ENR-004-cluster",
+      "@type": "PropertyValue",
+      "name": "cluster identifier",
+      "value": "cluster_004",
+      "description": "cluster size 18 sequences"
+    },
+    {
+      "@id": "#pv-ENR-004-distance",
+      "@type": "PropertyValue",
+      "name": "distance to cluster centre",
+      "value": "0.103",
+      "unitText": "1 minus fractional identity, 0 to 1 where 0 is the cluster centre itself"
+    },
+    {
+      "@id": "#construct-CON-001",
+      "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
+      "identifier": "CON-001",
+      "name": "Expression construct CON-001",
+      "description": "SIMULATED sequence. Not a real construct.",
+      "isBasedOn": {
+        "@id": "#protein-ENR-001"
+      },
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-CON-001-dna"
+        },
+        {
+          "@id": "#pv-CON-001-length"
+        },
+        {
+          "@id": "#pv-CON-001-host"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-CON-001-dna",
+      "@type": "PropertyValue",
+      "name": "codon optimised coding sequence",
+      "value": "AGGGTTTCCAGGACAAAACGATTGCCGCTAATAGGCCGCGACTTGTAACTCGCGATAAGTATGACCCAATTTATAATGTCCATCCTTTTGCGGCGCTCCTAAAGGAAGAAGACGGCGGCGGGGCCCAGTTTCGTCACTGAAGATTGACGTATAAGCTTGATGGTAGATCCCTGCATCGACCTACATCAGCGACTCGCGTGCCCATCGAGAAGGCATGGCTTGCATTCAGTAGGCTTCACCACTACAATTTTAAGTCGCTGGGGCTGACAGTCGATAGCCTTCTATGCACACATCGGCGAGCCTGCGATTCTTCGAAGGCGTCGGCCCCAGTAAAGTTCCGTGCTAGCTAGGTGTGCGGTTAGAACGGTTGCTCTGGGACTTGTGGATCGCGATGCTGCGTCGGCTTTGCACTAGTTCATTATCAATCATGATTGCAGTTTTCTGAACCCGTCTGGCCACAGTCTCACAGGGTTGGGCTTAACGGGTAAGTATTCCGCAATCGGACGGTCCTAATAGTTACGGCGCGTTAGTAAGGCAGTCCAAACCAACCTGAGTCCGGTTCCTGGTTCTGCCCGAAGCTTCCACCAAGATCGACCTTCAACCCAACACGTAAGGAACCATATCTGGGAGGGAAGTGTTGTTCCACTTGAGTCTACAGATTTATTATGTCTGGGGGAACTCAGTTATCGGGGCTCCCTCATTCCTAGGGATCGAGAGCGCACAGGCTCTTCGCGGATCCATAGTACTCACGCCTCGGTGGATTAAGTAACCCCATAACACGTCATCACTCTTGGGGCACGAGGTTCCTACCGGCACTTGTTCACCAGTAGGTGGCGCAAGTGAACCCCCTGTCCGCATGGGAGGAGGACAGTGCATCCGTCACGGGCTAGTAATCCTTGCATGGTATGTCGTTCCGTCGACTGAAACGTCTGTTCCCCACGCGCCGTTTATCCAAGAGTTGTTTCATAATACGGGGAGACACTAAGTCCGACGCCACGAAACCGTGTGCACACGCAGACCGCATCTGTACAATTGCGTTACGACCGGCCTAGCGAGTTGATTCTTCCTCCGCTCGGACCG",
+      "unitText": "DNA bases"
+    },
+    {
+      "@id": "#pv-CON-001-length",
+      "@type": "PropertyValue",
+      "name": "coding sequence length",
+      "value": "1080",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-CON-001-host",
+      "@type": "PropertyValue",
+      "name": "expression host",
+      "value": "Escherichia coli BL21(DE3)"
+    },
+    {
+      "@id": "#construct-CON-002",
+      "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
+      "identifier": "CON-002",
+      "name": "Expression construct CON-002",
+      "description": "SIMULATED sequence. Not a real construct.",
+      "isBasedOn": {
+        "@id": "#protein-ENR-002"
+      },
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-CON-002-dna"
+        },
+        {
+          "@id": "#pv-CON-002-length"
+        },
+        {
+          "@id": "#pv-CON-002-host"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-CON-002-dna",
+      "@type": "PropertyValue",
+      "name": "codon optimised coding sequence",
+      "value": "ACACCCAGAGGACCTTTCCGTGTTCCTACGAAAAGTTTGTGGGTCTGTATGACTGTAGGCCGCACATGTTTTATAGAGGTTGACACCTTATGGAGTCCCGGGCATCACACGCTAGAAAGAGTCATAACACTATACAATCAGCCATTGCGTTTATAATATCAGCCTGGCACTGGTGCGGTGCCGCGCCCTATAATGCGCGGCGAATCGTGTAGCGAGATACTCCGAGATCGAAAAAGAAGTTGGTCTTCATATAAGTTAAAAGAGAGTATATCAGTACGCTAGCGACCAGCTTATGACCTCTAACGGCGATAGCACTATAAAGGGAATATCGTAGGGAGGTCATGCGCGTTACGAGCGATAGTTTTGCCAAGGCGAAGGGGGGAGTATTCCTTGGCCTACTACGAGCAGAACTGAACGAGCTCGAGAGTACGTATGTATCTTAATATAAAAAACGAGTAGCTCATTCGCTGGTACTGCTGGATGAAGCTCGTCCGGTGTATCCATTGATTCTGTGATCTGGCAGCTCTCATCAGCATGGCTCTTTATGGTTTATGAAGTGGTTTACGAAAGAGTCAGTCCATAACAGGGACCGTCGCACGACTAAAGGCTGCGTTTTCTGTACTGGAAATCCCACAACATCCTCAAGCGCTCGCTGGGGGCGCTGATCCGCTGGAATACAAGCTTAGATGCATACAGTGGACAAGGGCTTTAGAAGTGACTGGTGCGTGTACAAAATTACGGTCGTGTTTACGTTGGCCTCGTCGCAATGCGGGCCATTTGCCAGCGCATAGATTGAATTGTGTTGTCGAAACTGGTCAATGGTACACGATAAACGTAACTAGCCTGTTGCATGCTTCCCCTCATAACCTACTAGACTCTCGCGGCACCACAATTTCTACGAACTTATCAGGGCGACGTGCTGAGTGGGCTGTCTGTTGAGGGTGTGATTCTCGAGCGAAGCCGCTGCGGCTAGGAAAACTAATCTTCGGGGAAAATGAAAGTTGGTATTGTGATTCTGGCCTCGCTATTTAATGTCGTTGTTACCAGGACCATCGGGCGGTCGCAGATCTGCGAGTACCGGCAGCTTGCTAGGCTCGGCTA",
+      "unitText": "DNA bases"
+    },
+    {
+      "@id": "#pv-CON-002-length",
+      "@type": "PropertyValue",
+      "name": "coding sequence length",
+      "value": "1101",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-CON-002-host",
+      "@type": "PropertyValue",
+      "name": "expression host",
+      "value": "Escherichia coli BL21(DE3)"
+    },
+    {
+      "@id": "#construct-CON-003",
+      "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
+      "identifier": "CON-003",
+      "name": "Expression construct CON-003",
+      "description": "SIMULATED sequence. Not a real construct.",
+      "isBasedOn": {
+        "@id": "#protein-ENR-003"
+      },
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-CON-003-dna"
+        },
+        {
+          "@id": "#pv-CON-003-length"
+        },
+        {
+          "@id": "#pv-CON-003-host"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-CON-003-dna",
+      "@type": "PropertyValue",
+      "name": "codon optimised coding sequence",
+      "value": "CGTCGACCATATGCTGTCTGATTCGCGACGTTGGGTCTTATTCCACCGACGTAGATTGTTATTTCCCTCTTTGGGGAGCCCAGGCCGCGGAGCGGACCGGTGGCCTCGGCGATACATCTCTCCCACCTTGACTTTTGCACAGGTACCGTACAAGAACTATTGTAGCATATGTCAGTACAATCTGTCTCCAAATGTGTGCTCAGCATAGAAGGCCATAATGTGTAGGGCGCTCAACTGCGTGGGTAAGGAATGAATCGCGAAGTGTTGTATATATCTAGCCCGTATGGTCACATGTCATATTTTTCTTCTCCGTAACGTATTGAGCCAGAGGTCATACATACTCTACACGGTGGGCAATAATCTGCTCGAAGGCACAGGCCACAACAAGGACGAACGTGCAAAATTGCCTATCCGGCGATCCTCTTTCACCAGGTTATCACGCTTGAAGCCTCTAACGAACATATCCTATTTGGGAACATAATCGGGAAGCAAAAGCTTTCAGAGAAGGGATTGTCAGTGGTGGTATCCAACATGCGGACTCGAGGCACGCTGGGGTGATCGTAGTGCTCCGTAGAGCAAAGCATAGAGTTACGATGCGACTGCCGAGAGACCCGATCGGGCAGGCCTATCCCACTAAAGTCGGCGTCGCAATTTAGCCGCTCAACGGCGTCATGTCTGGGGGAATACTCACTGGAATCAGTAATCCAGTCGGTGAGCCCGATCTAATTTCCTCCGTCGATCCCGTCTACGATCGCGGCCTAGTTATTCTGGGTCGTAGCAAGGGCGTATGTAGCAATTAACTTGGTTTCTTTGCTACCATTTTGGTCTCAGAATGGAGCGCGTAGGAGTCTATATCGGTGGGCATTGGTATTCGCTCATTCAATCTGGGGAACAGAGCCTAGCGCTCCCAGCAACCGCTACAATATGTAACCTCCAACTCACAAATTACGTCAGGGGCCACCTTTCGGTGCGAGCCAGATTAGTATGAAACTCTATGGTCTATAGTTCTCGAGTGGGCGGGCCAGACGCGGCTTCCAAAATCCTACCAATTCT",
+      "unitText": "DNA bases"
+    },
+    {
+      "@id": "#pv-CON-003-length",
+      "@type": "PropertyValue",
+      "name": "coding sequence length",
+      "value": "1053",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-CON-003-host",
+      "@type": "PropertyValue",
+      "name": "expression host",
+      "value": "Escherichia coli BL21(DE3)"
+    },
+    {
+      "@id": "#construct-CON-004",
+      "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
+      "identifier": "CON-004",
+      "name": "Expression construct CON-004",
+      "description": "SIMULATED sequence. Not a real construct.",
+      "isBasedOn": {
+        "@id": "#protein-ENR-004"
+      },
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-CON-004-dna"
+        },
+        {
+          "@id": "#pv-CON-004-length"
+        },
+        {
+          "@id": "#pv-CON-004-host"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-CON-004-dna",
+      "@type": "PropertyValue",
+      "name": "codon optimised coding sequence",
+      "value": "CGGCTCATTATAGAGAATCTCAAGAGTAACTTTTATGGTTGCTGCAAGACTTGTGTACGCGATTGAAGCTCACAGAAGGCCGGGGAGCATCGCTCAGTGCTACAATTCTGAGGTGGCGCAGTACCGATATTAAAACCAATACGTACGGTAACCAAGGATTACTACTATTGCTGATCAAGCGCCTTAGACCACTGAAATGGGTTCGTTATAATACCTGACCTATAACGGCCGCAACTTATCACCGTGCGATCCGGCTCATCAAGTCTTCCATCGGACGTATTTCAGGCGGCTAGTAGGGGAATGCCCGCATGCACACATCTGAGGCTAAAGGCATTCCCCGATCGGGGATTAACTGCCGGGCATCTGCCTTTTATACGCTTCCGCCCCATCGTTTGTCAATGGTCCCCCACGACTCAAATGTCAGCATTTTCCGACCACTACCCCCTTGCCGGGTTAGTCGTAGACGAAATTACACGTCATGACGAAAGCGACATCCGCGCCCTTCTCTATTTAACTTTTCTTGCCTACATAATTCTCCCGTTGCAGGTGATAATGTTGAGTGTTGGTACTCGAGCTAGAGAGGGTTATGCAGCCCATTACGTATTCCTATTAATAGTTACCAGAGGTAAAAAGTGATACTACGTGACTACGAACCGTAAGAATAGTTTGCTAAGTTGGCAAGAGTCTACTCAGGGGCTTAGTCGTTCGGAGACTATGAAACTGTAGGTTACGGGGATATACTCGCCCCTGAACCGAAATGGAACTAGCACAAAATCGCTGGAACCGCGTTGCATTTAGAGTTTTACGGATGATCTGAAGCCAGATCAACTGCTACCCGGTACAAACTATCAGGTCAGTGTCTGCATGTGGCGGGCCTAACCCTGGTCATCCAGGAATTACCTCCCACTTCCCACACGCTTGACCGGTAGACCCTAATGACTCCCGCATGCAAGAAATAGCGCAGATGAGAAGTAAGCCTCTTTTTTACGCTGAATTTACGGCGCTTTTCAGCCTCTTGAATGGAGGGGGGTACAACAGAGTGGCAGAGTAGGTAAGCGTGGTGGTCTACACAACTCGGTCAGCCTCAATTTTGAATCGATTCAATGATGCGAGTCAGGTCCGCTTCAGAAGCTAGTATTTCGACGACGAAAGTAGTACGTACGCCTGAGAAAATAGTTG",
+      "unitText": "DNA bases"
+    },
+    {
+      "@id": "#pv-CON-004-length",
+      "@type": "PropertyValue",
+      "name": "coding sequence length",
+      "value": "1179",
+      "unitText": "base pairs"
+    },
+    {
+      "@id": "#pv-CON-004-host",
+      "@type": "PropertyValue",
+      "name": "expression host",
+      "value": "Escherichia coli BL21(DE3)"
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A1",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A1",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-001"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A2",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A2",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-002"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A3",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A3",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-003"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A4",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A4",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-004"
+      }
+    }
+  ]
+}

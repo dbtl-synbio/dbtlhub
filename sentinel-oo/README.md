@@ -41,16 +41,18 @@ record.
 It is not a validator. A third party tool, `rocrate-validator`, already
 checks that an RO-Crate is well formed, and this does not repeat that work.
 
-The difference between the two is the point of the whole thing. Measured
-against five crates on 10 November 2026:
+The difference between the two is the point of the whole thing. Measured on
+11 November 2026 with `rocrate-validator` 0.13.1, against the six crates of
+the worked example, with no model running:
 
 | Crate | `rocrate-validator` | `sentinel-oo` |
 |---|---|---|
-| The worked example | valid | ACCEPTED |
-| Profile declaration removed | valid | REFUSED |
-| A required setting removed | valid | REFUSED |
-| A reference to a file it never describes | valid | REFUSED |
-| The setting present, but only in prose | valid | REFUSED |
+| The worked example | valid, 0 issues | ACCEPTED |
+| Profile declaration removed | valid, 0 issues | REFUSED |
+| A gene calling setting removed | valid, 0 issues | REFUSED |
+| A reference to a file it never describes | valid, 0 issues | REFUSED |
+| The setting present, but only as a flag in a command line | valid, 0 issues | REFUSED |
+| The setting present, written out in a sentence | valid, 0 issues | REFUSED |
 
 The last row is the one worth understanding. Nothing is missing from that
 crate. The value is there, inside the text of a command line, where a person
@@ -99,7 +101,7 @@ path so the commands below work without setting `PYTHONPATH`.
 export SENTINEL_CONTRACTS=examples/contracts
 export SENTINEL_MODEL_URL=            # no model for these two minutes
 
-python -m sentinel_oo examples/coating-test/valid --contract mixing_to_coating
+python -m sentinel_oo examples/plate-test/valid --contract design_to_build
 ```
 
 Without that second line the service tries to reach a model, finds none on
@@ -109,8 +111,8 @@ verdict changes.
 That accepts. Now one that does not:
 
 ```
-python -m sentinel_oo examples/coating-test/invalid/missing-conformsto \
-    --contract mixing_to_coating
+python -m sentinel_oo examples/plate-test/invalid/missing-conformsto \
+    --contract design_to_build
 ```
 
 ```
@@ -126,19 +128,28 @@ That sentence came from a contract file, not from the code.
 To see what is in a crate, which is the list a contract has to match:
 
 ```
-python -m sentinel_oo --describe examples/coating-test/valid
+python -m sentinel_oo --describe examples/plate-test/valid
 ```
 
 To read a contract in plain words, which is what you send to the team that
 produces the handover:
 
 ```
-python -m sentinel_oo --show-contract mixing_to_coating
+python -m sentinel_oo --show-contract design_to_build
 ```
 
-The worked example is a coating laboratory, deliberately not a DBTL cycle,
-so that nothing in the product looks as though it belongs to one use case.
-See [examples/README.md](examples/README.md).
+**The worked example is a handover from Design to Build in a bioprospecting
+cycle**: a panel of candidate proteins, the constructs made from them, and
+the plate layout they are going onto, with a record of every step that
+produced them. Bioprospecting means searching genomes and metagenomes for
+enzymes that might be useful industrially.
+
+**Nothing in the service knows what a protein or a plate is.** Every type
+and value name in that example comes from the contract file and the crate,
+and the same image checks a coating line, a chemical plant or anything else
+whose handover can be written as a contract. The sequences in the example
+are simulated and each one says so in its own line. See
+[examples/README.md](examples/README.md).
 
 ## Deploy your own
 
@@ -196,7 +207,7 @@ one document, the API manual, and the system manual. Rebuild them with
 | `src/sentinel_oo/__main__.py` | The command line |
 | `src/sentinel_oo/__init__.py` | What the package offers, and how to build one |
 | `deploy.py` | The deployment program |
-| `examples/` | The worked example: 2 contracts and 6 crates |
+| `examples/` | The worked example: 2 contracts and 7 crates |
 | `docs/` | The manuals, as Markdown and as PDFs |
 | `tests/` | 200 tests, which run inside the image at build time |
 | `vocabulary/` | Empty. Taken from the `sentinel` framework at a later step |
@@ -262,17 +273,25 @@ model configured and answering, or a model configured and not answering.
 Before 11 November 2026 all three looked identical, which is how an instance
 can appear to be working while doing none of what it was deployed to do.
 
-**What it can and cannot do, measured.** Given a crate whose drying
-atmosphere is recorded only inside the command line `dryer --atmosphere dry`,
-a 14 billion parameter model running locally recovered it and the handover
-was accepted. Given a crate where the value is not present at all, it wrote
-nothing and the handover was refused.
+**What it can and cannot do, measured.** Both of these are crates in the
+worked example, and you can run them.
 
-Given a harder case, a gene calling setting recorded only as the flag `-c`,
-where recovering the value means knowing what the flag means, two models of
+Given `examples/plate-test/invalid/edge-handling-in-prose`, where the gene
+calling step's description says in words that "contig edges were treated as
+closed, so no partial genes were kept", a model of 14 billion parameters
+recovered the value `closed`, the contract's own requirement confirmed it,
+and the handover was accepted with a flag. Given
+`examples/plate-test/invalid/missing-gene-calling-mode`, where the value is
+not in the crate at all, the model wrote nothing and the handover was
+refused.
+
+Given the harder crate, `examples/plate-test/invalid/mode-in-prose`, the
+same setting is recorded only as the flag `-c` inside a command line.
+Recovering it means knowing what that program's flags mean. Two models of
 the same size failed on 10 November 2026 and both stated a wrong meaning
 without hedging. Every one of those outcomes was a refusal with nothing
-written.
+written, because the contract's own requirements check whatever the model
+proposes before it is kept.
 
 So it helps when the value is in the text and fails safely when it is not.
 Section 7 of [docs/SYSTEM_MANUAL.md](docs/SYSTEM_MANUAL.md) has the full

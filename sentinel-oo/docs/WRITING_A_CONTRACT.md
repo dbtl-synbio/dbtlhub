@@ -36,15 +36,15 @@ use, and then people route around it, and then it protects nothing.
 ## The shape of the file
 
 ```yaml
-contract: mixing_to_coating
-version: 1.1.0
+contract: design_to_build
+version: 0.11.0
 
 description: >
-  What Mixing must hand to Coating, and why each item matters.
+  What Design must hand to Build, and why each item matters.
 
 expects:
-  - CoatingRecipe
-  - RackSlot
+  - PlateWell
+  - ExpressionConstruct
 
 requires:
   - name: declares_a_profile
@@ -59,7 +59,7 @@ requires:
 
 Five top level keys and nothing else: `contract`, `version`, `description`,
 `expects`, `requires`. The name in `contract` is how callers ask for it, as
-in `POST /check/mixing_to_coating`. The file name does not matter; this name
+in `POST /check/design_to_build`. The file name does not matter; this name
 does.
 
 ## `expects`: what your contract is for
@@ -73,11 +73,11 @@ requirement is applied, and the message names the type that is missing.
 
 ```yaml
 expects:
-  - CoatingRecipe
-  - RackSlot
-  - IntendedRackLayout
-  - ThicknessReading
-  - DryingStep
+  - PlateWell
+  - ExpressionConstruct
+  - IntendedPlateLayout
+  - Protein
+  - GeneCallingStep
 ```
 
 ### Why it is not optional in practice
@@ -145,14 +145,15 @@ list of files it claims to contain.
 **`descriptor`** is the entity describing the metadata file itself. You will
 rarely want it.
 
-**Anything else is read as a type**, so `applies_to: CoatingRecipe` means
-every entity in the crate that says it is a `CoatingRecipe`. You may write
-`type:CoatingRecipe` if you want to be explicit.
+**Anything else is read as a type**, so `applies_to: ExpressionConstruct`
+means every entity in the crate that says it is an `ExpressionConstruct`. You
+may write `type:ExpressionConstruct` if you want to be explicit.
 
 A type here means either the entity's `@type` or its `additionalType`. The
-second matters in practice: RO-Crate's vocabulary has no term for a coating
-recipe, so the worked example types those entities as `CreativeWork` with
-`additionalType: CoatingRecipe`, and a requirement can then name them.
+second matters in practice: RO-Crate's vocabulary has no term for a synthetic
+gene designed for expression, so the worked example types those entities as
+`CreativeWork` with `additionalType: ExpressionConstruct`, and a requirement
+can then name them.
 
 **A limitation worth knowing before you rely on it.** Types are compared as
 plain text. Nothing in the service knows that schema.org considers a `Hotel`
@@ -165,7 +166,7 @@ a general one, the requirement will match nothing and pass silently.
 **`property`** reads something written on the entity itself:
 
 ```yaml
-    applies_to: RackSlot
+    applies_to: PlateWell
     property: name
 ```
 
@@ -173,14 +174,14 @@ a general one, the requirement will match nothing and pass silently.
 of its own:
 
 ```yaml
-    applies_to: CoatingRecipe
-    named_value: film thickness
+    applies_to: ExpressionConstruct
+    named_value: coding sequence length
 ```
 
 Both exist because crates following the Process Run Crate profile record most
-numbers and strings the second way. The film thickness is not written on the
-recipe. It is a separate entity carrying the name `film thickness` and the
-value `42`, which the recipe points at.
+numbers and strings the second way. The coding sequence length is not written
+on the construct. It is a separate entity carrying the name `coding sequence
+length` and the value `1080`, which the construct points at.
 
 **You do not have to say which property carries the reference.** Every
 reference the entity makes is followed, and only entities of type
@@ -207,13 +208,13 @@ agree to rather than something you can do in your own folder.
 The value must be present and not empty.
 
 ```yaml
-  - name: slot_has_a_position
-    applies_to: RackSlot
+  - name: well_has_a_position
+    applies_to: PlateWell
     property: name
     must: be recorded
     severity: refuse
     message: >-
-      This slot has no position, so nobody can find it on the physical rack.
+      This well has no position, so nobody can find it on the physical plate.
 ```
 
 **This is the only verb that fires when the value is absent.** The others
@@ -228,36 +229,36 @@ So presence and soundness come in pairs. Write both.
 No two entities of this type may share this value.
 
 ```yaml
-  - name: one_slot_per_position
-    applies_to: RackSlot
+  - name: one_well_per_position
+    applies_to: PlateWell
     property: name
     must: be unique
     severity: refuse
     message: >-
-      Two slots claim the same position on the rack, so what is physically in
-      that position is undefined.
+      Two wells claim the same position on the plate, so what is physically
+      in that position is undefined.
 ```
 
 **Think about whether duplication is actually wrong in your laboratory.** Two
-slots holding the same recipe is a normal thing to do elsewhere: it is how a
-replicate or a control is included. A check that fires on correct practice is
-worse than no check. If replicates are normal for you, use `severity: flag`
-or leave the requirement out.
+wells holding the same construct is a normal thing to do elsewhere: it is how
+a technical replicate or a positive control is included. A check that fires
+on correct practice is worse than no check. If replicates are normal for you,
+use `severity: flag` or leave the requirement out.
 
 ### `point at something in the crate`
 
 The reference must resolve to an entity the crate describes.
 
 ```yaml
-  - name: slot_names_a_real_recipe
-    applies_to: RackSlot
+  - name: well_names_a_real_construct
+    applies_to: PlateWell
     property: mainEntity
     must: point at something in the crate
-    of_type: CoatingRecipe
+    of_type: ExpressionConstruct
     severity: refuse
     message: >-
-      This slot names something that is not a recipe in this crate, so
-      whatever is on it cannot be identified.
+      This well names something that is not a construct in this crate, so
+      whatever is in it cannot be identified.
 ```
 
 With `of_type`, the thing it lands on must also be of that type. Without it,
@@ -272,22 +273,23 @@ or describe cannot be acted on by somebody who only has the crate.
 The value must be a number, and within the range.
 
 ```yaml
-  - name: recipe_thickness_is_in_range
-    applies_to: CoatingRecipe
-    named_value: film thickness
+  - name: construct_length_is_plausible
+    applies_to: ExpressionConstruct
+    named_value: coding sequence length
     must: be a number between
-    between: [5, 500]
+    between: [300, 3000]
     severity: flag
     message: >-
-      This recipe's specified film thickness, in micrometres, is outside what
-      the coating line can run, which is 5 to 500 micrometres.
+      This construct's coding sequence length, in base pairs, is outside the
+      range a single bacterial enzyme usually falls in, which is 300 to 3000
+      base pairs.
 ```
 
 `between` takes two numbers, lowest first, and the range includes both ends.
 
 **State the units in the message every time.** The contract has no field for
 units, and a number with no unit in a finding is an invitation to compare a
-thickness against a temperature.
+length in base pairs against a concentration in nanograms per microlitre.
 
 ### `hold data`
 
@@ -342,16 +344,18 @@ proceeding would waste money or produce a record that is wrong.
 ## `one_of`: the only values that mean anything
 
 ```yaml
-  - name: drying_atmosphere_is_dry
-    applies_to: DryingStep
-    named_value: drying atmosphere
+  - name: edge_handling_is_closed
+    applies_to: GeneCallingStep
+    named_value: edge handling
     must: be recorded
-    one_of: ["dry"]
+    one_of: ["closed"]
     severity: refuse
     message: >-
-      This contract is written for panels dried in a dry atmosphere. Panels
-      dried any other way cure differently, and need a contract that says
-      what to do about them.
+      This contract is written for a panel called with closed ends, meaning
+      that a predicted gene running off the end of a contig was discarded
+      rather than reported truncated. A panel called any other way may
+      contain fragments, and needs a contract that says what to do about
+      them.
 ```
 
 **A known awkwardness, stated so it does not surprise you.** `one_of` hangs
@@ -435,14 +439,24 @@ Three gaps, recorded rather than worked around. If you need one of these, you
 are blocked until a verb is added to the product, and that is a change to the
 code rather than to your file.
 
-**It cannot compare one value against another.** You cannot say that a
-recipe's thickness must be about three times its primer's thickness, or that
-one length must be consistent with another. Every requirement reads one value
-and judges it on its own.
+**It cannot compare one value against another.** Every requirement reads one
+value and judges it on its own.
 
-**There are no conditional requirements.** You cannot say that if the drying
-atmosphere was humid then a correction factor must also be recorded. Each
-requirement fires or does not fire regardless of anything else in the crate.
+Here is a real example of what that costs. Each construct records its coding
+sequence length in base pairs, and the protein it was designed from records
+its amino acid sequence. The length should be three times the number of
+amino acids, plus three for the stop codon. That holds exactly for all four
+constructs in the worked example: 359 amino acids and 1080 base pairs, 366
+and 1101, 350 and 1053, 392 and 1179. A construct built from the wrong
+protein would break it. No requirement you can write will notice, for two
+reasons: nothing can compare two values, and nothing can measure the length
+of a sequence, since the crate records the sequence itself and not its
+length.
+
+**There are no conditional requirements.** You cannot say that if the gene
+calling step was run in metagenomic mode then the sample's environment must
+also be recorded. Each requirement fires or does not fire regardless of
+anything else in the crate.
 
 **There is no way to say "if present, must be one of these".** `one_of` hangs
 off `be recorded`, so a missing value triggers both requirements.
@@ -453,7 +467,7 @@ The service prints a contract back in plain words, which is what a producing
 team reads to check themselves before they are checked:
 
 ```
-python -m sentinel_oo --show-contract mixing_to_coating
+python -m sentinel_oo --show-contract design_to_build
 ```
 
 Then run it against a crate you know is good, and against a copy you have

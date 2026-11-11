@@ -28,7 +28,7 @@ Ordered by what blocks somebody first, not by how hard it is.
 | 4 | Not reachable from the whole network by default | It listens on every interface with no password |
 | 5 | A command to describe a crate | The second thing a newcomer does, and there is no tool for it |
 | 6 | Check the data, not only the description file | A crate whose data files are empty or missing passes today |
-| 7 | The worked example leaves the coating laboratory | It is outside the application domain |
+| 7 | The worked example leaves the coating laboratory | DONE. It was outside the application domain |
 | 8 | The compose route | Four faults, including an unstated download of about 9 gigabytes |
 | 9 | The documentation gaps | DONE. Eight small ones a newcomer hits in order |
 | 10 | Everything else | Found while building, and nothing blocks a newcomer on it |
@@ -282,58 +282,66 @@ reach the data. The API manual does not say whether it reads them.
 
 ---
 
-## 7. The worked example leaves the coating laboratory
+## 7. The worked example leaves the coating laboratory - DONE, 11 November 2026
 
-**Decided by Neil Wipat on 11 November 2026.** There is no harm in using a
-synthetic biology exemplar in the tutorial and the documents. The system is
-still generic.
+**Neil, 11 November 2026:** "Our users have no idea about paint. Its outside
+the aplpication domain." And: "we should use the enzyme plate example from
+the bioprospecting use case as a demo. The team are familiar with it and it
+doesnt make the system non-generic. Just easier to comprehend by our team."
 
-**Why it is a coating laboratory today.** It was made neutral on 11 November
-2026 so that nothing in the product would look as though it belonged to one
-use case, at a point when the product and one deployment were still
-entangled and the separation was being argued about.
+**What the worked example is now.** The handover from Design to Build in a
+bioprospecting cycle: a panel of candidate proteins pulled out of a
+metagenome, a synthetic gene designed for each one, and the plate layout
+saying which well each goes into. It is the bioprospecting use case's own
+crates, copied into `examples/` so the product still stands alone.
 
-**Why that reasoning no longer holds.** Genericity is a property of the
-code, not of the example, and the code's genericity is now held in place by
-tests rather than by the choice of nouns:
+**Where the coating laboratory went.** Into `tests/fixtures/`, unchanged.
+The test suite uses it exactly as before. It is not a leftover: it is how
+the suite holds in place that nothing in the service knows about any domain,
+since the same code checks a coating line and a bioprospecting handover with
+no difference but the contract file. The documents say so in four places and
+a newcomer never meets it otherwise.
 
-| Test | Fails if |
-|---|---|
-| `test_no_handover_name_in_source` | Any handover's name appears in the service source |
-| `test_source_imports_no_use_case` | Any service file imports from a deployment |
-| `test_fixtures_stay_inside_the_product` | Any test holds a path resolving outside the product |
+**What had to be built for it.** The plate example's repairable requirement
+is the gene calling step's edge handling, and in the crate meant to hide a
+value in prose the only trace is the flag `-c` in a command line. A model
+cannot recover that without knowing the program's flags, and two models
+failed at it on 10 November 2026. So the tutorial's model step had nothing
+that works. One crate was added, `plate-test/invalid/edge-handling-in-prose`,
+where the step says in words that "contig edges were treated as closed, so
+no partial genes were kept". A model recovers `closed` from that in about 9
+seconds on a laptop and the crate comes back ACCEPTED_WITH_FLAGS. The harder
+crate stays in as the lesson about a wrong proposal being thrown out.
 
-**The example is outside the application domain.** That is the objection,
-and it is one of kind rather than of taste. The application domain is
-synthetic biology and the DBTL cycle. An example from outside it is not a
-neutral choice, it is the wrong sort of thing to be explaining with.
+**Two requirements were added to the contract, in both copies**, because
+your contract used only three of the five verbs and the tutorial teaches all
+five. A construct's coding sequence length must be a number between 300 and
+3000 base pairs, as a flag rather than a refusal. Every file the crate names
+and carries must hold data.
 
-**The users have no idea about paint**, which is what that costs in
-practice. The tutorial asks a synthetic biologist to understand rack slots,
-film thickness in micrometres and drying atmospheres, none of which they
-will meet again, before they can reach a lesson about handovers.
+**What was rewritten.** The front page's two-minute example, the whole
+ten-step tutorial, the contract guide, the examples README, the deployment
+guide's printout, two sentences in the system manual, one troubleshooting
+example, and the library catalogue crate's own description, which described
+itself against the coating laboratory and used addresses under
+`example.org/coating-test`.
 
-An exemplar from their own field costs them nothing to read, and every noun
-in it is one they already know.
+**Two faults found by doing it, both fixed.** When a crate arrived as its
+description file alone, the new data requirement complained about every file
+the crate names by web address, which it was never going to carry: the check
+for "the data did not arrive" ran before the check for "this file lives
+elsewhere". And four tests in the bioprospecting demonstration loaded only
+the description file, so the same requirement refused them; they now load
+the whole crate folder, which is what a real receiving step does.
 
-**What it touches**, which is why it is a version and not an afternoon:
-
-| | Mentions |
-|---|---|
-| `examples/`, the generator, 2 contracts and 6 crates | about 60 |
-| `docs/USER_MANUAL.md`, the tutorial, step by step | 22 |
-| `docs/WRITING_A_CONTRACT.md`, every worked example in it | 21 |
-| The test suite, which reads the example as its fixtures | about 80 |
-| `README.md`, `DEPLOYING.md`, `SYSTEM_MANUAL.md` and the diagrams | 10 |
-
-**One thing that must survive the change.** The tutorial's step 3 sends a
-crate from a completely different domain and watches a contract without an
-`expects` block wrongly accept it. That needs a crate that shares nothing
-with the main example. `examples/from-another-phase/` is a library
-catalogue, which stays usable whatever the main example becomes.
-
-**About half a day**, and the risk is in the test fixtures rather than in
-the prose.
+**Checked rather than claimed.** Every command in the tutorial was run and
+every printout in it is real. Every YAML block in the contract guide was fed
+to the product's own contract reader. Every product path named in any of the
+eight documents exists. The product was copied into an empty directory and
+its tests pass there. And `rocrate-validator` 0.13.1 was installed to
+measure all seven crates: every one is valid RO-Crate 1.3 with 0 issues,
+which also unskipped the three tests that needed it. 263 tests pass with
+nothing skipped.
 
 ---
 

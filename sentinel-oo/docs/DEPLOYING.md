@@ -61,9 +61,9 @@ window because the build takes about a minute.
 sentinel-oo: deploying a tailored instance
 
 1. Reading contracts from examples/contracts
-   coating_to_inspection        0.2.0      2 requirements
-   mixing_to_coating            1.1.0     19 requirements
-   checksum over all of them: sha256:dd5dd91a...
+   build_to_test                0.3.0      2 requirements
+   design_to_build              0.11.0    20 requirements
+   checksum over all of them: sha256:b26c400c...
 
 2. Building the generic image
    sentinel-oo:dev built

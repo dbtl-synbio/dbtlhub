@@ -1,0 +1,69 @@
+contract: build_to_test
+version: 0.3.0
+
+# The entity types this contract is for. Added 11 November 2026, agreed with
+# Anil Wipat, from the Build to Test row of the 14-step bioprospecting
+# document: the handover carries assembly outputs and quality control
+# results, meaning which constructs passed, the product size in base pairs
+# against the accepted range, the concentration in nanograms per microlitre,
+# and the build route used.
+#
+# Why this block is not optional. Every requirement below applies to `root`,
+# so they check the packaging and nothing about the contents. Without
+# `expects`, this file would accept any crate at all, including one from a
+# completely different phase, because a requirement about a type says
+# nothing about a crate containing none of that type. The fault was measured
+# on 11 November 2026: a crate from an unrelated domain was accepted by the
+# Design to Build contract with 0 findings, because 12 of its 18
+# requirements named types that crate did not contain and so passed
+# vacuously.
+#
+# `PlateWell` is spelled as the Design to Build contract spells it, because
+# the two handovers describe the same physical plate and a different name
+# for it would make the pair unjoinable.
+
+expects:
+  # What came back from the build, one per well.
+  - AssembledConstruct
+  # Where each one sits on the plate.
+  - PlateWell
+  # The quality control measurements: product size and concentration.
+  - QualityControlResult
+  # The process step that built them, which carries the build route used.
+  - AssemblyStep
+
+# ⚠ STILL A STUB IN WHAT IT CHECKS. The two requirements below are about
+# packaging only. Nothing yet checks that a construct says whether it
+# passed, that the product size falls in the accepted range in base pairs,
+# that the concentration in nanograms per microlitre is recorded, or that
+# the build route is named. Those are written as requirements against the
+# four types above when the Test phase says what it needs.
+
+description: >
+  What the Build phase must hand to the Test phase. Build receives a plate of
+  synthesised constructs from the vendor, expresses them, and hands the
+  resulting strains or preparations to whoever runs the assays.
+
+  This file exists to prove something about the design rather than to be
+  complete. It was added without writing a line of Python: no class, no
+  registration, no entry in any table mapping names to code. If adding a
+  handover ever needs more than a file like this, the design has failed.
+
+requires:
+
+  - name: declares_a_profile
+    applies_to: root
+    property: conformsTo
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate does not say which profile it follows, so nothing can be
+      agreed about what its contents mean.
+
+  - name: names_itself
+    applies_to: root
+    property: name
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate has no name, so nobody receiving it can say what it is.

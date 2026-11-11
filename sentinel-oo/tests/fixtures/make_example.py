@@ -27,7 +27,7 @@ Writes five crates into this folder:
     coating-test/invalid/atmosphere-in-prose/  the setting is present, in prose
 
 All four broken copies are valid RO-Crate 1.3 and all four are refused by
-`examples/contracts/mixing_to_coating.yaml`, which is the argument for a
+`tests/fixtures/contracts/mixing_to_coating.yaml`, which is the argument for a
 contract on top of a validator, in four examples.
 
 ALL DATA HERE IS INVENTED. The thicknesses, the recipe codes and the
@@ -49,6 +49,10 @@ RO_CRATE_SPEC = "https://w3id.org/ro/crate/1.3"
 PROCESS_RUN_CRATE = "https://w3id.org/ro/wfrun/process/0.6"
 
 EX = "https://example.org/coating-test"
+# The library catalogue is not part of the coating laboratory and should not
+# borrow its addresses. It is the one crate here that a reader of the
+# product's worked example sees.
+LIBRARY = "https://example.org/library-catalogue"
 
 # Three recipes, each on one slot of the rack, each with one thickness
 # reading. Three rather than one so that "must be unique" has something to
@@ -374,7 +378,7 @@ def write_crate(folder, graph, payload=None, under="coating-test"):
 # crate does not contain matches nothing and passes. That is the worst thing
 # this service can do, and a reader should see it happen to them.
 #
-# A library catalogue, chosen because nobody could mistake it for a coating
+# A library catalogue, chosen because nobody could mistake it for a
 # laboratory or for anybody's DBTL cycle.
 
 def another_domain():
@@ -396,11 +400,12 @@ def another_domain():
             "@type": "Dataset",
             "name": "A handover from somewhere else entirely",
             "description": (
-                "A library catalogue. It contains no recipes, no rack slots "
-                "and no drying step, so a contract written for the coating "
-                "laboratory has nothing here to check. It exists so that the "
-                "tutorial can show what happens when a contract does not say "
-                "what it is for. ALL DATA HERE IS INVENTED."
+                "A library catalogue. It contains no plate wells, no "
+                "constructs and no gene calling step, and no recipes, rack "
+                "slots or drying step either, so a contract written for any "
+                "of those handovers has nothing here to check. It exists so "
+                "that the tutorial can show what happens when a contract "
+                "does not say what it is for. ALL DATA HERE IS INVENTED."
             ),
             "datePublished": "2026-11-11",
             "license": {"@id": "https://spdx.org/licenses/CC0-1.0"},
@@ -420,10 +425,10 @@ def another_domain():
             "name": "A. Librarian",
         },
         {
-            "@id": f"{EX}/equipment/scanner",
+            "@id": f"{LIBRARY}/equipment/scanner",
             "@type": "SoftwareApplication",
             "name": "Barcode scanner",
-            "url": f"{EX}/equipment/scanner",
+            "url": f"{LIBRARY}/equipment/scanner",
             "softwareVersion": "3",
             "version": "3",
         },
@@ -432,7 +437,7 @@ def another_domain():
             "@type": "CreateAction",
             "additionalType": "CataloguingStep",
             "name": "Catalogue the new arrivals",
-            "instrument": {"@id": f"{EX}/equipment/scanner"},
+            "instrument": {"@id": f"{LIBRARY}/equipment/scanner"},
             "object": [{"@id": "catalogue.csv"}],
             "result": [{"@id": "#book-0001"}],
             "agent": {"@id": "#librarian"},
@@ -468,14 +473,19 @@ VARIANTS = [
 
 
 def main():
-    print("the product's worked example: a coating test, not a DBTL cycle")
+    print("the test suite's fixtures: a coating laboratory, which is a "
+          "domain\nnothing in the service knows anything about")
     for folder, changes in VARIANTS:
         write_crate(folder, build_graph(**changes))
-    write_crate("from-another-phase", another_domain(), under=".",
+    # This one is not a fixture. The tutorial uses it to show that a
+    # contract with no `expects` block accepts a crate from any domain at
+    # all, so it lives with the worked example rather than in here.
+    write_crate("from-another-phase", another_domain(),
+                under="../../examples",
                 payload={"catalogue.csv": "barcode,title,shelf\n"
                                           "BOOK-0001,A book on a shelf,SHELF-A\n"})
     print("\nAll six are valid RO-Crate 1.3. Four of the coating five are")
-    print("refused by examples/contracts/mixing_to_coating.yaml, and")
+    print("refused by tests/fixtures/contracts/mixing_to_coating.yaml, and")
     print("from-another-phase is refused because it contains nothing that")
     print("contract is written for.")
 

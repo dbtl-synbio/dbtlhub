@@ -29,8 +29,8 @@ from conftest import PUBLISHED, minimal_crate_dict
 # removed. A whole generated crate rather than one invented inline here, and
 # inside the product, so this file needs nothing outside it.
 BROKEN = (
-    Path(__file__).resolve().parents[1]
-    / "examples"
+    Path(__file__).resolve().parent
+    / "fixtures"
     / "coating-test"
     / "invalid"
     / "missing-conformsto"
@@ -696,3 +696,46 @@ requires:
     message: "m"
 ''')
         assert "takes neither" in str(caught.value)
+
+
+# ------------------------------- a file that lives somewhere else entirely
+
+
+def test_a_file_named_by_a_web_address_is_left_alone_without_the_data():
+    """Found on 11 November 2026 while rewriting the tutorial.
+
+    A crate posted as its description file alone, with no data beside it,
+    was refused once for every file it names by web address. Those files
+    were never going to be carried: the crate says where they live, which
+    is the point of naming them that way. The refusal for data that did not
+    arrive is for files the crate says it carries.
+    """
+    from sentinel_oo.contract import Contract, Requirement
+    from sentinel_oo.crate import Crate
+    from sentinel_oo.rules import ContractChecks
+
+    import json
+
+    crate = Crate.from_bytes(json.dumps({
+        "@context": "https://w3id.org/ro/crate/1.3/context",
+        "@graph": [
+            {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+             "about": {"@id": "./"}},
+            {"@id": "./", "@type": "Dataset"},
+            {"@id": "https://example.org/elsewhere/reads.fastq.gz",
+             "@type": "File"},
+        ],
+    }).encode())
+    assert crate.folder is None
+
+    requirement = Requirement(
+        name="every_file_holds_data", applies_to="File", property=None,
+        named_value=None, must="hold data", severity="refuse",
+        message="This file holds nothing.",
+    )
+    contract = Contract(name="t", version="1", description="",
+                        requirements=(requirement,), expects=(),
+                        checksum="sha256:not-used-here")
+    report = ContractChecks().validate(crate, contract)
+
+    assert report.violations == (), [v.message for v in report.violations]

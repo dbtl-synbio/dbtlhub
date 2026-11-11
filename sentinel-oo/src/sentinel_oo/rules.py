@@ -361,6 +361,15 @@ class ContractChecks(RuleEngine):
         for entity in targets:
             identifier = str(entity.get("@id", ""))
 
+            if identifier.startswith(("http://", "https://")):
+                # A file the crate does not carry. Nothing about it changes
+                # when the crate arrives without its data, so this test has
+                # to come first. It did not until 11 November 2026, and a
+                # crate posted as its description alone was refused once for
+                # every file that lives elsewhere, none of which it was ever
+                # going to carry.
+                continue
+
             if crate.folder is None:
                 # Without this the reply carried the author's sentence,
                 # "this file holds nothing, so the step produced no data",
@@ -379,9 +388,6 @@ class ContractChecks(RuleEngine):
                         "requirement says: " + requirement.message
                     ),
                 ))
-                continue
-
-            if identifier.startswith(("http://", "https://")):
                 continue
 
             path = crate.folder / identifier

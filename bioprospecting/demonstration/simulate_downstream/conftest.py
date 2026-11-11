@@ -86,7 +86,15 @@ def no_network(monkeypatch):
 
 @pytest.fixture
 def published() -> Crate:
-    return Crate.from_bytes(PUBLISHED.read_bytes())
+    """The whole crate folder, not the description file on its own.
+
+    It used to read just `ro-crate-metadata.json`. From 11 November 2026 the
+    contract requires every file the crate names and carries to hold data,
+    and a crate loaded without its data files cannot answer that, so it is
+    refused rather than passed. Loading the folder is also what a real
+    receiving step does.
+    """
+    return Crate.from_path(PUBLISHED.parent)
 
 
 @pytest.fixture

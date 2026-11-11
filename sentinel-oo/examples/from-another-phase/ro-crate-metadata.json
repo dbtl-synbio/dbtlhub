@@ -27,7 +27,7 @@
       "@id": "./",
       "@type": "Dataset",
       "name": "A handover from somewhere else entirely",
-      "description": "A library catalogue. It contains no recipes, no rack slots and no drying step, so a contract written for the coating laboratory has nothing here to check. It exists so that the tutorial can show what happens when a contract does not say what it is for. ALL DATA HERE IS INVENTED.",
+      "description": "A library catalogue. It contains no plate wells, no constructs and no gene calling step, and no recipes, rack slots or drying step either, so a contract written for any of those handovers has nothing here to check. It exists so that the tutorial can show what happens when a contract does not say what it is for. ALL DATA HERE IS INVENTED.",
       "datePublished": "2026-11-11",
       "license": {
         "@id": "https://spdx.org/licenses/CC0-1.0"
@@ -58,10 +58,10 @@
       "name": "A. Librarian"
     },
     {
-      "@id": "https://example.org/coating-test/equipment/scanner",
+      "@id": "https://example.org/library-catalogue/equipment/scanner",
       "@type": "SoftwareApplication",
       "name": "Barcode scanner",
-      "url": "https://example.org/coating-test/equipment/scanner",
+      "url": "https://example.org/library-catalogue/equipment/scanner",
       "softwareVersion": "3",
       "version": "3"
     },
@@ -71,7 +71,7 @@
       "additionalType": "CataloguingStep",
       "name": "Catalogue the new arrivals",
       "instrument": {
-        "@id": "https://example.org/coating-test/equipment/scanner"
+        "@id": "https://example.org/library-catalogue/equipment/scanner"
       },
       "object": [
         {

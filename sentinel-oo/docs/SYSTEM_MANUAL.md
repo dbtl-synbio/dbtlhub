@@ -64,15 +64,17 @@ that.
 
 **The distinction those two make is the whole point of the system.** A crate
 can satisfy every rule a standard has and still be useless to the phase
-receiving it. Measured on 10 November 2026 against five crates:
+receiving it. Measured on 11 November 2026 with `rocrate-validator` 0.13.1,
+against the six crates of the worked example, with no model running:
 
 | Crate | `rocrate-validator` | `sentinel-oo` |
 |---|---|---|
-| The published example | valid | ACCEPTED |
-| Profile declaration removed | valid | REFUSED |
-| A gene calling setting removed | valid | REFUSED |
-| A reference to a file it never describes | valid | REFUSED |
-| The setting present, but only in prose | valid | REFUSED |
+| The published example | valid, 0 issues | ACCEPTED |
+| Profile declaration removed | valid, 0 issues | REFUSED |
+| A gene calling setting removed | valid, 0 issues | REFUSED |
+| A reference to a file it never describes | valid, 0 issues | REFUSED |
+| The setting present, but only as a flag in a command line | valid, 0 issues | REFUSED |
+| The setting present, written out in a sentence | valid, 0 issues | REFUSED |
 
 The last row is the one worth understanding. Nothing is missing from that
 crate. The value is there, inside the text of a command line, where no rule
@@ -441,8 +443,13 @@ serving a different folder, and it reported which contracts it expected and
 which it found.
 
 **One image, any number of deployments.** Two instances were run at once on
-11 November 2026, one holding bioprospecting contracts and one holding the
-product's coating example, each refusing a contract name the other one knew.
+11 November 2026, one holding bioprospecting contracts and one holding a
+coating laboratory's, each refusing a contract name the other one knew. The
+coating contracts are now the test suite's fixtures, in
+`tests/fixtures/contracts/`, and they are there for exactly this reason:
+nothing in the service knows anything about any domain, and the same code
+that checks a bioprospecting handover checks a coating line with no change
+but the contract file.
 
 The contracts are mounted **read only**: a service that checks handovers has
 no business editing the contract it checks against.
