@@ -121,7 +121,26 @@ class CrateStore:
 
     @property
     def root(self) -> dict:
-        return self.index["./"]
+        """The root data entity, found the way RO-Crate says to find it.
+
+        Not `index["./"]`. That is the usual identifier and it is not the rule:
+        the root is whatever the metadata descriptor is `about`, and a crate
+        somebody else wrote may root at anything. Hardcoding "./" meant that
+        adding an action to such a crate raised KeyError - which is how this
+        was found, adopting a crate written elsewhere.
+        """
+        index = self.index
+        descriptor = index.get("ro-crate-metadata.json", {})
+        about = descriptor.get("about")
+        ref = about.get("@id") if isinstance(about, dict) else None
+        if ref and ref in index:
+            return index[ref]
+        if "./" in index:
+            return index["./"]
+        raise KeyError(
+            "this crate has no root data entity: its descriptor names no "
+            "'about', and there is no './' entry. Nothing can be added to a "
+            "crate that cannot say what it is about.")
 
     # ---- adding ------------------------------------------------------------
     def add(self, phase: str, entities: list[dict], *, action: dict | None = None,

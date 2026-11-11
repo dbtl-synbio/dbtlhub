@@ -1,12 +1,18 @@
 """The validator: does a package satisfy its contract?
 
-Deterministic, no LLM, no network, no dependencies. It is the only authority on
-validity - an agent never declares its own output valid.
+Deterministic, no LLM, no network. It is the only authority on validity - an
+agent never declares its own output valid.
 
 Contracts are ordinary JSON Schema (the subset below), plus an "x-dbtl-checks"
 section for the rules a schema cannot express: uniqueness across a list, and
 cross-references between parts of the package. Those two turned out to be where
 the real handover bugs live, which is itself worth reporting from the week.
+
+Each contract is written twice: contracts/<name>.yaml, which is what a person
+edits because it can carry the reason for a check beside the check, and
+contracts/<name>.schema.json, the same contract with the comments stripped.
+PyYAML is the only dependency this module has and it is optional: without it
+the JSON is read and nothing else changes.
 
 Supported JSON Schema keywords:
     type, required, properties, items, minItems, enum, const, pattern,
@@ -99,6 +105,38 @@ def _bind(node, patterns: dict):
             _bind(item, patterns)
 
 
+def _read_contract(name: str) -> dict:
+    """Read one contract file: the YAML if it is readable, else the JSON.
+
+    The YAML is the form a person edits, because it can carry the reason a
+    check exists beside the check, and a JSON Schema cannot. The JSON is the
+    same contract with the comments stripped, kept so that this framework
+    still runs on the standard library alone: if PyYAML is not installed the
+    JSON is read and nothing else changes.
+
+    The order is deliberate. A YAML file that exists and cannot be parsed is
+    an error rather than a reason to quietly fall back, because falling back
+    would validate against a contract the author did not just edit.
+    """
+    yaml_path = CONTRACT_DIR / f"{name}.yaml"
+    json_path = CONTRACT_DIR / f"{name}.schema.json"
+
+    if yaml_path.exists():
+        try:
+            import yaml                                  # optional dependency
+        except ImportError:
+            if not json_path.exists():
+                raise FileNotFoundError(
+                    f"contract {name} is only available as YAML "
+                    f"({yaml_path}) and PyYAML is not installed")
+        else:
+            return yaml.safe_load(yaml_path.read_text())
+
+    if not json_path.exists():
+        raise FileNotFoundError(f"no contract {name} in {CONTRACT_DIR}")
+    return json.loads(json_path.read_text())
+
+
 def load_contract(name: str, profile: str | dict | None = None) -> dict:
     """Load a contract, bound to a use-case profile.
 
@@ -107,10 +145,7 @@ def load_contract(name: str, profile: str | dict | None = None) -> dict:
     mandatory measurements. Both cases therefore validate against the same
     structure, which is what makes a handover comparable across teams.
     """
-    path = CONTRACT_DIR / f"{name}.schema.json"
-    if not path.exists():
-        raise FileNotFoundError(f"no contract {name} in {CONTRACT_DIR}")
-    contract = json.loads(path.read_text())
+    contract = _read_contract(name)
 
     if profile is not None:
         prof = load_profile(profile) if isinstance(profile, str) else profile
@@ -168,7 +203,11 @@ def _check_node(value, schema: dict, path: str, errors: list[Error]) -> None:
 
     if isinstance(value, dict):
         for name in schema.get("required", []):
-            if name not in value or value[name] is None:
+            # An empty string is an absent value. This contract's premise is
+            # that a number on its own is not a measurement; accepting
+            # unit: "" would let a required field be present and say nothing,
+            # which is the same failure wearing a different shape.
+            if name not in value or value[name] in (None, ""):
                 sub = schema.get("properties", {}).get(name, {})
                 errors.append(Error(f"{path}.{name}" if path else name, "missing_field",
                                     sub.get("description", "required field is absent")))
@@ -287,7 +326,13 @@ def _check_required_quantities(package, check, errors, profile=None):
                     f"{quantity!r}: {check.get('message', 'required by profile')}",
                     f"expected unit {unit!r}" + (f", e.g. from {req['method_hint']}"
                                                  if req.get("method_hint") else "")))
-            elif unit and got.get("unit") and got["unit"] != unit:
+            elif unit and not got.get("unit"):
+                errors.append(Error(
+                    f"{check['of']}[{i}].{check['at']}.{quantity}", "wrong_unit",
+                    f"expected {unit!r}, and the unit is empty",
+                    "a measurement with a blank unit is a number, and the "
+                    "contract exists to refuse a bare number"))
+            elif unit and got["unit"] != unit:
                 errors.append(Error(
                     f"{check['of']}[{i}].{check['at']}.{quantity}", "wrong_unit",
                     f"expected {unit!r}, got {got['unit']!r}",
@@ -732,6 +777,57 @@ def validate(package: dict, contract: dict) -> Report:
     profile = contract.get("x-dbtl-profile", {})
     for check in contract.get("x-dbtl-checks", []):
         handler = CHECKS.get(check["kind"])
-        if handler:
-            handler(package, check, errors, profile)
+        if handler is None:
+            # A misspelt kind used to delete a check in silence. A contract
+            # asking for something this validator cannot do is a contract
+            # nobody is enforcing, so say so rather than pass.
+            errors.append(Error(
+                f"x-dbtl-checks.{check.get('code', check.get('kind', '?'))}",
+                "unknown_check_kind",
+                f"this contract asks for a check of kind "
+                f"{check.get('kind')!r}, which this validator does not "
+                f"implement, so nothing checked it",
+                "either the kind is misspelt, or the validator is older than "
+                "the contract. Do not assume the check passed."))
+            continue
+        handler(package, check, errors, profile)
+        _check_it_matched_something(package, check, errors)
     return Report(errors)
+
+
+# Kinds whose whole point is an empty target, or whose target is a single
+# field the schema already governs. Everything else is expected to find
+# something to look at.
+_MAY_MATCH_NOTHING = {"empty", "derived"}
+
+
+def _check_it_matched_something(package, check, errors) -> None:
+    """Did this check have anything to look at?
+
+    A rule that matches no entity passes, and a package that matches no rule
+    comes back clean. That is how a package from an entirely different process
+    can be accepted with nothing found: not because it satisfied the contract,
+    but because the contract never touched it.
+
+    So a check that examined nothing says so. It is a flag by default rather
+    than a refusal - an empty list is sometimes legitimate, and a run should
+    not be stopped by it without a human agreeing - but it is never silent. A
+    contract that wants it to stop the handover sets `expects: required`.
+    """
+    if check.get("kind") in _MAY_MATCH_NOTHING:
+        return
+    where = check.get("of")
+    if not where:
+        return
+    found = _dig(package, where)
+    if found not in (None, [], {}, ""):
+        return
+    severity = "error" if check.get("expects") == "required" else "flag"
+    errors.append(Error(
+        where, "matched_nothing",
+        f"the {check.get('kind')} check {check.get('code', '')!r} had nothing "
+        f"to examine: {where!r} is absent or empty, so it passed without "
+        f"looking at anything".replace("'' ", ""),
+        "an empty target is sometimes correct. If it is not, this package is "
+        "being accepted by a contract that never touched it.",
+        severity))

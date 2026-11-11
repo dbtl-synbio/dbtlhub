@@ -1,0 +1,328 @@
+# Test -> Learn handover (generic), handover 3 of 4.
+#
+# This is the form `load_contract()` in framework/validator.py prefers. It
+# falls back to test_to_learn.schema.json - the same contract with the
+# comments stripped - when PyYAML is not installed, so the framework still runs
+# with nothing but the standard library. Both files are therefore live: edit
+# this one and carry the change into the JSON, because a reader without PyYAML
+# gets the JSON and tests/test_framework.py reads the JSON too.
+#
+# Why YAML. A JSON Schema cannot carry a comment, so the reason a check exists
+# had to live either in a `description` the validator shows to a user or in a
+# commit message nobody reads. Here the reason sits beside the rule. Everything
+# below that is not a comment is the same contract, field for field.
+#
+# Naming, for convergence with `sentinel-oo` (dbtlhub/sentinel-oo), which is
+# the deployable service built from these ideas and whose contracts are YAML
+# already:
+#
+#     ours                      sentinel-oo
+#     $id                       contract + version
+#     x-handover.name           description
+#     x-dbtl-checks[].code      requires[].name
+#     x-dbtl-checks[].message   requires[].message
+#     severity: error | flag    severity: refuse | flag
+#
+# `x-pattern` is not a JSON Schema keyword. It names a regex that the active
+# use-case profile supplies, and `_bind()` replaces it with `pattern` at load
+# time. Without a profile the structure is still checked and the formats are
+# not.
+
+'$schema': 'https://json-schema.org/draft/2020-12/schema'
+'$id': 'dbtl:test_to_learn/0.1.0'
+
+# -------------------------------------------------------------------
+# Which handover this is. The use case numbers them, so the number is
+# carried here rather than inferred from the file name.
+# -------------------------------------------------------------------
+x-handover:
+  number: 3
+  name: screening results
+  from: test
+  to: learn
+  source: >-
+    Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov
+    2026
+  note: >-
+    The use case numbers its handovers. Carrying that number in the contract
+    means two teams arguing about 'the Design handover' are provably arguing
+    about the same one.
+title: 'Test -> Learn handover (generic)'
+description: >-
+  The handover the flash deck calls 'peak area is not flux'. The common
+  ground: every result resolves to a Design item, every number carries unit
+  and method, and the profile declares what Learn cannot work without - a
+  blank-corrected signal for bioprospecting, a titre normalised per gDW with
+  declared uncertainty for biomanufacturing.
+type: object
+required:
+  - contract
+  - contract_version
+  - profile
+  - run_id
+  - produced_by
+  - produced_at
+  - build_ref
+  - results
+
+# -------------------------------------------------------------------
+# The shape of the package.
+# -------------------------------------------------------------------
+properties:
+  contract:
+    const: test_to_learn
+  contract_version:
+    const: 0.1.0
+  profile:
+    enum:
+      - bioprospecting
+      - biomanufacturing
+  run_id:
+    type: string
+    pattern: '^[A-Za-z0-9._-]+$'
+  produced_at:
+    type: string
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+  produced_by:
+    type: object
+    required:
+      - agent
+      - tool
+      - engine
+    properties:
+      agent:
+        type: string
+      tool:
+        type: string
+      engine:
+        type: string
+  build_ref:
+    type: object
+    description: >-
+      The chain back to Build, and through it to Design. Without this a
+      measurement cannot be traced to what was built.
+    required:
+      - package
+    properties:
+      package:
+        type: string
+  target_list:
+    type: array
+    items:
+      type: object
+      required:
+        - name
+        - inchikey
+      properties:
+        name:
+          type: string
+        inchikey:
+          type: string
+          pattern: '^[A-Z]{14}-[A-Z]{10}-[A-Z]$'
+        role:
+          enum:
+            - substrate
+            - product
+            - intermediate
+            - byproduct
+  results:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required:
+        - sample_id
+        - design_item_id
+        - measurements
+      properties:
+        sample_id:
+          type: string
+          x-pattern: sample_id
+        design_item_id:
+          type: string
+          x-pattern: design_item_id
+        location:
+          type: object
+          properties:
+            container_id:
+              type: string
+              x-pattern: container_id
+            position:
+              type: string
+              x-pattern: position
+        measurements:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - quantity
+              - value
+              - unit
+              - method
+            properties:
+              quantity:
+                type: string
+              value:
+                type:
+                  - number
+                  - boolean
+              unit:
+                type: string
+              method:
+                type: string
+
+              # The basis that turns a signal into something a model can be fitted
+              # to. Optional in the structure and required by the profiles whose
+              # Learn step needs a rate rather than a raw number.
+              normalised_to:
+                type: string
+                description: >-
+                  The basis a derived value is expressed per, e.g. 'gDW'.
+                  Required by profiles whose Learn step needs a rate rather
+                  than a raw signal.
+              uncertainty:
+                type: object
+                required:
+                  - value
+                  - unit
+                properties:
+                  value:
+                    type: number
+                    minimum: 0
+                  unit:
+                    type: string
+  provenance:
+    type: array
+    items:
+      type: object
+      required:
+        - step
+        - tool
+      properties:
+        step:
+          type: string
+        tool:
+          type: string
+        ref:
+          type: string
+  reads:
+    type: array
+    description: >-
+      Crates or packages this handover READ but did not produce. Information
+      in this framework normally flows one way, from the phase that made
+      something to the phase that receives it. This is the other direction: a
+      receiving phase states what it can do, and the sending phase has to have
+      looked. Referenced, never inlined - the package stays small and the
+      graph joins the crates by their identifiers.
+    items:
+      type: object
+      required:
+        - crate
+        - role
+      properties:
+        crate:
+          type: string
+          description: 'The crate''s identifier or path.'
+        role:
+          enum:
+            - constraints
+            - context
+            - upstream
+          description: >-
+            constraints: limits this package had to respect. context: read to
+            interpret something. upstream: where the material came from.
+        checksum:
+          type: string
+          description: >-
+            Which version was read. A shared crate grows between rounds, so
+            'the Build crate' is not a unique thing to have read.
+  limits:
+    type: array
+    description: >-
+      Limits this package was built to respect, lifted out of the crates named
+      in 'reads'. Carried here rather than left in the crate so that a check
+      can compare against them, and 'from' says which crate each one came out
+      of. A limit is not a use-case constant and does not belong in the
+      profile: it is this run's equipment and this round's budget, and it
+      changes between rounds.
+    items:
+      type: object
+      required:
+        - quantity
+        - value
+        - unit
+        - from
+      properties:
+        quantity:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+          description: '''dimensionless'' rather than omitted.'
+        from:
+          type: string
+          description: The crate this limit was read out of.
+        stated_by:
+          type: string
+          description: >-
+            Who or what put it there - a researcher seeding the crate before
+            round 1, or a phase recording its own equipment.
+  crate:
+    type: object
+    description: >-
+      The run's crate, as it stands when this handover is made. Carried so the
+      checks below can read what Test recorded about each reading - the three
+      things a table of numbers cannot say about itself.
+
+# ===================================================================
+# What a JSON Schema cannot say.
+#
+# Each entry names a `kind` implemented in framework/validator.py.
+# `fix_hint` beginning "not auto-fixable" is load-bearing: it is what
+# stops a repair engine patching the error, and a test fails if a check
+# is patchable without saying so.
+# ===================================================================
+x-dbtl-checks:
+
+  # One row per sample. Two results for one sample_id are either a
+  # replicate that has not been declared as one or two different samples
+  # sharing a name, and Learn cannot tell which.
+  - kind: unique
+    of: results
+    fields:
+      - sample_id
+    code: duplicate_sample_id
+    message: sample_id is not unique
+
+  # What Learn cannot work without: a blank-corrected signal for
+  # bioprospecting, a titre normalised per gDW with declared uncertainty
+  # for biomanufacturing. Stated in the profile, so the two use cases
+  # differ in a table rather than in code.
+  - kind: required_quantities
+    of: results
+    at: measurements
+    from_profile: required_quantities.test_to_learn
+    code: missing_quantity
+    message: the profile requires this measurement before Learn can use the data
+    fix_hint: >-
+      not auto-fixable: a measurement that was never taken cannot be supplied.
+      Either the instrument output is found, or the sample is reported as
+      incomplete
+
+  # The three things a table of numbers cannot say about itself: whether
+  # the blank was subtracted, how many replicates there were, and
+  # whether the value sat inside the instrument's range. They are read
+  # off the crate's reading entities, not off the results table, because
+  # that is where Test recorded them.
+  - kind: required_provenance
+    of: 'crate.@graph'
+    from_profile: required_provenance.test_to_learn.entities
+    code: unusable_reading
+    message: the profile requires this on a reading before a model is fitted to it
+    fix_hint: >-
+      not auto-fixable: whether the blank was subtracted, how many replicates
+      there were and whether the value sat inside the instrument's range are
+      facts about the run. An agent that supplied them would be inventing the
+      conditions of an experiment

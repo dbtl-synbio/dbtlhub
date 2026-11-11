@@ -11,6 +11,21 @@ anything.
 
 **Marco Anteghini, LifeGlimmer** — raised on Slack 10 November 2026.
 
+## The Architect
+
+The centre of the agreed picture: the researcher talks to it, it holds what
+was agreed and the crate that grows, and it decides what happens after every
+verdict. Eight agents stand around it — four that do the work and may be
+people rather than programs, four that check and may refuse.
+
+```bash
+python3 architect/architect.py
+```
+
+Five parts, each runnable on its own, and
+[`architect/README.md`](architect/README.md) says what each is for and what is
+not done yet.
+
 ## Start here
 
 | | |

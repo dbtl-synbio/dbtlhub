@@ -1,8 +1,23 @@
-# Nothing. That is the point.
+# One optional dependency, and nothing else.
 #
-# Every demo and every script in this framework runs on the Python standard
-# library alone - no install step, no virtualenv, no network. If you can run
-# `python3 demo_cycle.py` you have everything.
+#   PyYAML>=5.1
+#
+# The four contracts in framework/contracts/ exist twice: as *.yaml, which is
+# the form a person edits because YAML can carry the reason for a check beside
+# the check, and as *.schema.json, the same contract with the comments
+# stripped. `load_contract()` prefers the YAML and reads the JSON when PyYAML
+# is not importable, so every demo and every script in this framework still
+# runs on the Python standard library alone - no install step, no virtualenv,
+# no network. If you can run `python3 demo_cycle.py` you have everything.
+#
+# Install it only if you want the comments, or if you are editing a contract:
+#
+#   pip install 'PyYAML>=5.1'
+#
+# It is deliberately not pinned and deliberately not required. `sentinel-oo`
+# (dbtlhub/sentinel-oo), the deployable service built from these ideas, does
+# require PyYAML, and its contracts are YAML only - which is why ours are now
+# YAML too.
 #
 # This file used to be an unrelated pip freeze (matplotlib, scikit-learn,
 # leidenalg) left over from another project in the same folder. It listed

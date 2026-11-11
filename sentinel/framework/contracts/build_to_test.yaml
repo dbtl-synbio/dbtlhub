@@ -1,0 +1,428 @@
+# Build -> Test handover (generic), handover 2 of 4.
+#
+# This is the form `load_contract()` in framework/validator.py prefers. It
+# falls back to build_to_test.schema.json - the same contract with the
+# comments stripped - when PyYAML is not installed, so the framework still runs
+# with nothing but the standard library. Both files are therefore live: edit
+# this one and carry the change into the JSON, because a reader without PyYAML
+# gets the JSON and tests/test_framework.py reads the JSON too.
+#
+# Why YAML. A JSON Schema cannot carry a comment, so the reason a check exists
+# had to live either in a `description` the validator shows to a user or in a
+# commit message nobody reads. Here the reason sits beside the rule. Everything
+# below that is not a comment is the same contract, field for field.
+#
+# Naming, for convergence with `sentinel-oo` (dbtlhub/sentinel-oo), which is
+# the deployable service built from these ideas and whose contracts are YAML
+# already:
+#
+#     ours                      sentinel-oo
+#     $id                       contract + version
+#     x-handover.name           description
+#     x-dbtl-checks[].code      requires[].name
+#     x-dbtl-checks[].message   requires[].message
+#     severity: error | flag    severity: refuse | flag
+#
+# `x-pattern` is not a JSON Schema keyword. It names a regex that the active
+# use-case profile supplies, and `_bind()` replaces it with `pattern` at load
+# time. Without a profile the structure is still checked and the formats are
+# not.
+
+'$schema': 'https://json-schema.org/draft/2020-12/schema'
+'$id': 'dbtl:build_to_test/0.2.0'
+
+# -------------------------------------------------------------------
+# Which handover this is. The use case numbers them, so the number is
+# carried here rather than inferred from the file name.
+# -------------------------------------------------------------------
+x-handover:
+  number: 2
+  name: assembly outputs and QC results
+  from: build
+  to: test
+  source: >-
+    Anil Wipat, bioprospecting use case slides, dbtl-synbio/dbtlhub, 10 Nov
+    2026
+  note: >-
+    The use case numbers its handovers. Carrying that number in the contract
+    means two teams arguing about 'the Design handover' are provably arguing
+    about the same one.
+title: 'Build -> Test handover (generic)'
+description: >-
+  The common ground for both use cases: every test item traces back to a
+  Design item and to a physical location, every measurement carries its own
+  unit and method, and the target list is inherited from Design. What differs
+  between bioprospecting and biomanufacturing is bound by a profile -
+  identifier patterns, container vocabulary, and which measurements are
+  mandatory. Fields marked x-pattern take their regex from the active profile.
+type: object
+required:
+  - contract
+  - contract_version
+  - profile
+  - run_id
+  - produced_by
+  - produced_at
+  - design_ref
+  - samples
+
+# -------------------------------------------------------------------
+# The shape of the package.
+# -------------------------------------------------------------------
+properties:
+  contract:
+    const: build_to_test
+  contract_version:
+    const: 0.2.0
+  profile:
+    type: string
+    description: Which use-case profile this package was written against.
+    enum:
+      - bioprospecting
+      - biomanufacturing
+  run_id:
+    type: string
+    pattern: '^[A-Za-z0-9._-]+$'
+  produced_at:
+    type: string
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+  produced_by:
+    type: object
+    description: >-
+      Who produced this package. 'engine' records the model used, or 'none'
+      for a deterministic step - this is what makes the model comparison fall
+      out of the ledger.
+    required:
+      - agent
+      - tool
+      - engine
+    properties:
+      agent:
+        type: string
+      tool:
+        type: string
+      engine:
+        type: string
+  design_ref:
+    type: object
+    description: >-
+      The link back to Design. 'items' is what Design committed to; every
+      sample must trace to one of them. In bioprospecting an item is an enzyme
+      candidate, in biomanufacturing a pathway construct - the structure is
+      the same.
+    required:
+      - package
+      - items
+    properties:
+      package:
+        type: string
+      items:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required:
+            - design_item_id
+            - accession
+          properties:
+            design_item_id:
+              type: string
+              x-pattern: design_item_id
+            accession:
+              type: string
+              description: >-
+                Resolvable, prefixed identifier - the shared backbone
+                (MetaNetX / identifiers.org style).
+              x-pattern: accession
+  target_list:
+    type: array
+    description: >-
+      Inherited from Design: what Test is expected to measure. The enzyme
+      substrate/product in bioprospecting, the pathway product in
+      biomanufacturing. InChIKey is mandatory either way, so the Test phase
+      can resolve what it is looking for.
+    items:
+      type: object
+      required:
+        - name
+        - inchikey
+      properties:
+        name:
+          type: string
+        inchikey:
+          type: string
+          pattern: '^[A-Z]{14}-[A-Z]{10}-[A-Z]$'
+        role:
+          enum:
+            - substrate
+            - product
+            - intermediate
+            - byproduct
+  samples:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required:
+        - sample_id
+        - design_item_id
+        - location
+        - qc
+      properties:
+        sample_id:
+          type: string
+          x-pattern: sample_id
+        design_item_id:
+          type: string
+          x-pattern: design_item_id
+        location:
+          type: object
+          description: >-
+            Where the material physically is. A plate well, a vial, a flask, a
+            bioreactor port - the profile fixes the vocabulary, the structure
+            does not change.
+          required:
+            - container_id
+            - position
+          properties:
+            container_id:
+              type: string
+              x-pattern: container_id
+            position:
+              type: string
+              x-pattern: position
+        qc:
+          type: object
+          required:
+            - measurements
+            - verdict
+          properties:
+            measurements:
+              type: array
+              minItems: 1
+              description: >-
+                The common ground. A number on its own is not a measurement:
+                quantity, value, unit and method travel together, always. This
+                is the generalisation of 'peak area is not flux'.
+              items:
+                type: object
+
+                # All four, always. A number with no unit and no method is not a
+                # measurement, it is a figure somebody can misread. This is the
+                # generalisation of "peak area is not flux".
+                required:
+                  - quantity
+                  - value
+                  - unit
+                  - method
+                properties:
+                  quantity:
+                    type: string
+                  value:
+                    type:
+                      - number
+                      - boolean
+                  unit:
+                    type: string
+                    description: >-
+                      Use 'dimensionless' rather than omitting the field;
+                      'none' is not a unit.
+                  method:
+                    type: string
+                    description: The instrument or procedure that produced the number.
+                  uncertainty:
+                    type: object
+                    required:
+                      - value
+                      - unit
+                    properties:
+                      value:
+                        type: number
+                        minimum: 0
+                      unit:
+                        type: string
+            verdict:
+              enum:
+                - pass
+                - fail
+  provenance:
+    type: array
+    items:
+      type: object
+      required:
+        - step
+        - tool
+      properties:
+        step:
+          type: string
+        tool:
+          type: string
+        ref:
+          type: string
+  not_delivered:
+    type: array
+    description: >-
+      Items Design committed to that are not in this plate, each with a
+      reason. A failed synthesis is a normal outcome and belongs here; what is
+      not acceptable is a well that is simply absent from the record, because
+      then nobody can tell a failure from an omission.
+    items:
+      type: object
+      required:
+        - design_item_id
+        - reason
+      properties:
+        design_item_id:
+          type: string
+          x-pattern: design_item_id
+        reason:
+          type: string
+          description: 'What happened, in the vendor''s or the lab''s own words.'
+        reported_by:
+          type: string
+  reads:
+    type: array
+    description: >-
+      Crates or packages this handover READ but did not produce. Information
+      in this framework normally flows one way, from the phase that made
+      something to the phase that receives it. This is the other direction: a
+      receiving phase states what it can do, and the sending phase has to have
+      looked. Referenced, never inlined - the package stays small and the
+      graph joins the crates by their identifiers.
+    items:
+      type: object
+      required:
+        - crate
+        - role
+      properties:
+        crate:
+          type: string
+          description: 'The crate''s identifier or path.'
+        role:
+          enum:
+            - constraints
+            - context
+            - upstream
+          description: >-
+            constraints: limits this package had to respect. context: read to
+            interpret something. upstream: where the material came from.
+        checksum:
+          type: string
+          description: >-
+            Which version was read. A shared crate grows between rounds, so
+            'the Build crate' is not a unique thing to have read.
+  limits:
+    type: array
+    description: >-
+      Limits this package was built to respect, lifted out of the crates named
+      in 'reads'. Carried here rather than left in the crate so that a check
+      can compare against them, and 'from' says which crate each one came out
+      of. A limit is not a use-case constant and does not belong in the
+      profile: it is this run's equipment and this round's budget, and it
+      changes between rounds.
+    items:
+      type: object
+      required:
+        - quantity
+        - value
+        - unit
+        - from
+      properties:
+        quantity:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+          description: '''dimensionless'' rather than omitted.'
+        from:
+          type: string
+          description: The crate this limit was read out of.
+        stated_by:
+          type: string
+          description: >-
+            Who or what put it there - a researcher seeding the crate before
+            round 1, or a phase recording its own equipment.
+
+# ===================================================================
+# What a JSON Schema cannot say.
+#
+# Each entry names a `kind` implemented in framework/validator.py.
+# `fix_hint` beginning "not auto-fixable" is load-bearing: it is what
+# stops a repair engine patching the error, and a test fails if a check
+# is patchable without saying so.
+# ===================================================================
+x-dbtl-checks:
+
+  # Two samples in one physical position. A composite key, because a
+  # position is only unique within its container: PLATE-1/A4 and
+  # PLATE-2/A4 are different wells.
+  - kind: unique
+    of: samples
+    fields:
+      - location.container_id
+      - location.position
+    code: double_booked_location
+    message: two samples claim the same physical position
+    fix_hint: >-
+      not auto-fixable: re-read the liquid handler worklist. Guessing which
+      sample sat where would fabricate a lab record
+
+  # sample_id must be unique on its own, independently of where the
+  # sample sits. Test joins on this identifier, so a collision silently
+  # merges two samples' results.
+  - kind: unique
+    of: samples
+    fields:
+      - sample_id
+    code: duplicate_sample_id
+    message: sample_id is not unique
+
+  # Every sample must trace to something Design committed to. The easy
+  # direction: something arrived that was never asked for.
+  - kind: cross_ref
+    of: samples
+    field: design_item_id
+    against: 'design_ref.items[].design_item_id'
+    code: unknown_design_item
+    message: this item is not in what Design committed to
+    fix_hint: >-
+      not auto-fixable: either Design adds the item, or Build mislabelled the
+      sample
+
+  # Which measurements a handover is incomplete without. The list is in
+  # the profile: biomanufacturing demands biomass here precisely because
+  # Test -> Learn cannot produce a titre per gDW without it.
+  - kind: required_quantities
+    of: samples
+    at: qc.measurements
+    from_profile: required_quantities.build_to_test
+    code: missing_quantity
+    message: the profile requires this measurement
+    fix_hint: >-
+      not auto-fixable: a measurement that was never taken cannot be supplied.
+      Either the instrument output is found, or the sample is reported as
+      incomplete
+
+  # The hard direction, and the one that goes unnoticed: an item Design
+  # committed to that is neither in the plate nor reported as not
+  # delivered. Nothing is wrong with any row; a row is just absent, and
+  # absence has no field to check. A failed synthesis is a normal outcome
+  # and belongs in `not_delivered` - what is not acceptable is a well
+  # that is simply missing from the record, because then nobody can tell
+  # a failure from an omission.
+  - kind: accounted_for
+    of: design_ref.items
+    field: design_item_id
+    against:
+      - 'samples[].design_item_id'
+      - 'not_delivered[].design_item_id'
+    code: unaccounted_item
+    message: >-
+      Design committed to this item and the Build record neither contains it
+      nor reports it as not delivered
+    fix_hint: >-
+      not auto-fixable: an absent well has no field to correct. Either the
+      sample is found and added, or the failure is stated in not_delivered.
+      Dropping it silently is how a failed synthesis becomes a missing result
+      nobody can explain.
