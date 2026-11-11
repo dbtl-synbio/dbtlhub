@@ -80,9 +80,9 @@
           },
           "properties_at": "object",
           "requires": [
-            "gene calling mode"
+            "edge handling"
           ],
-          "why": "Open ends permits a prediction running off the end of a contig, so a sequence may be a truncated fragment. A crate without the mode passes every automated validator there is and Build still cannot judge what it has been sent - which is the whole argument for a contract on top of a profile."
+          "why": "Whether gene calling allowed a prediction to run off the end of a contig decides whether a sequence may be a truncated fragment. The use case's crate now records this as 'edge handling', with 'closed' meaning no partial genes were reported - and the cost of closed, which the crate states and no contract yet checks, is that a gene spanning a contig edge is dropped and nothing records that it was dropped."
         },
         {
           "one_of": [

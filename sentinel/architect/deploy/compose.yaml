@@ -1,0 +1,148 @@
+# The Architect, run two ways: without a key, and with one.
+#
+#   cd architect/deploy
+#
+#   docker compose up architect                   no key. The default.
+#   docker compose run --rm check                 the health check, on demand
+#   docker compose run --rm with-model            with your key, if you have one
+#
+# THE DEFAULT HAS NO KEY, and that is not a degraded mode. The `architect`
+# service below passes no credential of any kind into the container, reaches no
+# network, and runs the four real phase agents against the four real sentinels
+# with `RulesEngine`: deterministic, offline, repeatable. That is the service
+# you get from a bare `docker compose up`, because a missing key is a normal
+# state in this framework and not an error.
+#
+# THE KEY IS NEVER IN THIS FILE. `with-model` lists ANTHROPIC_API_KEY with no
+# value, which means "take it from the shell that ran compose". There is no
+# default, no placeholder and nothing to fill in, so this file can be committed,
+# shared and pasted into an issue as it stands. If the variable is not set on
+# the host, the container simply has no key and says so - the run still works.
+#
+#   export ANTHROPIC_API_KEY=...        # in your shell, not in a file here
+#   docker compose run --rm with-model
+#
+# Compose will also interpolate from a `.env` file sitting beside this one. If
+# you choose to keep your key there, put `.env` in the repository's .gitignore
+# FIRST - as of today it is not listed, and the usual way a key escapes is not
+# a container, it is a commit.
+#
+# NOTHING LISTENS. There is no `ports:` section anywhere below, because nothing
+# in this framework binds a socket. The commented block in `architect` is the
+# shape to use if a service is ever added, and it binds to 127.0.0.1 unless the
+# operator names something else.
+
+name: dbtl-architect
+
+# ---------------------------------------------------------------------------
+# What all three services share. Written once so the difference between them
+# is visible: it is the environment, and nothing else.
+# ---------------------------------------------------------------------------
+x-image: &image
+  build:
+    # The repository root, because the Architect drives framework/ and
+    # usecases/ and would prove nothing without them. The Dockerfile names
+    # every path it copies; nothing else from the tree goes in.
+    context: ../..
+    dockerfile: architect/deploy/Dockerfile
+    target: runtime
+    args:
+      IMAGE_TAG: dev
+  image: dbtl-architect:dev
+  volumes:
+    # Every run is written here: the ledger, the crate that grows, the graph,
+    # the handover packages. A named volume rather than a folder, so a run
+    # survives the container without writing into the repository and without
+    # the uid of the container's user having to match yours.
+    #
+    #   docker compose cp architect:/app/runs ./runs     to copy a run out
+    #   docker volume rm dbtl-architect_runs             to throw them away
+    #
+    # To put them in a directory of your own instead, replace the line below
+    # with a bind mount and tell the container who you are, or it will not be
+    # able to write there:
+    #
+    #   volumes: ["/some/path:/app/runs"]
+    #   user: "${UID:-1000}:${GID:-1000}"
+    - runs:/app/runs
+
+services:
+
+  # -------------------------------------------------------------------------
+  # The default. No key, no network use, no model.
+  # -------------------------------------------------------------------------
+  architect:
+    <<: *image
+    command: ["architect/wiring.py"]
+    # The four real phase agents under the Architect, then the same agents with
+    # three faults injected so the sentinels have something to refuse. Both
+    # halves run on RulesEngine, which is the default and needs nothing.
+    environment: {}
+    # Nothing is passed in. Not an empty key, not a placeholder - the variable
+    # does not exist inside this container, which is what makes the offline
+    # path the one that is actually exercised every time.
+
+    # ports:
+    #   # There is no server in this framework, so this is commented out and
+    #   # not merely restricted. If one is added: 127.0.0.1 by default, because
+    #   # on conference wifi, publishing on every interface means everyone on
+    #   # that wifi can reach a service that asks for no password. Set
+    #   # ARCHITECT_BIND=0.0.0.0 deliberately, and put something that
+    #   # authenticates in front of it before you do.
+    #   - "${ARCHITECT_BIND-127.0.0.1}:${ARCHITECT_PORT-8080}:${ARCHITECT_PORT-8080}"
+
+  # -------------------------------------------------------------------------
+  # The health check, on demand. Exits 0 or 1, prints what it checked.
+  # -------------------------------------------------------------------------
+  # The same suite the image's HEALTHCHECK runs, as a command you can run
+  # yourself and read. It runs four demonstrations end to end and asserts the
+  # verdicts, so what it proves is that the framework works - not that Python
+  # started. One test skips: it needs a crate from a sibling repository that is
+  # deliberately not in the image.
+  #
+  #   docker compose run --rm check
+  check:
+    <<: *image
+    profiles: ["check"]
+    command: ["tests/test_framework.py"]
+    environment: {}
+    healthcheck:
+      # Declared as well as run, so `docker compose ps` can report it for
+      # anybody who keeps this service up rather than running it once.
+      test: ["CMD", "python3", "/app/tests/test_framework.py"]
+      interval: 10m
+      timeout: 180s
+      start_period: 5s
+      retries: 1
+
+  # -------------------------------------------------------------------------
+  # With a key. Under a profile, so you cannot get here by accident.
+  # -------------------------------------------------------------------------
+  # `framework/engines_api.py` runs six checks on what happens to the key -
+  # offline, always - and then, only if the key is actually set, makes one real
+  # call to the Messages API and prints the term the model suggested. With no
+  # key on the host it says so and sends nothing anywhere, which means this
+  # service is honest in both states rather than broken in one.
+  #
+  #   docker compose run --rm with-model
+  #
+  # What you are trusting when you set that variable is written out in
+  # README.md, next to this file. Read it before you export anything.
+  with-model:
+    <<: *image
+    profiles: ["model"]
+    command: ["framework/engines_api.py"]
+    environment:
+      # No value, deliberately. Compose takes it from the host environment and
+      # this file never contains it. The container holds the key in its
+      # environment only, for the life of one process.
+      ANTHROPIC_API_KEY:
+      # And nothing else. There is deliberately no model variable here: the
+      # model is `ApiEngine(model=...)` in code, defaulting to the constant in
+      # framework/engines_api.py, because a knob in a compose file that no code
+      # reads is worse than no knob at all.
+
+volumes:
+  # The runs. Kept out of the repository on purpose: mounting ./runs would
+  # write into the working tree as a different user and nothing would say so.
+  runs:

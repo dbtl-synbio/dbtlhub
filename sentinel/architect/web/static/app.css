@@ -1,0 +1,251 @@
+/* DBTL Reloaded - the look only.
+ *
+ * The colours and the font are not here. They come from architect/theme.py,
+ * which the server writes into the page as custom properties on :root, so
+ * there is one definition of the palette and it is the Python one. This file
+ * uses var(--fg) and friends and defines no colour of its own.
+ *
+ * Two rules worth keeping:
+ *   - amber (--flag) and red (--refuse) mean flagged and refused. They are
+ *     state, never decoration. Nothing else in this file uses them.
+ *   - the page has to be legible without this file. It is a form somebody
+ *     fills in carefully, so nothing here moves under text, and the rain sits
+ *     behind opaque panels only.
+ */
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  padding: 0 1rem 4rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---- the rain -----------------------------------------------------------
+ * CSS only: two repeating gradients drifting downwards. It is behind
+ * everything, it never sits under text because every panel has an opaque
+ * background, and it stops entirely for anybody who has asked for less
+ * motion. No canvas, no script, nothing to lose. */
+.rain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(90deg,
+      var(--grid) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(180deg,
+      var(--grid) 0 2px, transparent 2px 120px);
+  animation: fall 9s linear infinite;
+}
+
+@keyframes fall { from { background-position: 0 0, 0 0; }
+                  to   { background-position: 0 0, 0 120px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rain { animation: none; opacity: 0.3; }
+}
+
+/* ---- the frame --------------------------------------------------------- */
+header, main, footer { max-width: 54rem; margin: 0 auto; }
+
+header { padding: 2rem 0 1rem; }
+
+h1 { font-size: 1.5rem; margin: 0; color: var(--fg_bright); font-weight: 600; }
+
+.tagline { color: var(--fg); margin: 0.2rem 0 0.8rem; }
+
+h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.6rem;
+  color: var(--fg_bright);
+  border-bottom: 1px solid var(--grid);
+  padding-bottom: 0.3rem;
+}
+
+h3 { font-size: 1rem; margin: 0.4rem 0; color: var(--fg_bright); }
+
+.panel {
+  background: var(--bg_panel);
+  border: 1px solid var(--grid);
+  padding: 1rem 1.2rem;
+  margin: 0 0 1.4rem;
+}
+
+.hint, .intent, .feeds, .who { color: var(--fg_dim); }
+.hint, .feeds { font-size: 0.85rem; }
+
+a { color: var(--fg_bright); }
+a:hover { background: var(--grid); }
+
+code { color: var(--fg_bright); }
+
+.icon { color: var(--fg_dim); }
+
+/* ---- what is missing --------------------------------------------------- */
+.count strong { color: var(--fg_bright); font-size: 1.2rem; }
+
+ul.missing { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+
+ul.missing li {
+  border-left: 2px solid var(--fg_dim);
+  padding: 0.25rem 0 0.25rem 0.7rem;
+  margin-bottom: 0.5rem;
+}
+
+ul.missing a { display: block; }
+
+.stops { display: block; color: var(--fg_dim); font-size: 0.85rem; }
+
+.ok { color: var(--fg_bright); }
+
+/* ---- the form ---------------------------------------------------------- */
+fieldset { border: 1px solid var(--grid); margin: 0 0 1.4rem; padding: 1rem; }
+
+legend { color: var(--fg_bright); padding: 0 0.4rem; }
+
+.field {
+  padding: 0.7rem 0 1rem;
+  border-bottom: 1px dotted var(--grid);
+}
+
+.field:last-child { border-bottom: 0; }
+
+.label { display: block; color: var(--fg_bright); }
+
+.req, .phase {
+  font-size: 0.72rem;
+  border: 1px solid var(--fg_dim);
+  color: var(--fg_dim);
+  padding: 0 0.3rem;
+  margin-right: 0.3rem;
+}
+
+.detail { color: var(--fg_dim); font-size: 0.85rem; margin: 0.3rem 0; }
+
+/* Why a field is asked is the reason this is a form and not a prompt, so it
+ * is drawn as part of the question rather than as fine print. */
+.why {
+  color: var(--fg);
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.6rem;
+  border-left: 2px solid var(--grid);
+  padding-left: 0.6rem;
+}
+
+input[type=text], input[type=number], textarea {
+  background: var(--bg);
+  color: var(--human);          /* what the researcher typed */
+  border: 1px solid var(--fg_dim);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  padding: 0.35rem 0.5rem;
+  width: 100%;
+  max-width: 34rem;
+}
+
+textarea { display: block; resize: vertical; }
+
+input:focus, textarea:focus, button:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.quantity { display: inline-flex; align-items: center; gap: 0.5rem; }
+.quantity input { max-width: 10rem; }
+.unit {
+  border: 1px solid var(--fg_dim);
+  color: var(--fg_bright);
+  padding: 0.3rem 0.5rem;
+}
+
+.options { display: block; margin: 0.3rem 0; }
+
+.option {
+  display: block;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.option code { color: var(--human); }
+
+.option-why { display: block; color: var(--fg_dim); padding-left: 1.6rem; }
+
+/* A recommendation is marked and is not selected. The mark says so. */
+.recommended {
+  display: block;
+  padding-left: 1.6rem;
+  color: var(--fg_bright);
+  font-size: 0.8rem;
+}
+
+.n { color: var(--fg_dim); }
+
+button {
+  background: var(--bg);
+  color: var(--fg_bright);
+  border: 1px solid var(--fg);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+button:hover { background: var(--grid); }
+
+button[disabled] { color: var(--fg_dim); border-color: var(--fg_dim); cursor: default; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+
+/* ---- a question -------------------------------------------------------- */
+.ask { border-color: var(--human); }
+.ask h2 { color: var(--human); }
+
+/* ---- the run log ------------------------------------------------------- */
+ul.log {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  max-height: 26rem;
+  overflow-y: auto;
+  font-size: 0.86rem;
+}
+
+ul.log li { display: flex; gap: 0.5rem; padding: 0.1rem 0; }
+
+ul.log .at { color: var(--fg_dim); flex: 0 0 auto; }
+
+ul.log .said { white-space: pre-wrap; }
+
+/* What the researcher typed, so the system's voice and theirs never look
+ * like each other. */
+ul.log li.researcher .said { color: var(--human); }
+ul.log li.note .said, ul.log li.phase_agent .said { color: var(--fg_dim); }
+ul.log li.architect .said { color: var(--fg_bright); }
+
+/* ---- the crate --------------------------------------------------------- */
+table.crate { border-collapse: collapse; width: 100%; max-width: 26rem; }
+table.crate caption { text-align: left; color: var(--fg_dim); padding-bottom: 0.3rem; }
+table.crate th, table.crate td {
+  border: 1px solid var(--grid);
+  padding: 0.25rem 0.6rem;
+  text-align: left;
+}
+table.crate th { color: var(--fg_dim); font-weight: 400; }
+table.crate td.n { color: var(--fg_bright); text-align: right; }
+
+footer { padding-top: 1rem; }
+
+@media (max-width: 40rem) {
+  body { font-size: 14px; }
+  .panel { padding: 0.8rem; }
+}

@@ -67,16 +67,27 @@ def load(folder: str | Path | None = None) -> tuple[dict, list[dict], dict]:
 
     constructs = _constructs(root)
     plate = _plate(root)
+    # A crate may type a protein as bioschemas Protein or as the more general
+    # BioChemEntity. Both are read, because which one a crate uses is its own
+    # business and neither is wrong.
+    protein_types = ("Protein", "BioChemEntity")
     proteins = {e.get("identifier"): e["@id"] for e in graph
-                if isinstance(e, dict) and "BioChemEntity" in _types(e)}
+                if isinstance(e, dict)
+                and any(t in _types(e) for t in protein_types)}
 
-    items = []
+    items, unreadable = [], []
     for row in plate:
         construct = constructs.get(row["construct"])
         entity = proteins.get(row["protein"])
         if construct is None or entity is None:
             # Deliberately not skipped silently: the plate claims something the
             # crate does not contain, and the handover should hear about it.
+            unreadable.append(
+                f"{row['construct']}: "
+                + ("no construct of that identifier in constructs.json"
+                   if construct is None else
+                   f"no protein {row['protein']!r} in the crate - looked for "
+                   f"{' or '.join(protein_types)} with that identifier"))
             items.append({"design_item_id": row["construct"],
                           "crate_entity": entity or f"#protein-{row['protein']}",
                           "sequence_type": "dna", "length_bp": 0,
@@ -102,6 +113,9 @@ def load(folder: str | Path | None = None) -> tuple[dict, list[dict], dict]:
         "plate_rows": len(plate),
         "proteins": len(proteins),
         "conforms_to": _conforms_to(index),
+        # Emitting a zero length for a sequence we could not find would be a
+        # measurement nobody took. Say what could not be read instead.
+        "unreadable": unreadable,
     }
     return crate, items, report
 
