@@ -69,6 +69,11 @@ class Blessing:
     # Reachable and asked are different. A model can be there and never asked,
     # because no failing requirement was marked repairable, and that is a
     # perfectly good run.
+    # A fifth state, added 11 November 2026: the model was there and did not
+    # answer in the time allowed. A check that stopped waiting is not a check
+    # where a model looked and found nothing, and the record has to tell them
+    # apart.
+    model_timed_out: bool = False
     model_reachable: bool | None = None
     model_asked: int = 0
     model_unreachable_detail: str | None = None
@@ -111,6 +116,18 @@ class Blessing:
         """
         if self.engine_used == NO_ENGINE:
             return "none configured"
+
+        # Asked before reachability, because a server that accepts a
+        # connection and then says nothing fails both tests, and of the two
+        # answers "it did not answer in time" is the true one: something was
+        # there.
+        if self.model_timed_out:
+            detail = self.model_unreachable_detail or "no reason recorded"
+            return (
+                f"{self.engine_used}, DID NOT ANSWER IN TIME: {detail}. "
+                "Waiting was given up on, so no value was recovered from "
+                "free text, and whether one was there is not known"
+            )
 
         if self.model_reachable is False:
             detail = self.model_unreachable_detail or "no reason recorded"

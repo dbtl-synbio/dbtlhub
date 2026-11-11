@@ -248,6 +248,8 @@ environment variables:
 |---|---|---|
 | `SENTINEL_MODEL_URL` | Where the model is | `http://model:11434` |
 | `SENTINEL_MODEL` | Which model, pinned by name | `qwen2.5:14b` |
+| `SENTINEL_MODEL_FIRST_TIMEOUT` | Seconds to wait for the first answer, which includes loading the model | `180` |
+| `SENTINEL_MODEL_TIMEOUT` | Seconds to wait for every answer after that | `60` |
 
 ```
 docker compose up                                      model beside it

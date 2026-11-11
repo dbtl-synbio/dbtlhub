@@ -243,7 +243,8 @@ def agree_to_download(wanted, yes: bool) -> bool:
     return input("   Download now? [y/N] ").strip().lower() in ("y", "yes")
 
 
-def start_model(name: str, model: str, yes: bool) -> str:
+def start_model(name: str, model: str, yes: bool,
+                gpus: str | None = None) -> str:
     """Start a model container beside the sentinel and return its address.
 
     Returns the address the sentinel should use, which is the container
@@ -284,22 +285,32 @@ def start_model(name: str, model: str, yes: bool) -> str:
 
     run(["docker", "network", "create", network], timeout=60)
 
-    started = run([
+    command = [
         "docker", "run", "-d",
         "--name", container,
         "--network", network,
         # Named after the deployment, so two deployments do not fight over
         # one download and removing one does not take the other's model.
         "-v", f"{container}-store:/root/.ollama",
-        MODEL_IMAGE,
-    ], timeout=300)
+    ]
+    if gpus:
+        # Measured on 11 November 2026 on an NVIDIA card: the first answer
+        # took 39.6 seconds including about 19 seconds loading the model,
+        # and later answers took well under a second. On a processor alone
+        # every answer takes tens of seconds.
+        command += ["--gpus", gpus]
+    command.append(MODEL_IMAGE)
+
+    started = run(command, timeout=300)
     if started.returncode != 0:
         raise Failed(
             "the model container did not start:\n\n"
             + (started.stdout + started.stderr).strip()
             + "\n\nTo deploy without a model, pass --model-url ''"
         )
-    print(f"   {container} started from {MODEL_IMAGE}")
+    print(f"   {container} started from {MODEL_IMAGE}"
+          + (f", with graphics hardware: {gpus}" if gpus else
+             ", on the processor. Pass --gpus all to use graphics hardware"))
 
     # Wait for it to answer before asking it for anything.
     for _ in range(60):
@@ -330,10 +341,71 @@ def start_model(name: str, model: str, yes: bool) -> str:
     return f"http://{container}:{MODEL_PORT}"
 
 
+def put_contracts_on_that_machine(name: str, image: str,
+                                  contracts: Path) -> str:
+    """Copy the validated contracts into a volume on the remote machine.
+
+    A mount names a path on the machine the Docker daemon runs on, not on
+    the machine this program runs on. Deploying remotely while passing the
+    local folder's path would mount whatever happened to sit at that path
+    on the server, or an empty folder, and the deployment would look
+    perfectly healthy while checking handovers against nothing.
+
+    The contracts are copied after they are validated and before anything
+    starts, so what runs on that machine is what was read here.
+
+    `docker cp` is the right tool for this and the wrong tool for anything
+    large: it streams the whole file through the Docker connection, and on
+    11 November 2026 doing that with an 8.99 gigabyte model file brought
+    Docker Desktop down. Contracts are a few kilobytes.
+    """
+    volume = f"{name}-contracts"
+    carrier = f"{name}-contracts-carrier"
+
+    # Left over from a previous deployment of the same name, and replaced
+    # rather than added to: a contract deleted here must not survive there.
+    run(["docker", "rm", "-f", carrier], timeout=60)
+    run(["docker", "volume", "rm", "-f", volume], timeout=60)
+
+    made = run(["docker", "volume", "create", volume], timeout=60)
+    if made.returncode != 0:
+        raise Failed(
+            f"the volume {volume} could not be made on that machine:\n\n"
+            + (made.stdout + made.stderr).strip()
+        )
+
+    # A container that never runs, made only so there is somewhere to copy
+    # into. A volume on its own cannot be written to from outside.
+    created = run(["docker", "create", "--name", carrier,
+                   "-v", f"{volume}:/contracts", image], timeout=120)
+    if created.returncode != 0:
+        raise Failed(
+            "a container to carry the contracts could not be made on that "
+            "machine:\n\n" + (created.stdout + created.stderr).strip()
+        )
+
+    files = sorted(contracts.glob("*.yaml")) + sorted(contracts.glob("*.yml"))
+    for each in files:
+        copied = run(["docker", "cp", str(each),
+                      f"{carrier}:/contracts/{each.name}"], timeout=300)
+        if copied.returncode != 0:
+            run(["docker", "rm", "-f", carrier], timeout=60)
+            raise Failed(
+                f"{each.name} could not be copied to that machine:\n\n"
+                + (copied.stdout + copied.stderr).strip()
+            )
+    run(["docker", "rm", "-f", carrier], timeout=60)
+
+    print(f"   {len(files)} contract file(s) copied into the volume "
+          f"{volume} on that machine")
+    return volume
+
+
 def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
                    port: int, model_url: str | None, model: str | None,
                    network: str | None = None,
-                   reachable_from_network: bool = False) -> None:
+                   reachable_from_network: bool = False,
+                   contracts_volume: str | None = None) -> None:
     stop_instance(name, quiet=True)
 
     command = [
@@ -356,7 +428,11 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
     command += [
         # The whole of the tailoring, and read only: a service that checks
         # handovers has no business editing the contract it checks against.
-        "-v", f"{contracts.resolve()}:/contracts:ro",
+        #
+        # A volume when deploying to another machine, because a path here
+        # means nothing there; the folder itself when deploying to this one.
+        "-v", (f"{contracts_volume}:/contracts:ro" if contracts_volume
+               else f"{contracts.resolve()}:/contracts:ro"),
     ]
     if crates is not None:
         command += ["-v", f"{crates.resolve()}:/crates:ro"]
@@ -390,25 +466,50 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
     else:
         print("   reachable from this machine only. Pass "
               "--reachable-from-network to change that")
-    print(f"   contracts mounted read only from {contracts}")
+    if contracts_volume:
+        print(f"   contracts mounted read only from the volume "
+              f"{contracts_volume} on that machine")
+    else:
+        print(f"   contracts mounted read only from {contracts}")
 
 
 # ------------------------------------------------------------------ step 4
 
 
-def ask(port: int, path: str, timeout: float = 2.0):
-    with urllib.request.urlopen(
-        f"http://127.0.0.1:{port}{path}", timeout=timeout
-    ) as answer:
-        return json.loads(answer.read().decode())
+def ask(port: int, path: str, timeout: float = 2.0,
+        inside: str | None = None):
+    """Ask the running instance something.
+
+    `inside` names a container to ask from within. That is how a remote
+    deployment is checked: the port is published on the loopback interface
+    of the machine the instance runs on, so from here there is nothing to
+    connect to, and publishing it wider to make the check possible would
+    leave an unprotected service open on that machine's network.
+    """
+    if inside is None:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}{path}", timeout=timeout
+        ) as answer:
+            return json.loads(answer.read().decode())
+
+    probe = run([
+        "docker", "exec", inside, "python", "-c",
+        "import urllib.request,sys;"
+        f"sys.stdout.write(urllib.request.urlopen("
+        f"'http://127.0.0.1:{port}{path}', timeout={timeout}).read().decode())",
+    ], timeout=max(30, int(timeout) + 20))
+    if probe.returncode != 0:
+        raise OSError((probe.stdout + probe.stderr).strip()[-400:])
+    return json.loads(probe.stdout)
 
 
-def wait_until_answering(name: str, port: int, seconds: int = 30):
+def wait_until_answering(name: str, port: int, seconds: int = 30,
+                         inside: str | None = None):
     deadline = time.time() + seconds
     last = None
     while time.time() < deadline:
         try:
-            return ask(port, "/health")
+            return ask(port, "/health", inside=inside)
         except (urllib.error.URLError, OSError, ValueError) as exc:
             last = exc
             time.sleep(0.5)
@@ -421,14 +522,15 @@ def wait_until_answering(name: str, port: int, seconds: int = 30):
     )
 
 
-def confirm_it_serves_what_was_validated(registry, port: int) -> None:
+def confirm_it_serves_what_was_validated(registry, port: int,
+                                         inside: str | None = None) -> None:
     """The instance must hold exactly the contracts that were validated.
 
     Without this a wrong path, a stale mount or a contract edited after
     validation would deploy silently, and the first anybody would know is a
     handover being judged against something nobody checked.
     """
-    served = ask(port, "/contracts")
+    served = ask(port, "/contracts", inside=inside)
 
     wanted = {c.name: c.version for c in registry.list()}
     got = {c["name"]: c["version"] for c in served.get("contracts", [])}
@@ -461,6 +563,20 @@ def deploy(args) -> int:
     crates = Path(args.crates) if args.crates else None
     name = args.name or f"sentinel-{contracts.resolve().parent.name}"
 
+    # Deploying to another machine. Docker's own command line understands an
+    # address in DOCKER_HOST, so every `docker` call below runs there
+    # instead of here: the image is built there, the containers run there,
+    # and an ssh:// address uses the SSH key already on this machine with no
+    # password written to any file.
+    remote = bool(args.host)
+    if remote:
+        os.environ["DOCKER_HOST"] = args.host
+        # Checked from inside the container, because the port is published
+        # on that machine's loopback interface and not on this one.
+        inside = name
+    else:
+        inside = None
+
     if args.stop:
         say("Stopping", "")
         stop_instance(name)
@@ -468,6 +584,15 @@ def deploy(args) -> int:
 
     print("sentinel-oo: deploying a tailored instance")
     print(f"the generic product is at {HERE}")
+    if remote:
+        print(f"deploying to {args.host}, not to this machine")
+        if crates is not None:
+            raise Failed(
+                "--crates names a folder on this machine, and this "
+                "deployment is going to another one, where that path means "
+                "nothing. Leave it out. Crates reach a deployed instance by "
+                "being posted to it, not by being mounted."
+            )
 
     say(f"1. Reading contracts from {contracts}")
     registry = read_contracts(contracts)
@@ -497,7 +622,7 @@ def deploy(args) -> int:
         # what "the model is on by default" has to mean for the one command
         # the documents tell people to use.
         say("3. Starting the model beside it")
-        model_url = start_model(name, model, args.yes)
+        model_url = start_model(name, model, args.yes, args.gpus)
         network = network_name(name)
     elif model_url == "":
         say("3. The model", "   none: --model-url was empty, so this "
@@ -507,13 +632,26 @@ def deploy(args) -> int:
             f"   not started here: {model_url} was given, so the model is "
             "somebody else's to run")
 
-    say("4. Starting the instance")
-    start_instance(name, args.image, contracts, crates, args.port,
-                   model_url, model, network, args.reachable_from_network)
+    contracts_volume = None
+    if remote:
+        say("4. Copying the contracts to that machine")
+        contracts_volume = put_contracts_on_that_machine(
+            name, args.image, contracts
+        )
 
-    say("5. Checking the instance serves what was validated")
-    health = wait_until_answering(name, args.port)
-    print(f"   answering on http://127.0.0.1:{args.port}")
+    say("5. Starting the instance" if remote else "4. Starting the instance")
+    start_instance(name, args.image, contracts, crates, args.port,
+                   model_url, model, network, args.reachable_from_network,
+                   contracts_volume)
+
+    say("6. Checking the instance serves what was validated" if remote
+        else "5. Checking the instance serves what was validated")
+    health = wait_until_answering(name, args.port, inside=inside)
+    if remote:
+        print(f"   answering on port {args.port} of {args.host}, from "
+              "inside the container")
+    else:
+        print(f"   answering on http://127.0.0.1:{args.port}")
     print(f"   image {health.get('image_tag')}, commit {health.get('git_commit')}")
     model_state = (health.get("model") or {})
     print(f"   model: {model_state.get('state', 'unknown')}"
@@ -521,13 +659,30 @@ def deploy(args) -> int:
     if model_state.get("state") == "configured but not answering":
         print(f"   WARNING: {model_state.get('detail', '')}")
         print(f"            {model_state.get('effect', '')}")
-    confirm_it_serves_what_was_validated(registry, args.port)
+    confirm_it_serves_what_was_validated(registry, args.port, inside=inside)
 
     # The one with the most requirements, because a folder often holds a
     # substantial contract and a stub, and suggesting the stub teaches the
     # reader nothing.
     first = max(registry.list(), key=lambda c: len(c.requirements)).name
-    say("Deployed.", f"""
+
+    tunnel = ""
+    if remote:
+        # ssh://user@machine, which is also how to open the tunnel.
+        where = args.host.split("://", 1)[-1].split("/", 1)[0]
+        tunnel = f"""
+It is running on {args.host} and listening on that machine's loopback
+interface only, so nothing on that machine's network can reach it and it
+needs no password of its own. Reach it by forwarding the port over SSH,
+from this machine, leaving this running in another terminal:
+
+    ssh -N -L {args.port}:127.0.0.1:{args.port} {where}
+
+With that open, the commands below work here exactly as they would for a
+deployment on this machine.
+"""
+
+    say("Deployed.", f"""{tunnel}
 To see what it holds:
 
     curl -s http://127.0.0.1:{args.port}/contracts
@@ -539,7 +694,7 @@ To check a handover:
 
 To stop it:
 
-    python {Path(__file__).name} {args.contracts} --stop
+    python {Path(__file__).name} {args.contracts} --stop{' --host ' + args.host if remote else ''}
 """.rstrip())
     return 0
 
@@ -597,6 +752,30 @@ def main(argv: list[str] | None = None) -> int:
                         help="validate the contracts and stop")
     parser.add_argument("--stop", action="store_true",
                         help="stop and remove the instance")
+    parser.add_argument(
+        "--host", default=None, metavar="ADDRESS",
+        help=(
+            "deploy to another machine instead of this one, for example "
+            "ssh://you@gpu-box.example. Uses Docker's own support for a "
+            "remote host, so it builds, starts and checks there, over your "
+            "existing SSH key. The contracts are copied to that machine "
+            "after they are validated. Pass the same --host to --stop. The "
+            "service listens on that machine's loopback interface only, so "
+            "reach it with an SSH tunnel, which this program prints when it "
+            "finishes"
+        ),
+    )
+    parser.add_argument(
+        "--gpus", default=None, metavar="WHICH",
+        help=(
+            "hand graphics hardware to the model container, for example "
+            "--gpus all. This is passed straight to Docker and needs "
+            "NVIDIA's container toolkit on the machine running the model. "
+            "Without it the model runs on the processor, which works and is "
+            "slow. Docker on a Mac cannot reach a Mac's graphics hardware "
+            "at all"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:

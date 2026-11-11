@@ -511,3 +511,184 @@ def test_the_flag_is_written_into_the_checked_crate(writer, registry):
                  ScriptedEngine({"drying atmosphere": "dry"}))
     text = run.crate.to_json()
     assert "recovered by a model" in text
+
+
+# --------------------------------- a model server that is slow or broken
+#
+# Until 11 November 2026 the network engine had been tested against a
+# server that was not there, and by hand against a real one. It had never
+# been given a server that accepts a connection and then says nothing, or
+# one that answers with something that is not JSON. Both are things a real
+# model host does, and both reach a running service through the one
+# component a contract author cannot see.
+#
+# No real socket is opened here. Every test in this suite runs with sockets
+# disabled, so what is replaced is urllib's own opener, which is where the
+# waiting actually happens.
+
+
+class _Urlopen:
+    """Stands in for urllib.request.urlopen and remembers how long it was
+    told to wait."""
+
+    def __init__(self, behaviour):
+        self.behaviour = behaviour
+        self.waits = []
+
+    def __call__(self, request, timeout=None):
+        self.waits.append(timeout)
+        return self.behaviour(timeout)
+
+
+def _answering(payload: str):
+    class Answer:
+        def read(self):
+            return payload.encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    return lambda timeout: Answer()
+
+
+def _never_answering(timeout):
+    raise TimeoutError("timed out")
+
+
+class TestASlowOrBrokenModelServer:
+
+    def engine(self, **kwargs):
+        from sentinel_oo.engines import HttpEngine
+
+        return HttpEngine(url="http://model:11434", **kwargs)
+
+    def test_a_server_that_never_answers_gives_an_empty_answer(self,
+                                                               monkeypatch):
+        """Not an exception, and not a refusal. A model that does not answer
+        must never change a verdict."""
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_never_answering))
+        e = self.engine()
+        assert e.ask("anything") == ""
+        assert e.timed_out is True
+        assert "waited" in e.last_error
+
+    def test_the_record_says_it_did_not_answer_in_time(self, writer, registry,
+                                                       monkeypatch):
+        """Distinct from "could not be reached" and from "looked and found
+        nothing". A check that gave up waiting knows less than either."""
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_never_answering))
+        run = run_on(IN_PROSE, writer, registry, self.engine())
+        said = run.blessing.model_text()
+
+        assert "DID NOT ANSWER IN TIME" in said
+        assert run.verdict.value == "REFUSED"
+        assert run.blessing.changes == ()
+
+    def test_a_server_answering_something_that_is_not_json(self, monkeypatch):
+        """A proxy's error page, a login page, or anything else that is not
+        this interface."""
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_answering("<html>502 Bad Gateway</html>")))
+        e = self.engine()
+        assert e.ask("anything") == ""
+        assert e.last_error
+        assert e.timed_out is False
+
+    def test_a_server_answering_json_that_is_not_an_object(self, monkeypatch):
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_answering("[1, 2, 3]")))
+        e = self.engine()
+        assert e.ask("anything") == ""
+        assert "rather than an object" in e.last_error
+
+    def test_a_server_answering_json_with_no_answer_in_it(self, monkeypatch):
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_answering('{"done": true}')))
+        e = self.engine()
+        assert e.ask("anything") == ""
+
+    def test_a_null_answer_is_read_as_nothing(self, monkeypatch):
+        """Ollama answers with null rather than a string in some states, and
+        a null reaching the rules as a value would be a value nobody wrote."""
+        import sentinel_oo.engines as engines
+
+        monkeypatch.setattr(engines.urllib.request, "urlopen",
+                            _Urlopen(_answering('{"response": null}')))
+        assert self.engine().ask("anything") == ""
+
+
+class TestHowLongItWaits:
+    """A check is what a pipeline waits for. It used to wait up to 300
+    seconds for every call, so a model nobody could see could block a
+    handover for five minutes."""
+
+    def engine(self, **kwargs):
+        from sentinel_oo.engines import HttpEngine
+
+        return HttpEngine(url="http://model:11434", **kwargs)
+
+    def test_the_first_call_waits_longer_than_the_rest(self, monkeypatch):
+        """The first call has to load the model before it answers. Measured
+        on an NVIDIA card on 11 November 2026: about 19 seconds of loading
+        inside a 39.6 second first answer, and 67 milliseconds warm."""
+        import sentinel_oo.engines as engines
+
+        opener = _Urlopen(_answering('{"response": "dry"}'))
+        monkeypatch.setattr(engines.urllib.request, "urlopen", opener)
+        e = self.engine()
+
+        e.ask("first")
+        e.ask("second")
+        e.ask("third")
+
+        assert opener.waits == [e.first_timeout, e.timeout, e.timeout]
+        assert e.first_timeout > e.timeout
+
+    def test_a_first_call_that_fails_does_not_shorten_the_next_wait(
+            self, monkeypatch):
+        """Only an answer proves the model is loaded. A failure proves
+        nothing, so the next call is still a first call."""
+        import sentinel_oo.engines as engines
+
+        opener = _Urlopen(_never_answering)
+        monkeypatch.setattr(engines.urllib.request, "urlopen", opener)
+        e = self.engine()
+
+        e.ask("first")
+        e.ask("second")
+
+        assert opener.waits == [e.first_timeout, e.first_timeout]
+
+    def test_a_deployment_sets_both_waits_without_rebuilding(self,
+                                                             monkeypatch):
+        monkeypatch.setenv("SENTINEL_MODEL_TIMEOUT", "5")
+        monkeypatch.setenv("SENTINEL_MODEL_FIRST_TIMEOUT", "25")
+        e = self.engine()
+        assert (e.timeout, e.first_timeout) == (5, 25)
+
+    def test_nonsense_in_the_environment_falls_back_to_the_default(self,
+                                                                   monkeypatch):
+        """A mistyped number must not be the reason handovers cannot be
+        checked."""
+        from sentinel_oo.engines import HttpEngine
+
+        monkeypatch.setenv("SENTINEL_MODEL_TIMEOUT", "soon")
+        monkeypatch.setenv("SENTINEL_MODEL_FIRST_TIMEOUT", "-4")
+        e = self.engine()
+        assert e.timeout == HttpEngine.DEFAULT_TIMEOUT
+        assert e.first_timeout == HttpEngine.DEFAULT_FIRST_TIMEOUT

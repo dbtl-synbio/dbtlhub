@@ -159,6 +159,37 @@ class CommandEngine(Engine):
         return read_answer(self.ask(build_prompt(crate, violation, contract)))
 
 
+def _seconds(given, variable: str, fallback: int) -> int:
+    """How long to wait, from the argument, the environment, or the default.
+
+    A deployment sets these without anything being rebuilt. Nonsense in the
+    environment falls back to the default rather than stopping a service
+    from starting: a mistyped number must not be the reason handovers cannot
+    be checked.
+    """
+    if given is not None:
+        return int(given)
+    try:
+        wanted = int(os.environ.get(variable, "") or fallback)
+    except ValueError:
+        return fallback
+    return wanted if wanted > 0 else fallback
+
+
+def _is_a_timeout(exc: BaseException) -> bool:
+    """Whether waiting ran out, as opposed to anything else going wrong.
+
+    urllib raises several different things for this depending on where the
+    wait expired, so the test is made once here rather than in each caller.
+    """
+    if isinstance(exc, TimeoutError):
+        return True
+    reason = getattr(exc, "reason", None)
+    if isinstance(reason, TimeoutError):
+        return True
+    return "timed out" in str(exc).lower()
+
+
 class HttpEngine(Engine):
     """A model reached over the network, which is how a deployment reaches one.
 
@@ -191,18 +222,47 @@ class HttpEngine(Engine):
     DEFAULT_URL = "http://model:11434"
     DEFAULT_MODEL = "qwen2.5:14b"
 
+    # How long to wait for an answer, in seconds. Two numbers, because the
+    # first answer and every later one are not the same job.
+    #
+    # The first call has to load the model before it can answer anything. On
+    # an NVIDIA card on 11 November 2026 that loading took about 19 seconds
+    # of a 39.6 second first answer. On a processor alone it is slower
+    # again.
+    #
+    # Later calls go to a model already loaded. The same question that took
+    # 39.6 seconds cold came back in 67 milliseconds warm.
+    #
+    # It was one number, 300 seconds, for both. A check is what a pipeline
+    # waits for, so that was 300 seconds a handover could block for while a
+    # model nobody could see failed to answer.
+    DEFAULT_FIRST_TIMEOUT = 180
+    DEFAULT_TIMEOUT = 60
+
     def __init__(self, url: str | None = None, model: str | None = None,
-                 timeout: int = 300):
+                 timeout: int | None = None,
+                 first_timeout: int | None = None):
         if url is None:
             url = os.environ.get("SENTINEL_MODEL_URL", self.DEFAULT_URL)
         self.url = (url or "").rstrip("/")
         self.model = model or os.environ.get("SENTINEL_MODEL",
                                              self.DEFAULT_MODEL)
-        # Longer than a local subprocess would need. A model on another
-        # machine, asked for the first time, has to be loaded onto the GPU
-        # before it answers at all.
-        self.timeout = timeout
+        self.timeout = _seconds(
+            timeout, "SENTINEL_MODEL_TIMEOUT", self.DEFAULT_TIMEOUT
+        )
+        self.first_timeout = _seconds(
+            first_timeout, "SENTINEL_MODEL_FIRST_TIMEOUT",
+            self.DEFAULT_FIRST_TIMEOUT
+        )
         self.last_error: str | None = None
+        # Whether this engine has ever had an answer, which is how it knows
+        # the model is loaded and the shorter wait applies.
+        self.answered_once = False
+        # Whether the last attempt ran out of time rather than failing
+        # outright. Kept apart because the record must not say a model
+        # looked and found nothing when a model was still thinking when we
+        # stopped waiting.
+        self.timed_out = False
 
     @property
     def name(self) -> str:
@@ -232,6 +292,7 @@ class HttpEngine(Engine):
         """Send the prompt. Any failure is an empty answer, never an exception."""
         if not self.url:
             return ""
+        waiting = self.timeout if self.answered_once else self.first_timeout
         body = json.dumps({
             "model": self.model,
             "prompt": prompt,
@@ -246,13 +307,31 @@ class HttpEngine(Engine):
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as r:
+            with urllib.request.urlopen(request, timeout=waiting) as r:
                 answer = json.loads(r.read().decode())
-            self.last_error = None
-            return answer.get("response", "")
         except Exception as exc:  # noqa: BLE001
-            self.last_error = f"{type(exc).__name__}: {exc}"
+            # A server that accepts the connection and then says nothing
+            # looks like this, and so does one that answers with something
+            # that is not JSON. Both are things a real model host does.
+            self.timed_out = _is_a_timeout(exc)
+            self.last_error = (
+                f"{type(exc).__name__}: {exc}"
+                + (f" (waited {waiting} seconds)" if self.timed_out else "")
+            )
             return ""
+
+        self.last_error = None
+        self.timed_out = False
+        self.answered_once = True
+        if not isinstance(answer, dict):
+            # Something answered, but not this interface. Treated as finding
+            # nothing, and said so rather than crashing a check.
+            self.last_error = (
+                f"the model server answered with {type(answer).__name__} "
+                "rather than an object, so there was nothing to read"
+            )
+            return ""
+        return answer.get("response", "") or ""
 
     def propose_value(self, crate, violation, contract=None) -> str | None:
         return read_answer(self.ask(build_prompt(crate, violation, contract)))

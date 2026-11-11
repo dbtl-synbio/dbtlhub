@@ -169,6 +169,7 @@ class Sentinel:
                 else self.engine.available()
             ),
             model_asked=asked,
+            model_timed_out=getattr(self.engine, "timed_out", False),
             model_unreachable_detail=getattr(self.engine, "last_error", None),
             verdict=report.verdict if report else None,
             violations=report.violations if report else (),

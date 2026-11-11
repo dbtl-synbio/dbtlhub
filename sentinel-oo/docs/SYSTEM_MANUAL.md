@@ -252,6 +252,27 @@ it is and which one it is are both environment variables,
 `SENTINEL_MODEL_URL` and `SENTINEL_MODEL`, so a deployment points at its own
 without anything being rebuilt.
 
+**How long a check will wait for it, which is how long a pipeline waits.**
+Two numbers, both settable by a deployment. The first answer is allowed 180
+seconds, because the model has to be loaded before it can answer anything:
+measured on an NVIDIA card on 11 November 2026, that loading was about 19
+seconds of a 39.6 second first answer, and slower again on a processor.
+Every answer after that is allowed 60 seconds, because the same question
+that took 39.6 seconds cold came back in 67 milliseconds warm. Only an
+answer shortens the wait: a call that fails proves nothing about whether
+the model is loaded, so the one after it is still treated as a first call.
+
+Until 11 November 2026 both were one number, 300 seconds. A check is what a
+pipeline waits for, so that was five minutes a handover could block for
+while a model nobody could see failed to answer.
+
+**A model that does not answer in time is a fifth state in the record**,
+kept apart from a model that was never reached and from one that looked and
+found nothing. A check that gave up waiting knows less than either: whether
+the value was there is not known. The same is true of a server that answers
+with something that is not this interface, such as a proxy's error page,
+which is read as finding nothing and recorded with the reason.
+
 Setting the address to nothing, or passing a repair budget of 0, turns it
 off. That is a deliberate state rather than a failure, and `GET /health`
 tells it apart from a model that was wanted and could not be reached. A service with no

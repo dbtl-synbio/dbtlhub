@@ -458,28 +458,52 @@ agreed term a local word probably means.
 thinking behind it is the strongest part of that work. This would be
 `sentinel-oo` catching up rather than inventing anything.
 
-### A slow model delays a handover
+### A slow model delays a handover - DONE, 11 November 2026
 
-The model is called during a check, and a check is what a pipeline waits
-for. The timeout is 300 seconds, which is long enough for a cold model on
-another machine to load, and that is 300 seconds a pipeline can block for.
+**Was:** one timeout of 300 seconds for every call, so a model nobody could
+see could block a handover for five minutes. A check is what a pipeline
+waits for.
 
-**Why it has not bitten yet.** A warm model answers in about half a second,
-and only requirements marked `repairable` are ever asked about, which is
-typically one in a contract of nineteen.
+**Now:** two waits, both settable by a deployment without anything being
+rebuilt. The first answer is allowed 180 seconds
+(`SENTINEL_MODEL_FIRST_TIMEOUT`), because the model has to be loaded before
+it can answer at all: about 19 seconds of a 39.6 second first answer when
+measured on an NVIDIA card on 11 November 2026, and slower on a processor.
+Every answer after that is allowed 60 seconds
+(`SENTINEL_MODEL_TIMEOUT`), because the same question came back in 67
+milliseconds once the model was loaded.
 
-**What it needs.** Either a shorter timeout with the long one only on the
-first call, or the repair moved off the path the caller waits on. Both are
-a change in shape rather than a tweak, which is why neither is done.
+Only an answer shortens the wait. A call that fails proves nothing about
+whether the model is loaded, so the call after it is still treated as a
+first call.
 
-**Found** on 11 November 2026, when the model became the default.
+**And the record gained a fifth state.** A model that did not answer in
+time is now kept apart from one that was never reached and from one that
+looked and found nothing, because a check that gave up waiting knows less
+than either: whether the value was there is not known.
 
-### The network engine has not been tested against a slow or broken server
+Nonsense in either environment variable falls back to the default rather
+than stopping the service from starting. A mistyped number must not be the
+reason handovers cannot be checked.
 
-It is tested against a server that is not there, and by hand against a real
-one. It has never been given a server that accepts a connection and then
-never answers, or that returns something that is not JSON. Both are things
-a real model host does.
+**Not done, and still worth considering:** moving the repair off the path
+the caller waits on altogether. That is a change in shape rather than a
+number.
+
+### The network engine has not been tested against a slow or broken server - DONE, 11 November 2026
+
+Eleven tests added. The engine is now given, in turn: a server that accepts
+and never answers; one answering a proxy's error page rather than JSON; one
+answering JSON that is not an object; one answering an object with no
+answer in it; and one answering `null`, which Ollama does in some states
+and which would otherwise have reached the rules as a value nobody wrote.
+
+Every one of them produces an empty answer, no exception, and no change to
+any verdict. The record says which happened.
+
+No real socket is opened. The whole suite runs with sockets disabled, so
+what the tests replace is urllib's own opener, which is where the waiting
+happens.
 
 ---
 
@@ -549,11 +573,11 @@ change to the code.
 
 ---
 
-### A crate checked from the command line does not say which code checked it
+### A crate checked from the command line does not say which code checked it - DONE, 11 November 2026
 
 **Found by the RunPod session on 11 November 2026**, while testing the
 model on a rented machine with graphics hardware. Running from the command
-line rather than from the built image, the printout says:
+line rather than from the built image, the printout said:
 
 ```
   service image tag                      unset
@@ -570,6 +594,22 @@ happened. At the least the printout and the record should say that the
 service was run from source rather than leaving three fields reading
 `unset`, which a reader cannot tell apart from a fault.
 
+**What it says now.** Whatever is missing is worked out from the source
+rather than written as `unset`:
+
+```
+  service image tag    none: run from source, not from a built image
+  service commit       ab6c85d with uncommitted changes
+  rules checksum       sha256:92c250be125f02d4 over the service's source files
+```
+
+"with uncommitted changes" matters: the commit on its own would be a claim
+nobody could check, because the files at that commit are not the files that
+ran. A source folder outside a git repository, and a machine with no `git`
+program, each say which of those happened rather than going quiet. Ten
+tests, including one that the facts reach the inside of the checked crate,
+which is the only place that counts.
+
 ### The product itself
 
 ### A repository of its own
@@ -579,12 +619,41 @@ repository, because that is where the code currently sits. A wrong address
 would be worse than an awkward one, so it stays until the product moves.
 `SENTINEL_URL` overrides it in the meantime.
 
-### The Build to Test contract is a stub with no `expects`
+### The Build to Test contract is a stub with no `expects` - DONE, 11 November 2026
 
-Every requirement in it applies to the root, so it checks packaging and
-nothing else, and it would accept any crate at all. The warning is at the
-top of the file. The types belong to whoever specifies what that handover
-carries.
+Every requirement in it applies to the root, so it checked packaging and
+nothing else, and it would accept any crate at all.
+
+**Fixed on 11 November 2026**, agreed with Anil Wipat. The types come from
+the Build to Test row of the 14-step bioprospecting document, which says
+the handover carries assembly outputs and quality control results: which
+constructs passed, the product size in base pairs against the accepted
+range, the concentration in nanograms per microlitre, and the build route
+used.
+
+```yaml
+expects:
+  - AssembledConstruct     # what came back from the build, one per well
+  - PlateWell              # where each one sits
+  - QualityControlResult   # the size and concentration measurements
+  - AssemblyStep           # the process step that built them
+```
+
+`PlateWell` is spelled as the Design to Build contract spells it, because
+the two handovers describe the same physical plate.
+
+Checked: a crate from another phase is now refused four times, once per
+missing type, where before it was accepted with no findings.
+
+**Still a stub in what it checks.** Nothing yet requires a construct to say
+whether it passed, a product size to fall in the accepted range, a
+concentration to be recorded, or a build route to be named. Those are
+written when the Test phase says what it needs. The file says so.
+
+The file is at
+`outputs/dbtl-bioprospecting-contracts/deployments/bioprospecting/contracts/build_to_test.yaml`,
+which is the old private repository. **Where that deployment should live now
+that the work is in `dbtlhub` is an open question for Neil.**
 
 ---
 
@@ -649,6 +718,52 @@ model with it brought Docker Desktop down on Neil's laptop.**
   reaching the service through an SSH tunnel rather than through a port
   open to whatever network that machine is on. The service asks for no
   password of any kind, so this matters more remotely, not less.
+
+### Three routes, not one. Worked out with Neil on 11 November 2026
+
+A deployment goes to one of three kinds of place, and the person deploying
+picks by what their machine allows.
+
+| Where | How | State |
+|---|---|---|
+| Their own machine | `python deploy.py my-contracts` | Works today |
+| A machine they reach over SSH that runs Docker: their own server, an AWS EC2 instance, a Google Compute Engine virtual machine | `python deploy.py my-contracts --host ssh://them@that-machine` | Built on 11 November 2026, not yet tested against a real second machine |
+| A service that runs an image for them rather than giving them a machine: RunPod, Google Cloud Run, AWS Fargate, a Kubernetes cluster | They point the service at our published image and hand it their contracts the way that service does files | Not built. Needs the image published |
+
+**The image is published once per version, by us, not by each user.** This
+matters and was nearly got wrong: an image is the generic product, which
+does not change when somebody writes a contract. Tailoring is the contracts
+and nothing else. So nobody building a deployment builds or pushes an
+image.
+
+**The remote route should pull the published image rather than build it on
+the far machine.** It builds today, which is slower and needs a build
+toolchain on somebody else's server for no reason. Building should happen
+only when asked for.
+
+### Docker cannot run inside a RunPod Pod, measured
+
+Worth writing down, because it was argued about and it decides the third
+route. A RunPod Pod is itself a container. On `sentinel-oo-gpu`, Pod id
+`5r236t84yew8ph`, on 11 November 2026, over SSH and changing nothing:
+
+```
+docker                  not installed, no binary anywhere
+CapEff                  00000000a80425fb, which lacks the privilege a
+                        Docker daemon needs to create mount namespaces
+/dev/fuse               missing
+unshare --user          "Operation not permitted", so rootless Docker
+                        cannot start either
+```
+
+The earlier model test on RunPod, which succeeded, used no Docker: Ollama
+was installed directly into the Pod. RunPod's own Docker runs the Pod, on
+RunPod's machine. That is why a Pod feels like a container and still cannot
+host one.
+
+The route that does work on RunPod is the third one above: start the Pod
+from our published image, with the contracts on a RunPod network volume
+mounted at `/contracts`.
 
 ### Still to decide
 

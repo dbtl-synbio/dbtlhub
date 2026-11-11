@@ -168,6 +168,8 @@ the machine running the service.
 |---|---|---|
 | `--model-url` | `SENTINEL_MODEL_URL` | Where the model is. Default `http://model:11434` |
 | `--model` | `SENTINEL_MODEL` | Which model, pinned by name. Default `qwen2.5:14b` |
+| | `SENTINEL_MODEL_FIRST_TIMEOUT` | Seconds to wait for the first answer. Default 180 |
+| | `SENTINEL_MODEL_TIMEOUT` | Seconds to wait for each answer after that. Default 60 |
 
 ```
 python deploy.py <contracts>                                 a model beside it
@@ -261,6 +263,8 @@ SENTINEL_CONTRACTS=../my-deployment/contracts docker compose up
 | `SENTINEL_PORT` | Which port | 8080, which collides with `deploy.py` |
 | `SENTINEL_BIND` | Which interface | `127.0.0.1`, this machine only |
 | `SENTINEL_MODEL_URL` | Where the model is | A container beside it |
+| `SENTINEL_MODEL_FIRST_TIMEOUT` | Seconds to wait for the first answer | 180 |
+| `SENTINEL_MODEL_TIMEOUT` | Seconds to wait for later answers | 60 |
 
 **Three things it does not do**, which is why `deploy.py` is the ordinary
 route: it does not check your contracts before starting, it does not tell
