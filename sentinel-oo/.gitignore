@@ -1,0 +1,11 @@
+# Caches. Python writes these whenever anything is imported or tested, and
+# they are machine specific. 35 of them were committed by accident on
+# 11 November 2026 because this file was not here.
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Where a run writes a checked crate when it is given no other destination.
+out/
+
+.DS_Store

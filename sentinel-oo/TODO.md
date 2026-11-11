@@ -109,6 +109,61 @@ a real model host does.
 
 ---
 
+## The worked example
+
+### Replace the coating laboratory with a synthetic biology one
+
+**Decided by Neil Wipat on 11 November 2026.** There is no harm in using a
+synthetic biology exemplar in the tutorial and the documents. The system is
+still generic.
+
+**Why it is a coating laboratory today.** It was made neutral on 11 November
+2026 so that nothing in the product would look as though it belonged to one
+use case, at a point when the product and one deployment were still
+entangled and the separation was being argued about.
+
+**Why that reasoning no longer holds.** Genericity is a property of the
+code, not of the example, and the code's genericity is now held in place by
+tests rather than by the choice of nouns:
+
+| Test | Fails if |
+|---|---|
+| `test_no_handover_name_in_source` | Any handover's name appears in the service source |
+| `test_source_imports_no_use_case` | Any service file imports from a deployment |
+| `test_fixtures_stay_inside_the_product` | Any test holds a path resolving outside the product |
+
+**The example is outside the application domain.** That is the objection,
+and it is one of kind rather than of taste. The application domain is
+synthetic biology and the DBTL cycle. An example from outside it is not a
+neutral choice, it is the wrong sort of thing to be explaining with.
+
+**The users have no idea about paint**, which is what that costs in
+practice. The tutorial asks a synthetic biologist to understand rack slots,
+film thickness in micrometres and drying atmospheres, none of which they
+will meet again, before they can reach a lesson about handovers.
+
+An exemplar from their own field costs them nothing to read, and every noun
+in it is one they already know.
+
+**What it touches**, which is why it is a version and not an afternoon:
+
+| | Mentions |
+|---|---|
+| `examples/`, the generator, 2 contracts and 6 crates | about 60 |
+| `docs/USER_MANUAL.md`, the tutorial, step by step | 22 |
+| `docs/WRITING_A_CONTRACT.md`, every worked example in it | 21 |
+| The test suite, which reads the example as its fixtures | about 80 |
+| `README.md`, `DEPLOYING.md`, `SYSTEM_MANUAL.md` and the diagrams | 10 |
+
+**One thing that must survive the change.** The tutorial's step 3 sends a
+crate from a completely different domain and watches a contract without an
+`expects` block wrongly accept it. That needs a crate that shares nothing
+with the main example. `examples/from-another-phase/` is a library
+catalogue, which stays usable whatever the main example becomes.
+
+**About half a day**, and the risk is in the test fixtures rather than in
+the prose.
+
 ## The contract language
 
 These three are the limits people will hit. Each needs a new verb or a new
