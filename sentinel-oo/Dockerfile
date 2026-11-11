@@ -55,10 +55,18 @@ FROM base AS test
 
 COPY tests/ ./tests/
 
-# The product's own worked example: a coating laboratory, deliberately not a
-# DBTL cycle. The test fixtures read it, and it lives inside the product, so
-# this stage reads nothing from outside sentinel-oo/.
+# The worked example the documents teach from: a handover from Design to
+# Build in a bioprospecting cycle. The test fixtures read it, and it lives
+# inside the product, so this stage reads nothing from outside sentinel-oo/.
 COPY examples/ ./examples/
+
+# The deployment program. It is not part of the service and the final image
+# does not need it, but the test suite tests it, and a test that cannot find
+# what it tests fails the build. That is what happened on 12 November 2026:
+# tests/test_deploy.py was added without this line, and the next deployment
+# refused to produce an image, which is the gate below working correctly on
+# a fault in the tests rather than in the service.
+COPY deploy.py ./
 
 RUN python -m pytest -q && touch /app/tests-passed
 
