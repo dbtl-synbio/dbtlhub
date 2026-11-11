@@ -556,11 +556,29 @@ has to read.
 designed and never written, which is also why the Monday class diagram named
 components that do not exist.
 
-### Test the agent interface against a real client
+### Test the agent interface against a real client - DONE, 11 November 2026
 
-It is tested against the Model Context Protocol as written down, and by
-hand against the running container. It has never been driven by a real
-client, so the first team to try it will find whatever is wrong.
+**What was done.** A client was written that starts
+`python -m sentinel_oo --agent-interface` as a subprocess and speaks
+JSON-RPC 2.0 over its standard input and output, from the protocol as
+written down rather than from this service's own code. Twelve tests, in
+`tests/test_agent_client.py`, covering: the opening exchange; that a
+notification gets no answer, which would otherwise put every later reply
+out of step; listing the tools and checking each one describes every
+argument it requires; reading a contract; checking a handover and being
+told the verdict; a refusal arriving as a verdict rather than as an error,
+because a client that treated a refusal as a failure would retry it
+forever; an unknown tool; a missing argument; an unknown method; and a line
+that is not JSON, after which the server must still answer the next one.
+
+**Nothing in the service was wrong.** Every test passed on the first run
+except one, and that one was this file's own wrong guess at a field name.
+
+**One limitation this exposed, which is not a fault.** `check_handover`
+takes `crate_path`, a path on the machine the service runs on. An agent on
+another machine cannot use it, and must post the crate to the web interface
+instead. Worth saying in the API manual, and worth thinking about if the
+architect ends up running somewhere else.
 
 ### An action does not name who ran it - DONE, 11 November 2026
 

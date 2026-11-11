@@ -453,6 +453,18 @@ The one that does the work.
 Without `out_path` a writable folder is chosen and the reply says which, in
 `checked_package_written_to`.
 
+**Both paths are on the machine the service runs on, not on yours.** This
+interface is for an agent sharing a filesystem with the service, which is
+what happens when both run in the same container or on the same host. An
+agent somewhere else cannot use it: post the crate to
+`POST /check/{contract}` over the web interface instead, which carries the
+crate in the request and sends the checked crate back in the reply.
+
+**A refusal is a verdict, not an error.** `isError` stays false and the
+reply carries `verdict: "REFUSED"` with the findings. A client that treats
+a refusal as a failure will retry it forever, and the crate will be refused
+every time, because nothing about it has changed.
+
 ```json
 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
   "name":"check_handover",
