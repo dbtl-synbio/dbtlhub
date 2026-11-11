@@ -400,7 +400,7 @@ if __name__ == "__main__":
 
     save_cache()  # Final save to persist everything
 
-    out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl.csv")
+    out_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bio_tools_dbtl_utility.csv")
     print(f"Saving to {out_file}...")
     df_final.to_csv(out_file, index=False)
 
