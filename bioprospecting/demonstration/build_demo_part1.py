@@ -173,8 +173,12 @@ print("signed in, and gcloud has been given the same credentials")
 
 # Proof rather than assumption: ask gcloud to do something that needs them.
 listed = gcloud("billing", "accounts", "list",
-                "--filter=open=true", "--format=value(name,displayName)")
-accounts = listed.stdout.strip().splitlines()
+                "--filter=open=true", "--format=json")
+# Read as structured data rather than as columns of text. An earlier
+# version split the answer on a tab, and the tab did not survive being
+# written into this notebook, so the number and the name came back joined
+# together and would have been passed to --billing-account as one string.
+accounts = json.loads(listed.stdout or "[]")
 
 if not accounts:
     print("\\nNo open billing account came back.")
@@ -187,12 +191,12 @@ if not accounts:
 
 if len(accounts) > 1:
     print("\\nMore than one open billing account:")
-    for line in accounts:
-        print("   ", line.split("\\\\t")[-1])
+    for account in accounts:
+        print("   ", account["displayName"])
     print("Using the first. Set BILLING by hand if that is the wrong one.")
 
-BILLING = accounts[0].split("\\\\t")[0]
-BILLING_NAME = accounts[0].split("\\\\t")[-1]
+BILLING = accounts[0]["name"].split("/")[-1]
+BILLING_NAME = accounts[0]["displayName"]
 print(f"billing : {BILLING_NAME}")
 """)
 
