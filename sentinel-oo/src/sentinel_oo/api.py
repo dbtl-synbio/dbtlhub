@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
@@ -127,7 +128,13 @@ class Api:
             }
 
         try:
-            run = self.sentinel.check(crate, contract_name=params["contract"])
+            run = self.sentinel.check(
+                crate, contract_name=params["contract"],
+                # Who is asking, if they said: POST /check/{name}?by=...
+                # Recorded as their claim about themselves, since this
+                # service authenticates nobody.
+                ran_by=params.get("by"),
+            )
         except ContractNotFound as exc:
             return 404, {"error": "no such contract", "detail": str(exc)}
 
@@ -194,10 +201,30 @@ class Api:
         finally:
             shutil.rmtree(workspace, ignore_errors=True)
 
+    HOLDS_NOTHING = (
+        "This service holds no contracts, so it would refuse every handover "
+        "it was given. A deployment supplies a folder of contract files and "
+        "mounts it at /contracts."
+    )
+
     def contracts(self, params, body):
+        """What this instance knows how to check.
+
+        **An instance holding nothing says so.** It used to answer with an
+        empty list and a checksum, and that checksum was the SHA-256 of
+        nothing at all, the same on every machine that ever ran it. A reader
+        saw a service answering, with a checksum, and had no reason to doubt
+        it.
+        """
         registry = self.sentinel.registry
-        if registry is None:
-            return 200, {"contracts": [], "checksum": None}
+        held = [] if registry is None else registry.list()
+        if not held:
+            return 200, {
+                "contracts": [],
+                "checksum": None,
+                "holds_nothing": True,
+                "warning": self.HOLDS_NOTHING,
+            }
         return 200, {
             "contracts": [
                 {
@@ -205,9 +232,10 @@ class Api:
                     "version": c.version,
                     "requirements": len(c.requirements),
                 }
-                for c in registry.list()
+                for c in held
             ],
             "checksum": registry.checksum(),
+            "holds_nothing": False,
         }
 
     def contract(self, params, body):
@@ -325,14 +353,28 @@ class Api:
             "contracts": (
                 len(self.sentinel.registry) if self.sentinel.registry else 0
             ),
-        }
+        } | (
+            # An instance with nothing mounted is alive and useless, and the
+            # one place a deployment looks must say which it is.
+            {"holds_nothing": True, "warning": self.HOLDS_NOTHING}
+            if not (self.sentinel.registry and len(self.sentinel.registry))
+            else {"holds_nothing": False}
+        )
 
     def openapi(self, params, body):
         return 200, self.describe()
 
     # -------------------------------------------------------------- routing
 
-    def dispatch(self, method: str, path: str, body: bytes):
+    def dispatch(self, method: str, path: str, body: bytes,
+                 query: dict | None = None):
+        """Route one request.
+
+        `query` carries anything after the `?`. The server used to throw it
+        away before calling this, so a handler could not read it at all.
+        Values from the path win over values from the query, because a path
+        is part of the address and a query is a caller's suggestion.
+        """
         for route in self.routes:
             found = route.regex.match(path)
             if found is None:
@@ -342,7 +384,9 @@ class Api:
                     "error": "wrong method",
                     "detail": f"{path} answers {route.method}, not {method}",
                 }
-            return route.handler(found.groupdict(), body)
+            params = dict(query or {})
+            params.update(found.groupdict())
+            return route.handler(params, body)
         return 404, {
             "error": "no such path",
             "known": sorted({r.path for r in self.routes}),
@@ -400,7 +444,11 @@ def make_handler(api: Api):
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b""
             try:
-                status, payload = api.dispatch(method, self.path.split("?")[0], body)
+                address, _, raw_query = self.path.partition("?")
+                query = {
+                    k: v[0] for k, v in urllib.parse.parse_qs(raw_query).items()
+                }
+                status, payload = api.dispatch(method, address, body, query)
             except Exception as exc:  # noqa: BLE001
                 # A fault here must not take the service down. It answers,
                 # says what happened, and stays up for the next request.

@@ -168,6 +168,7 @@ the machine running the service.
 |---|---|---|
 | `--model-url` | `SENTINEL_MODEL_URL` | Where the model is. Default `http://model:11434` |
 | `--model` | `SENTINEL_MODEL` | Which model, pinned by name. Default `qwen2.5:14b` |
+| | `SENTINEL_RUN_BY` | Who this instance runs for, written into every record it writes as a claim rather than a verified identity. A request may override it with `?by=` |
 | | `SENTINEL_MODEL_FIRST_TIMEOUT` | Seconds to wait for the first answer. Default 180 |
 | | `SENTINEL_MODEL_TIMEOUT` | Seconds to wait for each answer after that. Default 60 |
 

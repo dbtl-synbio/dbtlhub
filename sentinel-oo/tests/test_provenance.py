@@ -182,3 +182,72 @@ def test_a_finding_never_adds_a_dangling_reference(published, writer):
     )
     assert "about" not in finding
     assert "#not-in-the-crate" in finding["description"]
+
+
+# ----------------------------------------- who asked for the check
+#
+# Process Run Crate asks every action to name the person or organisation
+# responsible. This service is not told unless somebody tells it, so until
+# 11 November 2026 it wrote nothing rather than inventing a name. Now a
+# caller may say, and the record says plainly that it is their claim about
+# themselves: nothing here authenticates anybody.
+
+
+def test_nobody_is_named_when_nobody_said(writer, minimal):
+    from sentinel_oo.sentinel import Sentinel
+
+    run = Sentinel(provenance=writer).check(minimal)
+    action = [e for e in run.crate
+              if e.get("@type") == "CreateAction"
+              and "sentinel-oo/run/" in str(e.get("@id"))][0]
+    assert "agent" not in action
+    assert "ran-by" not in run.crate.to_json()
+
+
+def test_a_caller_may_say_who_is_asking(writer, minimal):
+    from sentinel_oo.sentinel import Sentinel
+
+    run = Sentinel(provenance=writer).check(minimal, ran_by="the Build agent")
+    named = [e for e in run.crate if "ran-by" in str(e.get("@id"))]
+    assert len(named) == 1
+    assert named[0]["name"] == "the Build agent"
+
+    action = [e for e in run.crate
+              if e.get("@type") == "CreateAction"
+              and "sentinel-oo/run/" in str(e.get("@id"))][0]
+    assert action["agent"]["@id"] == named[0]["@id"]
+
+
+def test_the_record_says_it_is_a_claim_rather_than_an_identity(writer,
+                                                                minimal):
+    """A reader a year later must not take this as proof that a particular
+    person ran a particular check."""
+    from sentinel_oo.sentinel import Sentinel
+
+    run = Sentinel(provenance=writer).check(minimal, ran_by="somebody")
+    said = [e for e in run.crate if "ran-by" in str(e.get("@id"))][0]
+    assert "authenticates nobody" in said["description"]
+    assert "not a verified identity" in said["description"]
+
+
+def test_an_instance_may_be_started_on_somebody_s_behalf(minimal):
+    """A deployment that runs for one team says so once, when it starts,
+    rather than on every request."""
+    from sentinel_oo.provenance import ProvenanceWriter
+    from sentinel_oo.sentinel import Sentinel
+
+    writer = ProvenanceWriter(service_version="test", ran_by="the Build team")
+    run = Sentinel(provenance=writer).check(minimal)
+    assert [e for e in run.crate if "ran-by" in str(e.get("@id"))][0][
+        "name"] == "the Build team"
+
+
+def test_one_request_overrides_what_the_instance_was_started_with(minimal):
+    from sentinel_oo.provenance import ProvenanceWriter
+    from sentinel_oo.sentinel import Sentinel
+
+    writer = ProvenanceWriter(service_version="test", ran_by="the instance")
+    run = Sentinel(provenance=writer).check(minimal, ran_by="this caller")
+    named = [e for e in run.crate if "ran-by" in str(e.get("@id"))]
+    assert len(named) == 1
+    assert named[0]["name"] == "this caller"

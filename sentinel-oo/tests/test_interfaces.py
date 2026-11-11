@@ -476,3 +476,101 @@ def test_a_failing_tool_is_marked_as_an_error(agent):
          "params": {"name": "read_contract", "arguments": {"handover": "nope"}}},
     ])
     assert answers[0]["result"]["isError"] is True
+
+
+# ------------------------------- an instance that holds nothing says so
+#
+# It used to answer an empty list and a checksum, and that checksum was the
+# SHA-256 of nothing at all, e3b0c442...852b855, the same on every machine
+# that ever ran it. A reader saw a service answering, with a checksum, and
+# had no reason to doubt it. An instance with nothing mounted is alive and
+# useless, and the two places anybody looks must say which it is.
+
+
+class TestAnInstanceHoldingNothing:
+
+    def api(self, writer, tmp_path):
+        from sentinel_oo.api import Api
+        from sentinel_oo.contract import ContractRegistry
+        from sentinel_oo.engines import NullEngine
+        from sentinel_oo.rules import ContractChecks
+
+        empty = tmp_path / "no-contracts"
+        empty.mkdir()
+        return Api(Sentinel(
+            provenance=writer,
+            rules=ContractChecks(),
+            registry=ContractRegistry.from_dir(empty),
+            engine=NullEngine(),
+        ))
+
+    def test_the_listing_says_it_holds_nothing(self, writer, tmp_path):
+        status, body = self.api(writer, tmp_path).contracts({}, b"")
+        assert status == 200
+        assert body["contracts"] == []
+        assert body["holds_nothing"] is True
+        assert "refuse every handover" in body["warning"]
+
+    def test_it_does_not_answer_with_the_checksum_of_nothing(self, writer,
+                                                             tmp_path):
+        """The SHA-256 of an empty input is a real checksum of nothing, and
+        it looks exactly like a real checksum of something."""
+        _, body = self.api(writer, tmp_path).contracts({}, b"")
+        assert body["checksum"] is None
+        assert "e3b0c442" not in str(body)
+
+    def test_health_says_it_too(self, writer, tmp_path):
+        """The one place a deployment looks."""
+        status, body = self.api(writer, tmp_path).health({}, b"")
+        assert status == 200
+        assert body["alive"] is True
+        assert body["contracts"] == 0
+        assert body["holds_nothing"] is True
+        assert "refuse every handover" in body["warning"]
+
+    def test_an_instance_holding_contracts_says_that_instead(self, writer,
+                                                              registry):
+        from sentinel_oo.api import Api
+        from sentinel_oo.engines import NullEngine
+        from sentinel_oo.rules import ContractChecks
+
+        api = Api(Sentinel(provenance=writer, rules=ContractChecks(),
+                           registry=registry, engine=NullEngine()))
+        _, listing = api.contracts({}, b"")
+        _, health = api.health({}, b"")
+        assert listing["holds_nothing"] is False
+        assert listing["checksum"].startswith("sha256:")
+        assert health["holds_nothing"] is False
+        assert "warning" not in health
+
+
+def test_the_web_interface_reads_who_is_asking(writer, registry):
+    """POST /check/{name}?by=... The query string used to be thrown away by
+    the server before any handler could see it."""
+    from sentinel_oo.api import Api
+    from sentinel_oo.engines import NullEngine
+    from sentinel_oo.rules import ContractChecks
+
+    api = Api(Sentinel(provenance=writer, rules=ContractChecks(),
+                       registry=registry, engine=NullEngine()))
+    status, payload = api.dispatch(
+        "POST", "/check/mixing_to_coating",
+        PUBLISHED.read_bytes(), {"by": "the Coating agent"},
+    )
+    assert status == 200
+    named = [e for e in payload["crate"]["@graph"]
+             if "ran-by" in str(e.get("@id"))]
+    assert named and named[0]["name"] == "the Coating agent"
+
+
+def test_a_check_with_nobody_named_still_works(writer, registry):
+    from sentinel_oo.api import Api
+    from sentinel_oo.engines import NullEngine
+    from sentinel_oo.rules import ContractChecks
+
+    api = Api(Sentinel(provenance=writer, rules=ContractChecks(),
+                       registry=registry, engine=NullEngine()))
+    status, payload = api.dispatch(
+        "POST", "/check/mixing_to_coating", PUBLISHED.read_bytes())
+    assert status == 200
+    assert "ran-by" not in json.dumps(payload)

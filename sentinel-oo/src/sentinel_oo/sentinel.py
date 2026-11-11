@@ -87,6 +87,7 @@ class Sentinel:
         contract_name: str | None = None,
         contract: Contract | None = None,
         repair_budget: int = DEFAULT_REPAIR_BUDGET,
+        ran_by: str | None = None,
     ) -> Run:
         """Read a crate, check it against a contract, record what was found.
 
@@ -176,5 +177,5 @@ class Sentinel:
             changes=changes,
         )
 
-        blessed = self.provenance.write(returned, blessing)
+        blessed = self.provenance.write(returned, blessing, ran_by=ran_by)
         return Run(id=run_id, crate=blessed, blessing=blessing, report=report)

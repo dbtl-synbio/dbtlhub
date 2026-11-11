@@ -83,6 +83,15 @@ def main(argv: list[str] | None = None) -> int:
         "--show-contract",
         help="print one contract in plain words, and stop",
     )
+    parser.add_argument(
+        "--by", default=None, metavar="WHO",
+        help=(
+            "who asked for this check, written into the record as the "
+            "action's agent. Also settable as SENTINEL_RUN_BY. It is "
+            "recorded as the caller's claim about itself: this service "
+            "authenticates nobody"
+        ),
+    )
     args = parser.parse_args(argv)
 
     identity = BuildIdentity.from_env()
@@ -93,7 +102,8 @@ def main(argv: list[str] | None = None) -> int:
         from .runs import RunStore
         serve_agent(AgentInterface(
             Sentinel(
-                provenance=ProvenanceWriter(service_version=__version__),
+                provenance=ProvenanceWriter(service_version=__version__,
+                                    ran_by=args.by),
                 rules=ContractChecks(),
                 registry=registry,
                 build=identity,
@@ -119,7 +129,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.list_contracts:
-        for contract in registry.list():
+        held = registry.list()
+        if not held:
+            # It used to print an empty line and then a checksum, which is
+            # the SHA-256 of nothing at all:
+            # e3b0c442...852b855, the same on every machine. A reader saw a
+            # service answering with a checksum and no reason to doubt it.
+            print(f"No contracts. Nothing is mounted at {args.contracts}, so "
+                  "this service")
+            print("would refuse every handover it was given.")
+            print()
+            print("A deployment supplies a folder of contract files. See "
+                  "docs/DEPLOYING.md.")
+            return 1
+
+        for contract in held:
             print(f"{contract.name}  version {contract.version}  "
                   f"{len(contract.requirements)} requirement(s)")
         print(f"\nchecksum over all of them: {registry.checksum()}")
@@ -145,7 +169,8 @@ def main(argv: list[str] | None = None) -> int:
     # Wired by hand rather than through a convenience function, because
     # watching the pieces get handed to each other is most of the design.
     sentinel = Sentinel(
-        provenance=ProvenanceWriter(service_version=__version__),
+        provenance=ProvenanceWriter(service_version=__version__,
+                                    ran_by=args.by),
         rules=ContractChecks(),
         registry=registry,
         build=identity,

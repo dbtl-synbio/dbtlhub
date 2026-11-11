@@ -70,6 +70,23 @@ curl -s -X POST --data-binary @/tmp/crate.zip \
 written into it, ready to hand to the next process in the workflow. That is
 what a handover is: the data, not a description of it.
 
+**Say who is asking, if you can.** Add `?by=` and the record names you as
+the agent of the check:
+
+```
+http://127.0.0.1:8080/check/design_to_build?by=the%20Build%20agent
+```
+
+The Process Run Crate profile asks every action to name the person or
+organisation responsible. This service is not told unless you tell it, and
+it writes nothing rather than inventing a name.
+
+**It is recorded as your claim about yourself.** This service authenticates
+nobody, and the entity it writes says so in its own description, so that a
+reader a year later does not take it as proof that a particular agent ran a
+particular check. An instance that always runs for one team can be started
+with `SENTINEL_RUN_BY` instead, and a `?by=` on a request overrides it.
+
 The verdict travels in headers, so a pipeline can act on it without
 unpacking anything:
 
@@ -151,16 +168,36 @@ has findings and is not a refusal. Read `verdict`.
 ```json
 {
   "contracts": [
-    { "name": "build_to_test",   "version": "0.2.0",  "requirements": 2 },
-    { "name": "design_to_build", "version": "0.10.0", "requirements": 18 }
+    { "name": "build_to_test",   "version": "0.3.0",  "requirements": 2 },
+    { "name": "design_to_build", "version": "0.11.0", "requirements": 20 }
   ],
-  "checksum": "sha256:a23c50aa6e87a30d16703da6126a54b90dc5dde4ec5d82bc7d0a93719992b682"
+  "checksum": "sha256:b26c400cd13db7a6c53f9dd1246bbc2aedd10a7072f80ad6b6600acbd3a5a88d",
+  "holds_nothing": false
 }
 ```
 
 The checksum covers all of them together. It is what `deploy.py` compares
 after starting an instance, to prove the running service holds exactly the
 contracts that were validated.
+
+**An instance with nothing mounted says so.** It answers like this, and
+`GET /health` carries the same two fields:
+
+```json
+{
+  "contracts": [],
+  "checksum": null,
+  "holds_nothing": true,
+  "warning": "This service holds no contracts, so it would refuse every handover it was given. A deployment supplies a folder of contract files and mounts it at /contracts."
+}
+```
+
+Until 11 November 2026 it answered an empty list and a checksum, and that
+checksum was the SHA-256 of nothing at all, which is the same string on
+every machine that ever ran it. A caller saw a service answering, with a
+checksum, and had no reason to doubt it. **If you write a client, read
+`holds_nothing` rather than counting the list**, because an empty list is
+also what a filter returns.
 
 ---
 
@@ -264,7 +301,8 @@ For a run the service is not holding, it returns **404** instead.
     "engine": "qwen2.5:14b at http://model:11434"
   },
   "model_engine": "qwen2.5:14b at http://model:11434",
-  "contracts": 2
+  "contracts": 2,
+  "holds_nothing": false
 }
 ```
 

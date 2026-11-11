@@ -562,16 +562,45 @@ It is tested against the Model Context Protocol as written down, and by
 hand against the running container. It has never been driven by a real
 client, so the first team to try it will find whatever is wrong.
 
-### An action does not name who ran it
+### An action does not name who ran it - DONE, 11 November 2026
 
 Process Run Crate says an action should name the person or organisation
-responsible. The service is not told, so it writes nothing rather than
-inventing a name. It should become something a caller can supply.
+responsible. The service was not told, so it wrote nothing rather than
+inventing a name.
 
-### `--list-contracts` with nothing mounted
+**Now a caller may say.** `--by "the Build agent"` on the command line,
+`?by=the%20Build%20agent` on a check over the web, or `SENTINEL_RUN_BY` for
+an instance that always runs for one team. A request overrides the
+instance's own setting.
 
-It prints an empty list followed by a checksum, and that checksum is the
-SHA-256 of nothing at all. It should say it holds no contracts.
+**It is written as a claim, not an identity.** The entity the record gains
+says, in its own description, that this service authenticates nobody and
+that the name is the caller's claim about itself. A reader a year later must
+not take it as proof that a particular agent ran a particular check. Five
+tests, including one that the wording is there.
+
+**A fault found while doing it.** The web server threw the query string away
+before any handler could see it, so no endpoint could ever have read a
+parameter. It now parses it, and values from the path win over values from
+the query, because a path is part of the address and a query is a caller's
+suggestion.
+
+### `--list-contracts` with nothing mounted - DONE, 11 November 2026
+
+It printed an empty list followed by a checksum, and that checksum was the
+SHA-256 of nothing at all: `e3b0c442...852b855`, the same string on every
+machine that ever ran it. A reader saw a service answering, with a checksum,
+and had no reason to doubt it.
+
+**The command line** now says that nothing is mounted at the folder it was
+given, that the service would refuse every handover, and where to read about
+supplying contracts. It exits 1 rather than 0, so a script notices.
+
+**The same fault was in the web interface, in two places, and both are
+fixed.** `GET /contracts` returns `holds_nothing: true`, a null checksum and
+a sentence; `GET /health` carries the same two fields, because health is the
+one place a deployment looks and an instance holding nothing is alive and
+useless. Four tests.
 
 ### A crate with no `@context` is read without complaint
 

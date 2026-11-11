@@ -53,11 +53,28 @@ class ProvenanceWriter:
     in.
     """
 
-    def __init__(self, service_version: str, service_url: str = SERVICE_URL):
+    def __init__(self, service_version: str, service_url: str = SERVICE_URL,
+                 ran_by: str | None = None):
         self.service_version = service_version
         self.service_url = service_url
+        # Who asked for the check, if anybody said. Process Run Crate asks
+        # every action to name the person or organisation responsible, and
+        # this service is not told unless a deployment tells it, so until
+        # 11 November 2026 it wrote nothing rather than inventing a name.
+        #
+        # **It is a claim, not a fact.** Nothing here authenticates anybody,
+        # and the record says so in the entity itself, so that a reader a
+        # year later does not read it as proof that a particular person ran
+        # a particular check.
+        self.ran_by = (ran_by or os.environ.get("SENTINEL_RUN_BY") or "").strip()
 
-    def write(self, crate: Crate, blessing: Blessing) -> Crate:
+    def write(self, crate: Crate, blessing: Blessing,
+              ran_by: str | None = None) -> Crate:
+        """`ran_by` names who asked for this one check, overriding whatever
+        the instance was started with. An agent driving the service says who
+        it is per request; a deployment that runs on one team's behalf says
+        it once, when it starts."""
+        who = (ran_by or "").strip() or self.ran_by
         action_id = f"{SERVICE_ID}/run/{blessing.run_id}"
         added: list[dict] = []
 
@@ -166,6 +183,20 @@ class ProvenanceWriter:
                 "@id": FAILED if blessing.verdict is Verdict.REFUSED else COMPLETED
             },
         }
+        if who:
+            agent_id = f"{SERVICE_ID}/ran-by/{_slug(who) or 'caller'}"
+            added.append({
+                "@id": agent_id,
+                "@type": "Thing",
+                "name": who,
+                "description": (
+                    "Who asked for this check, as supplied by whoever asked. "
+                    "This service authenticates nobody, so this is the "
+                    "caller's claim about itself and not a verified identity."
+                ),
+            })
+            action["agent"] = {"@id": agent_id}
+
         added.append(action)
 
         # The one alteration: make the action reachable from the root.
