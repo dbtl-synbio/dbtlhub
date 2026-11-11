@@ -1,0 +1,6 @@
+# The product's own build context. Only what the image needs.
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+out/

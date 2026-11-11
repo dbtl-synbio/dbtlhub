@@ -1,0 +1,276 @@
+contract: mixing_to_coating
+version: 1.1.0
+
+description: >
+  The product's own worked example, and the thing to read first when learning
+  the contract language. It belongs to `sentinel-oo` itself rather than to any
+  deployment, and it is deliberately not a DBTL cycle.
+
+  The domain is a coating laboratory. Recipes are blended, applied to metal
+  panels held in numbered slots on a rack, dried, and their film thickness
+  measured. The handover is from Mixing to Coating: Mixing finishes with a set
+  of recipes and an intended rack layout saying which recipe goes on which
+  panel position, and Coating applies them and spends materials. So anything
+  Coating cannot judge from the crate is a panel that may be wasted.
+
+  Every requirement here answers one question: what does the receiving phase
+  do, and what goes wrong if this is missing? Anything with no answer to that
+  is a preference rather than a requirement, and preferences accumulate until
+  a contract is too irritating to use.
+
+  A note on the pairs below. Presence and soundness are two separate
+  requirements, because one rule doing both would make one of them impossible
+  to say. So every reference needs two: one that it is recorded at all, and
+  one that it lands on something real.
+
+  This file exercises all four verbs the language has, both severities, and
+  every extra field. Nothing in it is Python. Adding a handover means writing
+  a file like this one and nothing else.
+
+# What this contract is for. Every type named here must be present in the
+# crate, or the handover is refused before a single requirement is applied.
+#
+# Without this block a crate from a different phase is accepted in silence:
+# every requirement about a type the crate does not contain matches nothing
+# and passes. That was measured on 11 November 2026, when a crate from an
+# unrelated domain was accepted with 0 findings because 12 of 18 requirements
+# in another contract passed vacuously.
+expects:
+  - CoatingRecipe
+  - RackSlot
+  - IntendedRackLayout
+  - ThicknessReading
+  - DryingStep
+
+requires:
+
+  # ---------------------------------------------------------------
+  # The packaging. True of any crate, whatever is inside it.
+  # ---------------------------------------------------------------
+
+  - name: declares_a_profile
+    applies_to: root
+    property: conformsTo
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate does not say which profile it follows, so nothing can be
+      agreed about what its contents mean.
+
+  - name: names_itself
+    applies_to: root
+    property: name
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate has no name, so nobody receiving it can say what it is.
+
+  - name: everything_the_crate_lists_is_present
+    applies_to: root
+    property: hasPart
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      The crate lists a file as part of itself that is described nowhere in
+      it. Whoever receives this will look for it and not find it.
+
+  - name: says_how_it_may_be_used
+    applies_to: root
+    property: license
+    must: be recorded
+    severity: flag
+    message: >-
+      The crate does not say how it may be used. Coating can proceed, but
+      whoever receives the data afterwards has nothing to go on.
+
+  # ---------------------------------------------------------------
+  # The rack. Where each recipe is meant to go.
+  # ---------------------------------------------------------------
+
+  - name: slot_has_a_position
+    applies_to: RackSlot
+    property: name
+    must: be recorded
+    severity: refuse
+    message: >-
+      This slot has no position, so nobody can find it on the physical rack.
+
+  - name: one_slot_per_position
+    applies_to: RackSlot
+    property: name
+    must: be unique
+    severity: refuse
+    message: >-
+      Two slots claim the same position on the rack, so what is physically in
+      that position is undefined.
+
+  - name: slot_names_a_recipe
+    applies_to: RackSlot
+    property: mainEntity
+    must: be recorded
+    severity: refuse
+    message: >-
+      This slot does not say which recipe is meant to go on it, so nothing
+      measured from it later can be attributed to a recipe.
+
+  - name: slot_names_a_real_recipe
+    applies_to: RackSlot
+    property: mainEntity
+    must: point at something in the crate
+    of_type: CoatingRecipe
+    severity: refuse
+    message: >-
+      This slot names something that is not a recipe in this crate, so
+      whatever is on it cannot be identified.
+
+  - name: slot_belongs_to_a_rack
+    applies_to: RackSlot
+    property: isPartOf
+    must: point at something in the crate
+    of_type: IntendedRackLayout
+    severity: refuse
+    message: >-
+      This slot does not belong to a rack that this crate describes, so there
+      is no physical object its position refers to.
+
+  # ---------------------------------------------------------------
+  # The chain. That no link in it is missing.
+  # ---------------------------------------------------------------
+  #
+  # No rule here walks the chain from a reading back to the recipe it came
+  # from, because a requirement follows one reference and the chain is a
+  # search backwards across the graph. What these two do instead is check
+  # that no link is missing. If every step's inputs and outputs are present,
+  # the chain holds, whether or not anybody walks it.
+
+  - name: every_step_input_is_present
+    applies_to: CreateAction
+    property: object
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      A step says it used something that is not described in this crate, so
+      the chain back to the materials is broken at that point.
+
+  - name: every_step_output_is_present
+    applies_to: CreateAction
+    property: result
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      A step says it produced something that is not described in this crate,
+      so what the next step worked on cannot be identified.
+
+  # ---------------------------------------------------------------
+  # The settings the next phase cannot work without.
+  # ---------------------------------------------------------------
+  #
+  # A coating dried in a humid atmosphere cures differently, and its
+  # thickness reading is not comparable with one dried dry. The reading
+  # announces nothing about this, so the one setting below decides whether a
+  # whole class of question needs asking at all.
+  #
+  # The first of the two is repairable, which means a model may be asked
+  # whether the value is already written down somewhere in the record. It
+  # often is: a crate usually carries the command line that ran, and the
+  # setting is in it. Whatever the model proposes is checked by these rules
+  # before it counts, and the returned crate records that the value was
+  # recovered rather than stated.
+  #
+  # Repairable is not the same as guessable. Nothing may be invented: the
+  # value either is in the record or it is not, and answering that it is not
+  # there is a correct and expected answer.
+
+  - name: drying_atmosphere_is_recorded
+    applies_to: DryingStep
+    named_value: drying atmosphere
+    must: be recorded
+    repairable: true
+    severity: refuse
+    message: >-
+      The drying step does not say what atmosphere it ran in, so nobody can
+      tell whether these thickness readings are comparable with each other.
+
+  - name: drying_atmosphere_is_dry
+    applies_to: DryingStep
+    named_value: drying atmosphere
+    must: be recorded
+    one_of: ["dry"]
+    severity: refuse
+    message: >-
+      This contract is written for panels dried in a dry atmosphere. Panels
+      dried any other way cure differently, and need a contract that says
+      what to do about them.
+
+  # ---------------------------------------------------------------
+  # The recipes. What is being applied.
+  # ---------------------------------------------------------------
+
+  - name: recipe_says_what_it_is_based_on
+    applies_to: CoatingRecipe
+    property: isBasedOn
+    must: be recorded
+    severity: refuse
+    message: >-
+      This recipe does not say which thickness reading it was specified
+      from, so if the panel fails nobody can say what was expected of it.
+
+  - name: recipe_names_a_real_reading
+    applies_to: CoatingRecipe
+    property: isBasedOn
+    must: point at something in the crate
+    of_type: ThicknessReading
+    severity: refuse
+    message: >-
+      This recipe names something that is not a thickness reading in this
+      crate, so what it was specified from cannot be identified.
+
+  - name: recipe_records_its_thickness
+    applies_to: CoatingRecipe
+    named_value: film thickness
+    must: be recorded
+    severity: refuse
+    message: >-
+      This recipe does not say what film thickness it is specified to
+      produce, in micrometres, so nothing can be judged against it
+      afterwards.
+
+  # The one place in this contract that compares a number against a range.
+  # The coating line cannot run below 5 micrometres or above 500
+  # micrometres, where a micrometre is one thousandth of a millimetre.
+  #
+  # A flag rather than a refusal, because a recipe outside the line's range
+  # is a decision for a person: it may be intended for a different line.
+  - name: recipe_thickness_is_in_range
+    applies_to: CoatingRecipe
+    named_value: film thickness
+    must: be a number between
+    between: [5, 500]
+    severity: flag
+    message: >-
+      This recipe's specified film thickness, in micrometres, is outside what
+      the coating line can run, which is 5 to 500 micrometres.
+
+  # ---------------------------------------------------------------
+  # The readings. Whether they can be compared.
+  # ---------------------------------------------------------------
+
+  - name: reading_records_its_coverage
+    applies_to: ThicknessReading
+    named_value: coverage
+    must: be recorded
+    severity: refuse
+    message: >-
+      This reading does not say whether the gauge covered the whole panel, so
+      nobody can tell whether the number is a thickness or an artefact of a
+      badly seated panel.
+
+  - name: reading_is_full_coverage
+    applies_to: ThicknessReading
+    named_value: coverage
+    must: be recorded
+    one_of: ["full"]
+    severity: refuse
+    message: >-
+      This reading does not cover the whole panel. The gauge writes 'full'
+      when it did, and a partial reading cannot be compared with a full one.

@@ -1,0 +1,140 @@
+"""The orchestrator.
+
+Thin on purpose. It sequences collaborators it was handed and contains no rule
+of its own. If a rule ever appears in this file, it has been put in the wrong
+place: a rule belongs in a contract, and the decision about a rule belongs to
+the rule engine.
+
+At step 1 of the build order there is nothing to sequence except the writer.
+Each later step adds one collaborator to the constructor and one line to
+`check`, and this file should stay about this length.
+"""
+
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass
+
+from .blessing import Blessing, ContractSource
+from .contract import Contract, ContractRegistry
+from .crate import Crate
+from .identity import BuildIdentity
+from .engines import Engine, NullEngine
+from .provenance import ProvenanceWriter, now
+from .repair import Repairer
+from .rules import Report, RuleEngine
+
+
+@dataclass(frozen=True)
+class Run:
+    """One execution, start to finish."""
+
+    id: str
+    crate: Crate
+    blessing: Blessing
+    report: Report | None = None
+
+    @property
+    def verdict(self):
+        return self.blessing.verdict
+
+
+class Sentinel:
+    def __init__(
+        self,
+        provenance: ProvenanceWriter,
+        rules: RuleEngine | None = None,
+        registry: ContractRegistry | None = None,
+        engine: Engine | None = None,
+        build: BuildIdentity | None = None,
+    ):
+        self.provenance = provenance
+        self.rules = rules
+        self.registry = registry
+        # Attached whether used or not. The default calls nothing, so a
+        # service with no model configured works exactly as one with a model
+        # does, except that it cannot read a value out of prose.
+        self.engine = engine or NullEngine()
+        self.repairer = Repairer(rules) if rules is not None else None
+        self.build = build or BuildIdentity()
+
+    def check(
+        self,
+        crate: Crate,
+        contract_name: str | None = None,
+        contract: Contract | None = None,
+        repair_budget: int = 0,
+    ) -> Run:
+        """Read a crate, check it against a contract, record what was found.
+
+        The contract comes from the registry when named, or is supplied by the
+        caller. With neither, nothing is checked and the record says so, which
+        is not the same as saying the crate was accepted.
+
+        A contract the requester supplied and a contract from the registry are
+        recorded differently. "Checked against the published rules" and
+        "checked against rules the sender supplied" are different claims about
+        a crate and must not look alike afterwards.
+        """
+        run_id = uuid.uuid4().hex[:12]
+        started = now()
+
+        # The checksum is taken here, of the crate as it arrived, and not later.
+        # Taken after any repair it would describe something the sender never
+        # sent, and a reader could no longer tell whether what was blessed has
+        # since been altered.
+        input_checksum = crate.checksum()
+
+        if contract is not None:
+            source = ContractSource.SUPPLIED_BY_REQUESTER
+        elif contract_name is not None:
+            if self.registry is None:
+                raise LookupError(
+                    "a contract was named but this service holds no registry"
+                )
+            contract = self.registry.get(contract_name)
+            source = ContractSource.REGISTRY
+        else:
+            source = ContractSource.NONE
+
+        # The one component that may decide. This class never inspects the
+        # report to reach a view of its own: it carries the verdict across
+        # unchanged.
+        report = (
+            self.rules.validate(crate, contract)
+            if self.rules is not None and contract is not None
+            else None
+        )
+
+        # The repair path. Nothing is attempted without a budget, and with a
+        # budget of zero the model is never asked anything at all.
+        changes = ()
+        returned = crate
+        if report is not None and repair_budget > 0 and self.repairer is not None:
+            returned, changes = self.repairer.repair(
+                crate, report, contract, self.engine, repair_budget
+            )
+            if changes:
+                # The crate is the authority for content and the report must
+                # describe what is being returned, so it is taken again from
+                # the repaired crate rather than patched.
+                report = self.rules.validate(returned, contract)
+
+        blessing = Blessing(
+            run_id=run_id,
+            build=self.build,
+            input_checksum=input_checksum,
+            started=started,
+            ended=now(),
+            contract_name=contract.name if contract else None,
+            contract_version=contract.version if contract else None,
+            contract_checksum=contract.checksum if contract else None,
+            contract_source=source,
+            engine_used=self.engine.name,
+            verdict=report.verdict if report else None,
+            violations=report.violations if report else (),
+            changes=changes,
+        )
+
+        blessed = self.provenance.write(returned, blessing)
+        return Run(id=run_id, crate=blessed, blessing=blessing, report=report)

@@ -1,0 +1,110 @@
+{
+  "@context": [
+    "https://w3id.org/ro/crate/1.3/context",
+    "https://w3id.org/ro/terms/workflow-run/context"
+  ],
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/crate/1.3"
+      },
+      "about": {
+        "@id": "./"
+      }
+    },
+    {
+      "@id": "https://w3id.org/ro/wfrun/process/0.6",
+      "@type": [
+        "CreativeWork",
+        "Profile"
+      ],
+      "name": "Process Run Crate",
+      "version": "0.6"
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "A handover from somewhere else entirely",
+      "description": "A library catalogue. It contains no recipes, no rack slots and no drying step, so a contract written for the coating laboratory has nothing here to check. It exists so that the tutorial can show what happens when a contract does not say what it is for. ALL DATA HERE IS INVENTED.",
+      "datePublished": "2026-11-11",
+      "license": {
+        "@id": "https://spdx.org/licenses/CC0-1.0"
+      },
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/wfrun/process/0.6"
+      },
+      "hasPart": [
+        {
+          "@id": "catalogue.csv"
+        }
+      ],
+      "mentions": [
+        {
+          "@id": "#act-cataloguing"
+        }
+      ]
+    },
+    {
+      "@id": "catalogue.csv",
+      "@type": "File",
+      "name": "One row per book",
+      "encodingFormat": "text/csv"
+    },
+    {
+      "@id": "#librarian",
+      "@type": "Person",
+      "name": "A. Librarian"
+    },
+    {
+      "@id": "https://example.org/coating-test/equipment/scanner",
+      "@type": "SoftwareApplication",
+      "name": "Barcode scanner",
+      "url": "https://example.org/coating-test/equipment/scanner",
+      "softwareVersion": "3",
+      "version": "3"
+    },
+    {
+      "@id": "#act-cataloguing",
+      "@type": "CreateAction",
+      "additionalType": "CataloguingStep",
+      "name": "Catalogue the new arrivals",
+      "instrument": {
+        "@id": "https://example.org/coating-test/equipment/scanner"
+      },
+      "object": [
+        {
+          "@id": "catalogue.csv"
+        }
+      ],
+      "result": [
+        {
+          "@id": "#book-0001"
+        }
+      ],
+      "agent": {
+        "@id": "#librarian"
+      },
+      "endTime": "2026-10-02T09:00:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#book-0001",
+      "@type": "CreativeWork",
+      "additionalType": "ShelvedBook",
+      "identifier": "BOOK-0001",
+      "name": "A book on a shelf",
+      "isPartOf": {
+        "@id": "#shelf-A"
+      }
+    },
+    {
+      "@id": "#shelf-A",
+      "@type": "CreativeWork",
+      "additionalType": "Shelf",
+      "identifier": "SHELF-A",
+      "name": "Shelf A"
+    }
+  ]
+}

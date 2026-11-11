@@ -1,0 +1,41 @@
+contract: coating_to_inspection
+version: 0.2.0
+
+description: >
+  A second handover in the same worked example, present to demonstrate one
+  thing: adding a handover means writing a file like this and nothing else.
+
+  No class was written for it, no name was registered anywhere, and no table
+  maps this name to any code. The service found it because it is a file in
+  the folder it was pointed at. A test in the product's own suite greps the
+  service source and fails the day somebody adds a handover name to it.
+
+  It is deliberately a stub. Two requirements, enough to be loaded and
+  served and no more, because its job here is to exist rather than to be
+  complete.
+
+# What this contract is for. A crate containing none of these is refused
+# rather than accepted in silence.
+expects:
+  - CoatedPanel
+  - CoatingStep
+
+requires:
+
+  - name: coated_panel_names_its_slot
+    applies_to: CoatedPanel
+    property: isPartOf
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      This coated panel does not say which rack slot it came off, so the
+      recipe that produced it cannot be identified.
+
+  - name: coating_run_is_dated
+    applies_to: CoatingStep
+    property: endTime
+    must: be recorded
+    severity: refuse
+    message: >-
+      The coating step does not say when it finished, so nothing downstream
+      can be put in order against the other runs of the day.

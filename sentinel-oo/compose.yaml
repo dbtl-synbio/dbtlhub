@@ -1,0 +1,27 @@
+# The product, for development.
+#
+# This file builds the generic image and nothing else. It mounts no contracts,
+# so a service started from here knows no handovers and refuses to check
+# anything, which is correct: the product ships no contracts.
+#
+#   docker compose -f sentinel-oo/compose.yaml build
+#
+# To run a tailored instance, use a deployment's own compose file, which
+# mounts that deployment's contracts into this same image. For example:
+#
+#   docker compose -f deployments/bioprospecting/compose.yaml up
+#
+# The build context is this folder. Nothing outside sentinel-oo/ is read,
+# which is what lets the product be copied out of this repository on its own
+# and still build, test and run.
+services:
+
+  build-only:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        IMAGE_TAG: dev
+    image: sentinel-oo:dev
+    command: ["--help"]

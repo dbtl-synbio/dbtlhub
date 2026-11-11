@@ -1,0 +1,348 @@
+{
+  "@context": [
+    "https://w3id.org/ro/crate/1.3/context",
+    "https://w3id.org/ro/terms/workflow-run/context"
+  ],
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/crate/1.3"
+      },
+      "about": {
+        "@id": "./"
+      }
+    },
+    {
+      "@id": "https://w3id.org/ro/wfrun/process/0.6",
+      "@type": [
+        "CreativeWork",
+        "Profile"
+      ],
+      "name": "Process Run Crate",
+      "version": "0.6"
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "Mixing to Coating handover, rack A1",
+      "description": "The output of one Mixing run: three coating recipes, the intended rack layout saying which recipe goes on which panel position, and a record of every step that produced them. ALL DATA IN THIS CRATE IS INVENTED. The thicknesses and recipe codes are made up and the identifiers under example.org resolve to nothing. It exists to exercise the rule engine and to be read by somebody learning the contract language.",
+      "datePublished": "2026-11-11",
+      "license": {
+        "@id": "https://spdx.org/licenses/CC0-1.0"
+      },
+      "hasPart": [
+        {
+          "@id": "recipes.csv"
+        },
+        {
+          "@id": "rack-layout.csv"
+        },
+        {
+          "@id": "coverage-photographs.zip"
+        }
+      ],
+      "mentions": [
+        {
+          "@id": "#act-blending"
+        },
+        {
+          "@id": "#act-drying"
+        }
+      ],
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/wfrun/process/0.6"
+      }
+    },
+    {
+      "@id": "recipes.csv",
+      "@type": "File",
+      "name": "The three recipes, one per row",
+      "encodingFormat": "text/csv"
+    },
+    {
+      "@id": "rack-layout.csv",
+      "@type": "File",
+      "name": "Which recipe is intended for which slot",
+      "encodingFormat": "text/csv"
+    },
+    {
+      "@id": "#operator",
+      "@type": "Person",
+      "name": "A. Operator"
+    },
+    {
+      "@id": "https://example.org/coating-test/equipment/blender",
+      "@type": "SoftwareApplication",
+      "name": "Bench blender, model B2",
+      "url": "https://example.org/coating-test/equipment/blender",
+      "softwareVersion": "2",
+      "version": "2",
+      "description": "A bench blender. It is not software and it has no version. The value 2 is its model number, present because RO-Crate requires a version. Saying plainly what it is beats borrowing another step's instrument."
+    },
+    {
+      "@id": "https://example.org/coating-test/equipment/dryer",
+      "@type": "SoftwareApplication",
+      "name": "Cabinet dryer control software",
+      "url": "https://example.org/coating-test/equipment/dryer",
+      "softwareVersion": "4.2.0",
+      "version": "4.2.0"
+    },
+    {
+      "@id": "https://example.org/coating-test/equipment/gauge",
+      "@type": "SoftwareApplication",
+      "name": "Film thickness gauge",
+      "url": "https://example.org/coating-test/equipment/gauge",
+      "softwareVersion": "1.9",
+      "version": "1.9"
+    },
+    {
+      "@id": "#act-blending",
+      "@type": "CreateAction",
+      "additionalType": "BlendingStep",
+      "name": "Blend the three recipes",
+      "instrument": {
+        "@id": "https://example.org/coating-test/equipment/blender"
+      },
+      "object": [
+        {
+          "@id": "recipes.csv"
+        }
+      ],
+      "result": [
+        {
+          "@id": "#recipe-REC-001"
+        },
+        {
+          "@id": "#recipe-REC-002"
+        },
+        {
+          "@id": "#recipe-REC-003"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-10-02T10:15:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#act-drying",
+      "@type": "CreateAction",
+      "additionalType": "DryingStep",
+      "name": "Dry the coated panels",
+      "description": "Panels were dried in the cabinet before the thickness gauge was run over them.",
+      "instrument": {
+        "@id": "https://example.org/coating-test/equipment/dryer"
+      },
+      "object": [
+        {
+          "@id": "#recipe-REC-001"
+        },
+        {
+          "@id": "#recipe-REC-002"
+        },
+        {
+          "@id": "#recipe-REC-003"
+        },
+        {
+          "@id": "#pv-drying-atmosphere"
+        }
+      ],
+      "result": [
+        {
+          "@id": "#reading-REC-001"
+        },
+        {
+          "@id": "#reading-REC-002"
+        },
+        {
+          "@id": "#reading-REC-003"
+        }
+      ],
+      "agent": {
+        "@id": "#operator"
+      },
+      "endTime": "2026-10-02T14:40:00Z",
+      "actionStatus": "http://schema.org/CompletedActionStatus"
+    },
+    {
+      "@id": "#pv-drying-atmosphere",
+      "@type": "PropertyValue",
+      "name": "drying atmosphere",
+      "value": "dry",
+      "description": "The dryer was run with --atmosphere dry, meaning no humidity was added. A coating dried in a humid atmosphere cures differently and its thickness reading is not comparable, so a panel dried any other way needs a contract that says what to do about it."
+    },
+    {
+      "@id": "#rack-A1",
+      "@type": "CreativeWork",
+      "additionalType": "IntendedRackLayout",
+      "identifier": "RACK-A1",
+      "name": "Intended rack layout A1",
+      "description": "What Mixing asked for. Not a record of what was actually coated, which is Coating's to write."
+    },
+    {
+      "@id": "#slot-P1",
+      "@type": "CreativeWork",
+      "additionalType": "RackSlot",
+      "name": "P1",
+      "description": "A panel position on the rack, P1 to P3. The slot belongs to the rack rather than to the recipe, because Coating needs somewhere to record what actually arrived in it.",
+      "isPartOf": {
+        "@id": "#rack-A1"
+      },
+      "mainEntity": {
+        "@id": "#recipe-REC-001"
+      }
+    },
+    {
+      "@id": "#recipe-REC-001",
+      "@type": "CreativeWork",
+      "additionalType": "CoatingRecipe",
+      "identifier": "REC-001",
+      "name": "Coating recipe REC-001",
+      "isBasedOn": {
+        "@id": "#reading-REC-001"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-thickness-REC-001"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-thickness-REC-001",
+      "@type": "PropertyValue",
+      "name": "film thickness",
+      "value": 42,
+      "unitText": "micrometres",
+      "description": "The thickness the recipe is specified to produce, in micrometres. The coating line will not run below 5 or above 500 micrometres."
+    },
+    {
+      "@id": "#reading-REC-001",
+      "@type": "CreativeWork",
+      "additionalType": "ThicknessReading",
+      "name": "Thickness reading for REC-001",
+      "additionalProperty": [
+        {
+          "@id": "#pv-coverage-REC-001"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-coverage-REC-001",
+      "@type": "PropertyValue",
+      "name": "coverage",
+      "value": "full",
+      "description": "Whether the gauge covered the whole panel. The gauge writes 'full' when it did and 'partial' when the panel was too small or badly seated, and a partial reading cannot be compared with a full one."
+    },
+    {
+      "@id": "#slot-P2",
+      "@type": "CreativeWork",
+      "additionalType": "RackSlot",
+      "name": "P2",
+      "description": "A panel position on the rack, P1 to P3. The slot belongs to the rack rather than to the recipe, because Coating needs somewhere to record what actually arrived in it.",
+      "isPartOf": {
+        "@id": "#rack-A1"
+      },
+      "mainEntity": {
+        "@id": "#recipe-REC-002"
+      }
+    },
+    {
+      "@id": "#recipe-REC-002",
+      "@type": "CreativeWork",
+      "additionalType": "CoatingRecipe",
+      "identifier": "REC-002",
+      "name": "Coating recipe REC-002",
+      "isBasedOn": {
+        "@id": "#reading-REC-002"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-thickness-REC-002"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-thickness-REC-002",
+      "@type": "PropertyValue",
+      "name": "film thickness",
+      "value": 65,
+      "unitText": "micrometres",
+      "description": "The thickness the recipe is specified to produce, in micrometres. The coating line will not run below 5 or above 500 micrometres."
+    },
+    {
+      "@id": "#reading-REC-002",
+      "@type": "CreativeWork",
+      "additionalType": "ThicknessReading",
+      "name": "Thickness reading for REC-002",
+      "additionalProperty": [
+        {
+          "@id": "#pv-coverage-REC-002"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-coverage-REC-002",
+      "@type": "PropertyValue",
+      "name": "coverage",
+      "value": "full",
+      "description": "Whether the gauge covered the whole panel. The gauge writes 'full' when it did and 'partial' when the panel was too small or badly seated, and a partial reading cannot be compared with a full one."
+    },
+    {
+      "@id": "#slot-P3",
+      "@type": "CreativeWork",
+      "additionalType": "RackSlot",
+      "name": "P3",
+      "description": "A panel position on the rack, P1 to P3. The slot belongs to the rack rather than to the recipe, because Coating needs somewhere to record what actually arrived in it.",
+      "isPartOf": {
+        "@id": "#rack-A1"
+      },
+      "mainEntity": {
+        "@id": "#recipe-REC-003"
+      }
+    },
+    {
+      "@id": "#recipe-REC-003",
+      "@type": "CreativeWork",
+      "additionalType": "CoatingRecipe",
+      "identifier": "REC-003",
+      "name": "Coating recipe REC-003",
+      "isBasedOn": {
+        "@id": "#reading-REC-003"
+      },
+      "additionalProperty": [
+        {
+          "@id": "#pv-thickness-REC-003"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-thickness-REC-003",
+      "@type": "PropertyValue",
+      "name": "film thickness",
+      "value": 38,
+      "unitText": "micrometres",
+      "description": "The thickness the recipe is specified to produce, in micrometres. The coating line will not run below 5 or above 500 micrometres."
+    },
+    {
+      "@id": "#reading-REC-003",
+      "@type": "CreativeWork",
+      "additionalType": "ThicknessReading",
+      "name": "Thickness reading for REC-003",
+      "additionalProperty": [
+        {
+          "@id": "#pv-coverage-REC-003"
+        }
+      ]
+    },
+    {
+      "@id": "#pv-coverage-REC-003",
+      "@type": "PropertyValue",
+      "name": "coverage",
+      "value": "full",
+      "description": "Whether the gauge covered the whole panel. The gauge writes 'full' when it did and 'partial' when the panel was too small or badly seated, and a partial reading cannot be compared with a full one."
+    }
+  ]
+}

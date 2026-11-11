@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinel-oo"
+version = "0.1.0"
+description = "Decides whether one phase of a Design, Build, Test, Learn cycle can accept what the previous phase produced."
+requires-python = ">=3.11"
+# Contracts are authored in a simple declarative form, which needs a reader.
+dependencies = ["PyYAML>=6"]
+
+[project.optional-dependencies]
+# Each arrives with the step of the build order that needs it, so the image
+# stays small while the service is still doing little.
+test = [
+  "pytest>=8",
+  # A third party validator, so the test that the returned crate is still a
+  # valid RO-Crate is checked by something that knows nothing about this
+  # service. Those tests skip when it is absent.
+  "roc-validator>=0.13",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests", "."]
+addopts = "-q --strict-markers"
