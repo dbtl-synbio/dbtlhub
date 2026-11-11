@@ -71,7 +71,7 @@ coating line or a chemical plant.
 2. Make a project
 3. Make a machine
 4. Put the code on it
-5. Start the model
+5. Start the LLM
 6. Read the contract, in plain words
 7. Deploy sentinel-oo
 8. Ask it what it holds
@@ -271,7 +271,7 @@ One ordinary Linux machine in Madrid, which is the Google data centre
 nearest to this room.
 
 It installs Docker as it starts. Docker is the thing that runs sentinel-oo
-and the model side by side, each in its own container, which is what lets
+and the LLM side by side, each in its own container, which is what lets
 the same image run on anybody's machine without installing anything into it.
 
 The machine takes about half a minute to appear, and about another minute
@@ -351,39 +351,41 @@ on_the_machine(f"rm -rf dbtlhub && git clone --depth 1 {REPO} && "
                f"echo '--- what came down ---' && ls dbtlhub")
 """)
 
-# --------------------------------------------------------------- 4.5 the model
+# --------------------------------------------------------------- 4.5 the LLM
 
 md("""
 ---
 
-# 5. Start the model
+# 5. Start the LLM
 
-**Which model, and where it runs.** `qwen2.5:14b`. That is Alibaba's Qwen
+LLM stands for large language model.
+
+**Which LLM, and where it runs.** `qwen2.5:14b`. That is Alibaba's Qwen
 2.5, the version with 14 billion parameters, released under the Apache 2.0
 licence. It is downloaded onto your own machine and runs there, under
-Ollama, which is a program that serves a model over a plain web interface.
+Ollama, which is a program that serves an LLM over a plain web interface.
 
 It is reachable by nothing outside that machine: no key, no account, and no
-request leaving to anybody's service. The model file is about nine
+request leaving to anybody's service. The LLM's own file is about nine
 gigabytes, which on a Google Cloud machine comes down in a couple of
 minutes.
 
 The name and version are pinned in the deployment rather than left to
 whatever is newest, so that a check done today and the same check done next
-year were done by the same model. The record inside every checked package
+year were done by the same LLM. The record inside every checked package
 names it.
 
 **What it is here to do.** One requirement in the contract is marked as one
-a model may help with. When that requirement fails, the model is asked a
+an LLM may help with. When that requirement fails, the LLM is asked a
 single question: is this value already written down somewhere in this
 package, including inside ordinary prose that no rule can read? It answers
 out of the package's own text. Whatever it proposes is then put back through
 the contract's rules and kept only if every requirement about that value now
 passes.
 
-**That one job is a deliberate choice, not the limit of the model.** It is
+**That one job is a deliberate choice, not the limit of the LLM.** It is
 given a narrow job here so that every answer can be checked by something
-that cannot be talked round. The same model could do considerably more:
+that cannot be talked round. The same LLM could do considerably more:
 explain a refusal in the words of the team that caused it, draft a contract
 from a package somebody already has, propose the vocabulary two groups
 should agree on, or sit above the whole cycle deciding which handover to
@@ -391,7 +393,7 @@ check next. The architecture allows all of that. What changes when you do it
 is how much you can still prove afterwards, and this service was built to
 keep that provable.
 
-This cell downloads the model now so that the deployment in the next step is
+This cell downloads the LLM now so that the deployment in the next step is
 quick.
 """)
 
@@ -402,7 +404,7 @@ print(f"downloading {MODEL}. A few minutes.\\n")
 # user is not yet in the group allowed to use Docker. The deployment in the
 # next step runs under sudo for the same reason.
 #
-# The model goes into a named store, which is the same store the deployment
+# The LLM goes into a named store, which is the same store the deployment
 # will mount, so the deployment finds it already there rather than
 # downloading nine gigabytes again.
 #
@@ -485,7 +487,7 @@ print("\\n          . . .\\n")
 print(requirement_called("well_has_a_position"))
 print("\\n          . . .\\n")
 
-# And the only one in the file a model is allowed to help with.
+# And the only one in the file an LLM is allowed to help with.
 print(requirement_called("edge_handling_is_recorded"))
 print(f"\\n{len(lines)} lines in all, holding 20 requirements")
 """)
@@ -527,8 +529,8 @@ you see a refusal later in this notebook, you are reading somebody's
 sentence out of this file.
 
 One requirement further down the file carries `repairable: true`. That is
-the one the model is allowed to answer a question about, and it is the only
-place in the whole system where a model may suggest anything.
+the one the LLM is allowed to answer a question about, and it is the only
+place in the whole system where an LLM may suggest anything.
 """)
 
 # ----------------------------------------------------------------- 6 deploy
@@ -547,7 +549,7 @@ one that fails:
 3. Runs sentinel-oo's own test suite inside the build, so an image whose
    tests fail is never produced
 4. Starts sentinel-oo, with the contracts mounted read only, beside the
-   model that is already downloaded
+   LLM that is already downloaded
 5. Checks that the instance now running is serving exactly the contracts it
    validated in step 1, by checksum
 
@@ -584,7 +586,7 @@ the same way you would reach any machine you own.
 Then three questions, asked over that tunnel.
 
 **Is it alive, and what is it?** Which image it was built from, which commit
-of the code, and which model it can see. If it had been given a model it
+of the code, and which LLM it can see. If it had been given an LLM it
 could not reach, this is where it would say so rather than carrying on
 quietly.
 
@@ -854,12 +856,12 @@ for folder, what in broken:
     print()
 """)
 
-# -------------------------------------------------------- 9b the model's turn
+# ---------------------------------------------------------- 9b the LLM's turn
 
 md("""
 ---
 
-# 11. The one the model can rescue
+# 11. The one the LLM can rescue
 
 This package is broken in a subtler way. The setting the Build phase needs
 is not recorded as a value. It is sitting in an ordinary English sentence in
@@ -868,18 +870,18 @@ treated as closed, so no partial genes were kept".
 
 No rule can read that. A rule reads a value recorded as a value.
 
-So the contract marks that requirement as one a model may help with, and the
-model is asked its single question. It reads the sentence, proposes
+So the contract marks that requirement as one an LLM may help with, and the
+LLM is asked its single question. It reads the sentence, proposes
 `closed`, and the contract's own rules check the proposal before it is
 kept.
 
 **The verdict that comes back is not `ACCEPTED`.** It is `ACCEPTED_WITH_FLAGS`,
-and the flag says what happened: which value, found by which model,
+and the flag says what happened: which value, found by which LLM,
 confirmed by which requirement. The handover goes through, and whoever
 produced it is told that a machine had to go and find something they should
 have recorded.
 
-This machine has no graphics card, so the model takes tens of seconds to
+This machine has no graphics card, so the LLM takes tens of seconds to
 answer rather than about one second. On a machine with one, this is quick.
 """)
 
@@ -890,7 +892,7 @@ announce(answer, "the setting is there, written in a sentence")
 waited = round(time.time() - started)
 print(f"\\n  the whole check took about {waited} "
       f"{'second' if waited == 1 else 'seconds'}, nearly all of it the "
-      f"model\\n")
+      f"LLM\\n")
 
 crate = json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
                    .read("ro-crate-metadata.json"))
@@ -909,26 +911,26 @@ md("""
 
 In the next package the same setting is recorded only as `-c`, a flag inside
 a command line. Recovering it would mean knowing what that program's flags
-mean, rather than reading what the record says. Two models of this size were
+mean, rather than reading what the record says. Two LLMs of this size were
 asked to do exactly that on 10 November 2026, and both stated a wrong
 meaning without hedging.
 
 The contract's rules reject the answer, nothing is written, and the package
-stays refused. **The model is never the thing that decides.**
+stays refused. **The LLM is never the thing that decides.**
 """)
 
 code("""
 answer = send(CRATES / "design-to-build" / "invalid" / "mode-in-prose")
 announce(answer, "the setting is there, but only as a flag in a command line")
 
-# Rather than assert what the model did, read it out of the record. The
-# line says whether a model was reached, how many times it was asked, and
+# Rather than assert what the LLM did, read it out of the record. The
+# line says whether an LLM was reached, how many times it was asked, and
 # how many of its answers survived the contract's own rules.
 crate = json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
                    .read("ro-crate-metadata.json"))
 for thing in crate["@graph"]:
     if thing.get("name") == "model":
-        print(f"\\n  what the record says about the model:\\n")
+        print(f"\\n  what the record says about the LLM:\\n")
         print(textwrap.fill(str(thing.get("value")), 66,
                             initial_indent="    ", subsequent_indent="    "))
 
@@ -947,7 +949,7 @@ at the gene that goes in it; that gene points at the protein it was designed
 from; a step points at the files it read and the files it produced.
 
 Ask sentinel-oo for the graph of one check and it hands back the boxes and
-the lines, with the check itself, each finding, and anything the model
+the lines, with the check itself, each finding, and anything the LLM
 recovered marked so they stand out from the handover they are about.
 """)
 
@@ -1013,7 +1015,7 @@ md("""
 **What to look for in the picture.**
 
 The orange box is the check itself. The red boxes hanging off it are what it
-found. The purple box is the value the model recovered, which is the one
+found. The purple box is the value the LLM recovered, which is the one
 thing in this package that nobody wrote down by hand.
 
 Everything in blue is the handover: the wells, the genes, the proteins, the
@@ -1066,7 +1068,7 @@ different file and the same service checks a different handover.
 **A package that passes a standards validator can still be refused**, and
 should be, when what the next phase needs is not there.
 
-**The model helps where rules cannot reach**, reading values out of ordinary
+**The LLM helps where rules cannot reach**, reading values out of ordinary
 prose, and it is never allowed to decide. Every answer it gives is checked
 by the contract before it counts.
 
