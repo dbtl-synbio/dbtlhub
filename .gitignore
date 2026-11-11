@@ -8,3 +8,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 *.egg-info/
+
+# Left behind by `pip install .`, which builds in the source tree.
+build/
+dist/
