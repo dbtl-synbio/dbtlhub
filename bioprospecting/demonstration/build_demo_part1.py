@@ -526,24 +526,83 @@ the handover, so they can check themselves before they are checked.
 """)
 
 code("""
+import requests, socket
+
+# A port on this notebook's own machine that nothing else is using.
+#
+# It used to forward port 8080 here to port 8080 there. Colab already has
+# something of its own listening on 8080, so the forward could not take
+# that port, every request went to Colab's thing instead, and it answered
+# 404 with an empty body. Asking the operating system for a free port
+# cannot collide with anything.
+with socket.socket() as probe:
+    probe.bind(("127.0.0.1", 0))
+    HERE_PORT = probe.getsockname()[1]
+
+SERVICE = f"http://127.0.0.1:{HERE_PORT}"
+
 # The service listens on the machine's own loopback address, which nothing
-# outside that machine can reach. This forwards port 8080 of this notebook
-# to port 8080 of the machine, down the same SSH connection used above, so
-# the requests below go nowhere near the open internet.
+# outside that machine can reach. This forwards the free port above to port
+# 8080 of that machine, down an SSH connection, so the requests below go
+# nowhere near the open internet.
+#
+# ssh's complaints are kept rather than thrown away: if the forward cannot
+# be made, that is where it says so.
+tunnel_said = open("tunnel.log", "w")
 tunnel = subprocess.Popen(
     ["gcloud", "compute", "ssh", VM, "--zone", ZONE, "--project", PROJECT,
-     "--quiet", "--", "-N", "-L", "8080:127.0.0.1:8080"],
-    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(12)
-SERVICE = "http://127.0.0.1:8080"
-print("tunnel open\\n")
+     "--quiet", "--", "-N", "-L", f"{HERE_PORT}:127.0.0.1:8080"],
+    stdout=tunnel_said, stderr=tunnel_said)
+print(f"forwarding port {HERE_PORT} here to port 8080 on {VM}")
 
-import requests
-print("--- is it alive, and what is it? ---")
-print(json.dumps(requests.get(f"{SERVICE}/health").json(), indent=2))
+
+def ask(path, tries=30):
+    # Waits for an answer rather than sleeping for a fixed time and hoping.
+    # The tunnel takes a few seconds to open, and on the first run of a
+    # notebook it also generates an SSH key, which takes longer. An earlier
+    # version slept for twelve seconds and then tried to read JSON out of
+    # whatever came back, which on a slow start was nothing at all.
+    for attempt in range(tries):
+        if tunnel.poll() is not None:
+            raise SystemExit(
+                "The tunnel closed. Run the cell again; if it keeps closing, "
+                "the machine is not reachable over SSH.")
+        try:
+            answer = requests.get(f"{SERVICE}{path}", timeout=5)
+        except requests.exceptions.RequestException:
+            time.sleep(2)
+            continue
+        try:
+            return answer.json()
+        except ValueError:
+            raise SystemExit(
+                f"{path} answered with status {answer.status_code} and this, "
+                f"which is not JSON:\\n\\n{answer.text[:400] or '(nothing)'}"
+                f"\\n\\nWhat ssh said about the forward:\\n"
+                f"{open('tunnel.log').read()[-400:] or '(nothing)'}")
+    raise SystemExit(
+        "The service did not answer within a minute. Check the cell above "
+        "finished, then run: on_the_machine('sudo docker ps')\\n\\n"
+        f"What ssh said about the forward:\\n"
+        f"{open('tunnel.log').read()[-400:] or '(nothing)'}")
+
+
+alive = ask("/health")
+
+# Whatever answered has to be the right thing. A forward that could not
+# take the port leaves the requests going to something else entirely, and
+# something else answering politely is worse than nothing answering.
+if alive.get("service") != "sentinel-oo":
+    raise SystemExit(
+        f"Something answered on port {HERE_PORT}, and it is not sentinel-oo. "
+        f"It said:\\n\\n{json.dumps(alive, indent=2)[:400]}")
+
+print("the service is answering\\n")
+print("--- what is it? ---")
+print(json.dumps(alive, indent=2))
 
 print("\\n--- what contracts does it hold? ---")
-print(json.dumps(requests.get(f"{SERVICE}/contracts").json(), indent=2))
+print(json.dumps(ask("/contracts"), indent=2))
 """)
 
 md("""
@@ -556,7 +615,7 @@ code("""
 # out as sentences, which is the form a producing team is sent, and
 # `requirements` is the same thing as data, for something that has to act
 # on it rather than read it.
-held = requests.get(f"{SERVICE}/contracts/design_to_build").json()
+held = ask("/contracts/design_to_build")
 print(held["summary"])
 """)
 
@@ -793,7 +852,9 @@ recovered marked so they stand out from the handover they are about.
 """)
 
 code("""
-graph = requests.get(f"{SERVICE}/graph/{FLAGGED_RUN}").json()
+# The same waiting helper as before, so a slow answer is waited for and a
+# reply that is not JSON is shown rather than crashing on a decode.
+graph = ask(f"/graph/{FLAGGED_RUN}")
 print(f"verdict : {graph['verdict']}")
 print(f"boxes   : {graph['counts']['nodes']}")
 print(f"lines   : {graph['counts']['edges']}")
