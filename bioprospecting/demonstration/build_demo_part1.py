@@ -73,7 +73,7 @@ coating line or a chemical plant.
 4. Put the code on it
 5. Start the model
 6. Read the contract, in plain words
-7. Deploy the service
+7. Deploy sentinel-oo
 8. Ask it what it holds
 9. Send it a good package
 10. Send it packages that are broken
@@ -111,10 +111,8 @@ DEPLOY    = "sentinel-demo"              # what the deployment is called
 REPO      = "https://github.com/dbtl-synbio/dbtlhub.git"
 
 
-# Runs one gcloud command and hands back everything it said, including
-# what it complained about. An earlier version looked only at what gcloud
-# printed and treated silence as an answer, so a command that failed for
-# one reason was reported as a different thing entirely.
+# Runs one gcloud command and hands back what it printed, what it
+# complained about, and whether it worked.
 def gcloud(*arguments):
     return subprocess.run(["gcloud", *arguments], capture_output=True,
                           text=True)
@@ -171,13 +169,10 @@ def refresh():
 credentials = refresh()
 print("signed in, and gcloud has been given the same credentials")
 
-# Proof rather than assumption: ask gcloud to do something that needs them.
+# Find the billing account. This also proves gcloud really has the
+# credentials, by asking it to do something that needs them.
 listed = gcloud("billing", "accounts", "list",
                 "--filter=open=true", "--format=json")
-# Read as structured data rather than as columns of text. An earlier
-# version split the answer on a tab, and the tab did not survive being
-# written into this notebook, so the number and the name came back joined
-# together and would have been passed to --billing-account as one string.
 accounts = json.loads(listed.stdout or "[]")
 
 if not accounts:
@@ -201,11 +196,9 @@ print(f"billing : {BILLING_NAME}")
 
 # Anything left behind by an earlier run of this notebook.
 #
-# A billing account can only have so many projects attached at once, and a
-# run that stops halfway leaves its project attached. On 12 November 2026
-# two such projects filled the last slot, the next run could not attach
-# billing at all, and each of them still had a machine running and
-# billing. So this says so before you start rather than after you fail.
+# A billing account can only have so many projects attached at once. A run
+# that stops halfway leaves its project attached, and possibly a machine
+# running and charging, so it is worth knowing before starting another.
 leftovers = json.loads(gcloud(
     "projects", "list", "--filter=projectId:dbtl-sentinel-*",
     "--format=json").stdout or "[]")
@@ -239,12 +232,9 @@ Takes about half a minute.
 """)
 
 code("""
-# Each step is checked. An earlier version ran these three as shell lines
-# and looked at none of their exit codes: attaching billing failed because
-# the billing account had its full number of projects attached already,
-# switching on Compute Engine then failed because of that, and the cell
-# still printed "project is ready" and carried on to make a machine that
-# could not be made.
+# Every step from here on is checked. If one fails, this prints what
+# Google said and stops, rather than carrying on to the next step with
+# something missing underneath it.
 def must(what, *arguments):
     done = gcloud(*arguments)
     if done.returncode != 0:
@@ -280,7 +270,7 @@ md("""
 One ordinary Linux machine in Madrid, which is the Google data centre
 nearest to this room.
 
-It installs Docker as it starts. Docker is the thing that runs the service
+It installs Docker as it starts. Docker is the thing that runs sentinel-oo
 and the model side by side, each in its own container, which is what lets
 the same image run on anybody's machine without installing anything into it.
 
@@ -309,24 +299,38 @@ must("make the machine",
      "--quiet")
 
 
-def on_the_machine(command, quiet=False):
-    \"\"\"Run one command on that machine and return what it printed.\"\"\"
+def on_the_machine(command, quiet=False, must_work=True):
+    # Runs one command on that machine over SSH. A command that fails stops
+    # the notebook by default: a step that did not work, followed by the
+    # next step, is how a problem gets found three cells later.
     done = subprocess.run(
         ["gcloud", "compute", "ssh", VM, "--zone", ZONE, "--project", PROJECT,
          "--quiet", "--command", command],
         capture_output=True, text=True)
     if not quiet:
         print(done.stdout or done.stderr)
+    if must_work and done.returncode != 0:
+        raise SystemExit(
+            f"That command failed on {VM}, exit code {done.returncode}:\\n\\n"
+            f"{(done.stderr or done.stdout)[-800:]}")
     return done
+
 
 print("waiting for the machine to finish installing Docker ...")
 for attempt in range(40):
-    if on_the_machine("test -f /var/tmp/ready && echo yes", quiet=True).stdout.strip() == "yes":
+    # must_work is off here: until the machine accepts connections, SSH
+    # itself fails, and that is exactly what is being waited for.
+    ready = on_the_machine("test -f /var/tmp/ready && echo yes",
+                           quiet=True, must_work=False)
+    if ready.stdout.strip() == "yes":
         print("ready")
         break
     time.sleep(10)
 else:
-    print("it is taking longer than expected. Run this cell again.")
+    raise SystemExit(
+        f"{VM} did not finish installing Docker within about seven minutes. "
+        "Run this cell again. If it keeps happening, look at the machine in "
+        "the Google Cloud console.")
 """)
 
 # ---------------------------------------------------------------- 4 the code
@@ -392,19 +396,31 @@ quick.
 """)
 
 code("""
-print("pulling the model server, then the model itself. A few minutes.\\n")
-# sudo on every docker command: on a machine this new, your login user is
-# not in the docker group yet. The deployment in the next step runs under
-# sudo for the same reason.
+print(f"downloading {MODEL}. A few minutes.\\n")
+
+# Every docker command runs with sudo: on a machine this new your login
+# user is not yet in the group allowed to use Docker. The deployment in the
+# next step runs under sudo for the same reason.
+#
+# The model goes into a named store, which is the same store the deployment
+# will mount, so the deployment finds it already there rather than
+# downloading nine gigabytes again.
+#
+# `ollama pull` prints a progress bar on every line, so only the last two
+# lines are kept.
 on_the_machine(
+    f"set -o pipefail; "
     f"sudo docker volume create {DEPLOY}-model-store >/dev/null && "
     f"sudo docker rm -f warming >/dev/null 2>&1; "
-    f"sudo docker run -d --name warming -v {DEPLOY}-model-store:/root/.ollama ollama/ollama:0.5.7 && "
+    f"sudo docker run -d --name warming "
+    f"-v {DEPLOY}-model-store:/root/.ollama ollama/ollama:0.5.7 >/dev/null && "
     f"until sudo docker exec warming ollama list >/dev/null 2>&1; do sleep 2; done && "
-    f"sudo docker exec warming ollama pull {MODEL} && "
+    f"sudo docker exec warming ollama pull {MODEL} 2>&1 | tail -2 && "
+    f"echo '--- what is in the store now ---' && "
     f"sudo docker exec warming ollama list && "
     f"sudo docker rm -f warming >/dev/null")
-print("\\nthe model is on the machine and ready for the service to use")
+
+print(f"\\n{MODEL} is on {VM}, ready for sentinel-oo to use")
 """)
 
 # ------------------------------------------------------------- 5 the contract
@@ -424,7 +440,7 @@ the sentence a person should read when it is not true.
 
 Nothing in the file is code. Adding a new handover means writing a file like
 this and nothing else. No class is written, no name is registered anywhere,
-and no table maps a handover to any piece of the service.
+and no table maps a handover to any piece of sentinel-oo.
 
 The cell below fetches the repository here, so this notebook has the
 packages to send later, and prints the beginning of the contract file.
@@ -457,8 +473,11 @@ def requirement_called(name):
     return "\\n".join(out)
 
 
-# The head of the file: what this contract is, and what it is for.
-head = lines[:lines.index("expects:") + 7]
+# The head of the file: what this contract is and what it is for. It ends
+# where the requirements begin, found rather than counted, so this still
+# shows the right thing if the contract changes.
+head = lines[:next(n for n, line in enumerate(lines)
+                   if line.startswith("requires:"))]
 print("\\n".join(head))
 print("\\n          . . .\\n")
 
@@ -475,7 +494,7 @@ md("""
 **What you are looking at, part by part.**
 
 `contract: design_to_build` is the handover's name. That name is how
-anything asks for this check later, and it is the only name the service
+anything asks for this check later, and it is the only name sentinel-oo
 knows this contract by. The file could be called anything.
 
 `version: 0.11.0` is written into the record inside every package this
@@ -503,7 +522,7 @@ Then the requirements. Each one has:
 - `message`, the sentence a person reads
 
 **Every sentence in those messages was written by a person**, about their
-own laboratory, in their own words. None of it came from the service. When
+own laboratory, in their own words. None of it came from sentinel-oo. When
 you see a refusal later in this notebook, you are reading somebody's
 sentence out of this file.
 
@@ -517,7 +536,7 @@ place in the whole system where a model may suggest anything.
 md("""
 ---
 
-# 7. Deploy the service
+# 7. Deploy sentinel-oo
 
 One command, on the machine. It does five things, and it stops at the first
 one that fails:
@@ -525,21 +544,28 @@ one that fails:
 1. Reads every contract and refuses before building anything if one of them
    does not make sense
 2. Builds the image
-3. Runs the service's own test suite inside the build, so an image whose
+3. Runs sentinel-oo's own test suite inside the build, so an image whose
    tests fail is never produced
-4. Starts the service, with the contracts mounted read only, beside the
+4. Starts sentinel-oo, with the contracts mounted read only, beside the
    model that is already downloaded
-5. Checks that the service now running is serving exactly the contracts it
+5. Checks that the instance now running is serving exactly the contracts it
    validated in step 1, by checksum
 
-**No package has been sent yet.** This is only the service, standing ready.
+**No package has been sent yet.** This is sentinel-oo standing ready, and nothing else.
 
 About two minutes, nearly all of it the build.
 """)
 
 code("""
+# `tail` keeps the last 40 lines, which is the part that says what was
+# deployed; the whole output includes the image build and is long.
+#
+# `pipefail` matters here. Without it the exit code would be tail's, which
+# always succeeds, so a failed deployment would look like a successful one
+# and the trouble would surface two cells later as a service that is not
+# answering.
 on_the_machine(
-    f"cd dbtlhub/sentinel-oo && "
+    f"set -o pipefail; cd dbtlhub/sentinel-oo && "
     f"sudo python3 deploy.py ../bioprospecting/contracts "
     f"--name {DEPLOY} --yes 2>&1 | tail -40")
 """)
@@ -564,10 +590,10 @@ quietly.
 
 **What contracts is it serving?** With a checksum over all of them. The
 deployment compared that checksum against the contracts it read in step one,
-which is how it proved that the service now running holds exactly what was
+which is how it proved that the instance now running holds exactly what was
 validated and not something else that happened to be on the machine.
 
-**And the contract itself, from the service rather than from a file.** The
+**And the contract itself, from sentinel-oo rather than from a file.** The
 same contract you read a moment ago, handed back by the thing that will
 enforce it, in plain words. This is what you send to the team that produces
 the handover, so they can check themselves before they are checked.
@@ -577,12 +603,8 @@ code("""
 import requests, socket
 
 # A port on this notebook's own machine that nothing else is using.
-#
-# It used to forward port 8080 here to port 8080 there. Colab already has
-# something of its own listening on 8080, so the forward could not take
-# that port, every request went to Colab's thing instead, and it answered
-# 404 with an empty body. Asking the operating system for a free port
-# cannot collide with anything.
+# Colab has services of its own on the usual ports, so the free one is
+# asked for rather than chosen.
 with socket.socket() as probe:
     probe.bind(("127.0.0.1", 0))
     HERE_PORT = probe.getsockname()[1]
@@ -596,7 +618,15 @@ SERVICE = f"http://127.0.0.1:{HERE_PORT}"
 #
 # ssh's complaints are kept rather than thrown away: if the forward cannot
 # be made, that is where it says so.
-tunnel_said = open("tunnel.log", "w")
+# Line buffered, so that whatever ssh says is in the file by the time
+# anything reads it.
+tunnel_said = open("tunnel.log", "w", buffering=1)
+
+# A forward left over from an earlier run of this cell would still be
+# holding its port and its connection.
+if "tunnel" in dir():
+    tunnel.terminate()
+
 tunnel = subprocess.Popen(
     ["gcloud", "compute", "ssh", VM, "--zone", ZONE, "--project", PROJECT,
      "--quiet", "--", "-N", "-L", f"{HERE_PORT}:127.0.0.1:8080"],
@@ -605,11 +635,9 @@ print(f"forwarding port {HERE_PORT} here to port 8080 on {VM}")
 
 
 def ask(path, tries=30):
-    # Waits for an answer rather than sleeping for a fixed time and hoping.
-    # The tunnel takes a few seconds to open, and on the first run of a
-    # notebook it also generates an SSH key, which takes longer. An earlier
-    # version slept for twelve seconds and then tried to read JSON out of
-    # whatever came back, which on a slow start was nothing at all.
+    # Asks sentinel-oo something, waiting up to a minute for it to answer.
+    # The tunnel takes a few seconds to open, and on a notebook's first run
+    # it also has to make an SSH key, which takes longer.
     for attempt in range(tries):
         if tunnel.poll() is not None:
             raise SystemExit(
@@ -645,7 +673,7 @@ if alive.get("service") != "sentinel-oo":
         f"Something answered on port {HERE_PORT}, and it is not sentinel-oo. "
         f"It said:\\n\\n{json.dumps(alive, indent=2)[:400]}")
 
-print("the service is answering\\n")
+print("sentinel-oo is answering\\n")
 print("--- what is it? ---")
 print(json.dumps(alive, indent=2))
 
@@ -658,7 +686,7 @@ Now the contract, from the running service, in plain words.
 """)
 
 code("""
-# Asking the service for the contract rather than reading the file again.
+# Asking sentinel-oo for the contract rather than reading the file again.
 # What comes back carries the contract both ways: `summary` is it written
 # out as sentences, which is the form a producing team is sent, and
 # `requirements` is the same thing as data, for something that has to act
@@ -712,10 +740,20 @@ def send(folder):
         for item in Path(folder).rglob("*"):
             if item.is_file():
                 bundle.write(item, item.relative_to(folder))
-    return requests.post(
+    answer = requests.post(
         f"{SERVICE}/check/design_to_build?by=the%20demonstration",
         data=buffer.getvalue(),
         headers={"Content-Type": "application/zip"})
+
+    # What should come back is the package itself. Anything else is the
+    # service refusing to do the job rather than refusing the package, and
+    # saying so here is clearer than failing to unpack it two lines later.
+    if answer.headers.get("Content-Type") != "application/zip":
+        raise SystemExit(
+            f"The service answered with status {answer.status_code} and "
+            f"{answer.headers.get('Content-Type')}, not a package:\\n\\n"
+            f"{answer.text[:400]}")
+    return answer
 
 
 def verdict_of(answer):
@@ -766,7 +804,7 @@ with zipfile.ZipFile(io.BytesIO(answer.content)) as bundle:
         print("   ", name)
 
 # The description file is a list of things, each with an identifier. The
-# ones the service added for this check have identifiers that say what they
+# ones sentinel-oo added for this check have identifiers that say what they
 # are: `/about/` for what was checked, `/found/` for what was found.
 crate = json.load(open("checked/ro-crate-metadata.json"))
 print("\\nwhat the record says about this check:\\n")
@@ -849,7 +887,10 @@ code("""
 started = time.time()
 answer = send(CRATES / "design-to-build" / "invalid" / "edge-handling-in-prose")
 announce(answer, "the setting is there, written in a sentence")
-print(f"\\n  the model took about {time.time() - started:.0f} seconds\\n")
+waited = round(time.time() - started)
+print(f"\\n  the whole check took about {waited} "
+      f"{'second' if waited == 1 else 'seconds'}, nearly all of it the "
+      f"model\\n")
 
 crate = json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
                    .read("ro-crate-metadata.json"))
@@ -879,8 +920,19 @@ stays refused. **The model is never the thing that decides.**
 code("""
 answer = send(CRATES / "design-to-build" / "invalid" / "mode-in-prose")
 announce(answer, "the setting is there, but only as a flag in a command line")
-print("\\n  the model proposed something. The rules threw it out, nothing was")
-print("  written into the package, and the handover is refused.")
+
+# Rather than assert what the model did, read it out of the record. The
+# line says whether a model was reached, how many times it was asked, and
+# how many of its answers survived the contract's own rules.
+crate = json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
+                   .read("ro-crate-metadata.json"))
+for thing in crate["@graph"]:
+    if thing.get("name") == "model":
+        print(f"\\n  what the record says about the model:\\n")
+        print(textwrap.fill(str(thing.get("value")), 66,
+                            initial_indent="    ", subsequent_indent="    "))
+
+print("\\n  Nothing was written into the package, and the handover is refused.")
 """)
 
 # ------------------------------------------------------------------ 10 graph
@@ -894,14 +946,14 @@ A package is a set of things that point at each other. A plate well points
 at the gene that goes in it; that gene points at the protein it was designed
 from; a step points at the files it read and the files it produced.
 
-Ask the service for the graph of one check and it hands back the boxes and
+Ask sentinel-oo for the graph of one check and it hands back the boxes and
 the lines, with the check itself, each finding, and anything the model
 recovered marked so they stand out from the handover they are about.
 """)
 
 code("""
-# The same waiting helper as before, so a slow answer is waited for and a
-# reply that is not JSON is shown rather than crashing on a decode.
+# The graph of one check: every thing in the package, every pointer
+# between them, and the check itself.
 graph = ask(f"/graph/{FLAGGED_RUN}")
 print(f"verdict : {graph['verdict']}")
 print(f"boxes   : {graph['counts']['nodes']}")
@@ -983,8 +1035,20 @@ charge. There is nothing left to forget about afterwards.
 
 code("""
 tunnel.terminate()
-!gcloud projects delete {PROJECT} --quiet
-print(f"\\n{PROJECT} is gone, and so is everything that was in it")
+
+gone = gcloud("projects", "delete", PROJECT, "--quiet")
+if gone.returncode != 0:
+    print("The project was not deleted. What Google said:\\n")
+    print(gone.stderr or gone.stdout)
+    raise SystemExit(
+        "Delete it by hand, or it keeps a billing slot and anything still "
+        "running in it keeps charging:\\n\\n"
+        f"    !gcloud projects delete {PROJECT} --quiet")
+
+state = gcloud("projects", "describe", PROJECT,
+               "--format=value(lifecycleState)").stdout.strip()
+print(f"{PROJECT}: {state or 'gone'}")
+print("\\nThe machine went with it, so nothing is charging any more.")
 """)
 
 md("""
