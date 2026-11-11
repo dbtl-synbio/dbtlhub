@@ -293,7 +293,7 @@ def describe(crate) -> str:
     """What is in a crate, as the list somebody needs to write a contract.
 
     A requirement names an entity type and a value, and both names have to
-    match what is actually in the crate. Until 12 November 2026 there was no
+    match what is actually in the crate. Until 11 November 2026 there was no
     way to find out what those were: the service could check a crate, list
     its contracts and print a contract in plain words, and could not say
     what a crate contains. The only options were to read the raw JSON of a
@@ -364,7 +364,7 @@ def describe(crate) -> str:
 # workflow needs the files, so a crate has to be able to arrive and leave
 # whole, over the one interface a pipeline uses.
 #
-# Until 12 November 2026 `POST /check` took the description and returned the
+# Until 11 November 2026 `POST /check` took the description and returned the
 # description, and whoever sent it had to put the data and the record back
 # together by hand. It also meant no contract could check the data over the
 # web, because the data was never there.

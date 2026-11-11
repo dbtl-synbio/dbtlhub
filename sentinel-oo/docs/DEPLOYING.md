@@ -218,7 +218,7 @@ refused.
 interface, so other machines on your network cannot send it requests.
 
 **The service asks for no password of any kind.** That is why the default is
-what it is. Before 12 November 2026 it published on every interface, which
+what it is. Before 11 November 2026 it published on every interface, which
 on shared wifi at a conference means anyone on that network could use it.
 
 To let other machines reach it:
@@ -248,9 +248,29 @@ There is a worked one in `examples/`.
 ## If you prefer Docker Compose
 
 `deploy.py` uses `docker run` directly, so a deployment needs no compose
-file at all. A hand written Compose file can do the same thing, but without
-the validation in steps 1 and 4, so a broken contract will not be caught
-until first use.
+file at all. `compose.yaml` in this folder does the same thing for somebody
+who would rather use Compose:
+
+```
+SENTINEL_CONTRACTS=../my-deployment/contracts docker compose up
+```
+
+| Setting | What it does | Default |
+|---|---|---|
+| `SENTINEL_CONTRACTS` | Your folder of contracts | The worked example |
+| `SENTINEL_PORT` | Which port | 8080, which collides with `deploy.py` |
+| `SENTINEL_BIND` | Which interface | `127.0.0.1`, this machine only |
+| `SENTINEL_MODEL_URL` | Where the model is | A container beside it |
+
+**Three things it does not do**, which is why `deploy.py` is the ordinary
+route: it does not check your contracts before starting, it does not tell
+you that it is about to download about 11 gigabytes and wait for a yes, and
+it does not confirm afterwards that the running instance serves what you
+meant.
+
+Checked crates go into a named volume rather than a folder, so nothing is
+written into the repository. Copy them out with
+`docker compose cp sentinel:/out ./out`.
 
 ## Stopping
 

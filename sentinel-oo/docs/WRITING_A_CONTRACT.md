@@ -195,8 +195,8 @@ entry at a time, because a language that can say anything can also say things
 nobody can check.
 
 **You cannot add a verb by writing a contract.** If your requirement needs
-one these four cannot express, you will get a message naming the four that
-exist, and you are blocked until a fifth is added to the product. That means
+one these five cannot express, you will get a message naming the five that
+exist, and you are blocked until a sixth is added to the product. That means
 editing `MUSTS` in `src/sentinel_oo/contract.py`, adding a branch to
 `_apply` in `src/sentinel_oo/rules.py`, and writing tests for both. It is the
 one case where tailoring is not enough, and it is a change somebody has to
@@ -379,6 +379,16 @@ and it is kept only if every requirement reading that value now passes and
 nothing new is broken anywhere. The returned crate records that the value was
 recovered from text rather than stated, and which engine proposed it.
 
+**A value a model recovers raises a flag**, naming the value, the model that
+proposed it and the requirement that confirmed it. So a crate rescued this
+way comes back as `ACCEPTED_WITH_FLAGS` rather than `ACCEPTED`. The handover
+is not blocked and nobody has to act. The flag is there because the crate
+itself already says a value read out of prose is less trustworthy than one
+somebody wrote down, and the verdict should say the same thing rather than
+contradict it. The person worth telling is the team producing the handover:
+a step that relies on a model to recover what it should be recording is a
+fault further up the workflow.
+
 **Repairable is not the same as guessable.** Nothing may be invented. The
 value either is in the record or it is not, and answering that it is not
 there is a correct and expected answer.
@@ -404,7 +414,7 @@ requirement you believe is protecting you.
 ```
 trial.yaml: requirement 1 (r) says 'be greater than', which is not something
 a requirement can demand. It may say: ['be a number between', 'be recorded',
-'be unique', 'point at something in the crate'].
+'be unique', 'hold data', 'point at something in the crate'].
 
 trial.yaml: requirement 1 does not understand ['propery']. A requirement may
 say ['applies_to', 'between', 'message', 'must', 'name', 'named_value',

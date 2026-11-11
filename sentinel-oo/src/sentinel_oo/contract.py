@@ -182,8 +182,9 @@ class Contract:
                 "",
                 "It is for crates containing all of: "
                 + ", ".join(self.expects),
-                "A crate containing none of those is refused rather than "
-                "accepted without being checked.",
+                "Each one that is missing is refused on its own, because a "
+                "crate without it cannot be checked by the requirements "
+                "about it.",
             ]
         else:
             lines += [
@@ -202,7 +203,59 @@ class Contract:
             lines.append(f"    {requirement.applies_to} {requirement.demand_in_words()}")
             lines.append(f"    failing it {verb}")
             lines.append(f"    {requirement.message}")
+            if requirement.repairable:
+                lines.append(
+                    "    a model may recover this one from the text already "
+                    "in the crate"
+                )
+        # Finding 15 of the deployment trial. This printout is what the front
+        # page tells you to send to the team that produces the handover, and
+        # the demands above are written in RO-Crate's words. A team that has
+        # not met RO-Crate before cannot act on "mainEntity must point at
+        # something of type CoatingRecipe". Only the words actually used are
+        # explained, so the list does not grow into a glossary nobody reads.
+        glossary = _rocrate_words_in("\n".join(lines))
+        if glossary:
+            lines += ["", "The RO-Crate words used above:"]
+            for word, meaning in glossary:
+                lines.append(f"  {word}: {meaning}")
+        if any(r.repairable for r in self.requirements):
+            lines += [
+                "",
+                "Where a requirement says a model may recover it, the value "
+                "still has to be somewhere in the crate's own text. A model "
+                "is never asked to invent one, and whatever it proposes is "
+                "checked against this contract again before it is kept.",
+            ]
         return "\n".join(lines)
+
+
+# The RO-Crate words that can appear in a requirement's demand, each said in
+# plain words. Added for finding 15 of the deployment trial of 11 November
+# 2026: the producing team is sent this printout and may never have met
+# RO-Crate.
+ROCRATE_WORDS = {
+    "conformsTo": "names the standard or profile this crate follows, so a "
+                  "reader knows which rules it was written to",
+    "mainEntity": "points from a record to the one thing that record is "
+                  "mainly about",
+    "hasPart": "lists the things held inside this one, such as the files in "
+               "a crate or the readings in a run",
+    "isPartOf": "points the other way, from a thing to the larger thing it "
+                "belongs to",
+    "identifier": "the name or number that picks this thing out from every "
+                  "other one",
+    "@type": "what kind of thing a record is, such as a File or a "
+             "ThicknessReading",
+    "@id": "the address of a record inside the crate, which other records "
+           "use to point at it",
+}
+
+
+def _rocrate_words_in(text: str) -> list[tuple[str, str]]:
+    """Which of the RO-Crate words above actually appear in a printout."""
+    return [(word, meaning) for word, meaning in ROCRATE_WORDS.items()
+            if word in text]
 
 
 def _require(condition: bool, message: str) -> None:
@@ -333,7 +386,8 @@ def _parse_requirement(raw, where: str, position: int, seen: set) -> Requirement
         must in MUSTS,
         f"{at} ({name}) says {must!r}, which is not something a requirement "
         f"can demand. It may say: {sorted(MUSTS)}. "
-        "Adding a fifth is a change to the product rather than to this file: "
+        f"Adding a {len(MUSTS) + 1}th is a change to the product rather "
+        "than to this file: "
         "MUSTS in src/sentinel_oo/contract.py, a branch in _apply in "
         "src/sentinel_oo/rules.py, and tests for both. See "
         "docs/WRITING_A_CONTRACT.md.",

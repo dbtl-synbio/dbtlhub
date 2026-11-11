@@ -34,7 +34,7 @@ from .engines import Engine, HttpEngine, NullEngine
 DEFAULT_REPAIR_BUDGET = 3
 from .provenance import ProvenanceWriter, now
 from .repair import Repairer
-from .rules import Report, RuleEngine
+from .rules import Report, RuleEngine, with_flags_for
 
 
 @dataclass(frozen=True)
@@ -143,6 +143,11 @@ class Sentinel:
                 # describe what is being returned, so it is taken again from
                 # the repaired crate rather than patched.
                 report = self.rules.validate(returned, contract)
+                # Then one flag for each value the model recovered, so the
+                # verdict says what the crate says. Without this a crate
+                # went from REFUSED to ACCEPTED with nothing in the verdict
+                # showing a model had supplied the missing value.
+                report = with_flags_for(report, changes)
 
         blessing = Blessing(
             run_id=run_id,

@@ -128,10 +128,13 @@ sequence must be valid DNA" does not, and the right form of it is a general
 check that every character comes from a given set, with the set written in
 the contract file.
 
-A requirement that none of the four can express needs the vocabulary to
+A requirement that none of the five can express needs the vocabulary to
 grow, which is a decision taken on purpose rather than a special case added
 in a hurry. The error message a contract author sees says exactly that, and
-says where in the code a fifth would be added.
+says where in the code the next one would be added. The fifth verb,
+`hold data`, was added on 11 November 2026 for exactly that reason: a
+sentinel that reads only the description file cannot tell an empty result
+from a real one.
 
 **There is no field for instructing a model**, and a file carrying an
 unknown field is refused rather than ignored, so a misspelled key cannot sit

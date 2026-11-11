@@ -53,7 +53,7 @@ to one another.
 | Verdict | What it means | What should happen next |
 |---|---|---|
 | `ACCEPTED` | Nothing was found | The next phase proceeds |
-| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded | The next phase proceeds and something or somebody reads the flags |
+| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded. A value a model recovered always lands here | The next phase proceeds and something or somebody reads the flags |
 | `REFUSED` | At least one requirement with severity `refuse` was violated | The next phase must not proceed |
 
 ### What it is not
@@ -322,7 +322,7 @@ answer.
 ### What the record must never let a reader conclude wrongly
 
 **A model that was not reached must not read as a model that found
-nothing.** Until 12 November 2026 the record named the engine and said how
+nothing.** Until 11 November 2026 the record named the engine and said how
 many changes were kept, whatever had happened. A crate refused on a
 repairable requirement, with no model anywhere, carried `model engine:
 qwen2.5:14b at http://model:11434` and `0 change(s)`. Anybody reading that

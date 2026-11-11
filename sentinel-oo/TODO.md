@@ -30,8 +30,9 @@ Ordered by what blocks somebody first, not by how hard it is.
 | 6 | Check the data, not only the description file | A crate whose data files are empty or missing passes today |
 | 7 | The worked example leaves the coating laboratory | It is outside the application domain |
 | 8 | The compose route | Four faults, including an unstated download of about 9 gigabytes |
-| 9 | The documentation gaps | Eight small ones a newcomer hits in order |
+| 9 | The documentation gaps | DONE. Eight small ones a newcomer hits in order |
 | 10 | Everything else | Found while building, and nothing blocks a newcomer on it |
+| 11 | Deploy to a remote machine | Asked for by Neil on 11 November 2026. The machine with the graphics hardware is usually not the machine you are sitting at |
 
 ---
 
@@ -39,7 +40,7 @@ Ordered by what blocks somebody first, not by how hard it is.
 
 **Findings 11, 13, 17 and 26. The most serious thing in the trial.**
 
-**DONE, 12 November 2026.** The record and the command line now say which
+**DONE, 11 November 2026.** The record and the command line now say which
 of four things happened: no model configured; reachable and asked, with how
 many times and how many changes were kept; reachable and not asked because
 no failing requirement was marked repairable; or configured and NOT
@@ -119,7 +120,7 @@ guide says `compose.yaml` starts the model, and its list of what
 
 ## 3. The front page's first command works on a clean Python
 
-**Findings 6, 7, 9 and 10. DONE, 12 November 2026.**
+**Findings 6, 7, 9 and 10. DONE, 11 November 2026.**
 
 The front page now says Python 3.11 or later, says `python3` rather than
 `python` on a Mac, tells you to make a virtual environment and run
@@ -155,7 +156,7 @@ the name `roc-validator`, which nobody would guess.
 
 ## 4. Not reachable from the whole network by default
 
-**Finding 20. DONE, 12 November 2026.**
+**Finding 20. DONE, 11 November 2026.**
 
 The port is published on the loopback interface, so only this machine can
 reach the instance. `--reachable-from-network` opts out and warns in those
@@ -184,7 +185,7 @@ otherwise, and say plainly what asking otherwise means.
 
 ## 5. A command to describe a crate
 
-**Finding 16, and found while building. DONE, 12 November 2026.**
+**Finding 16, and found while building. DONE, 11 November 2026.**
 
 ```
 python -m sentinel_oo --describe <a crate>
@@ -230,7 +231,7 @@ for it.
 
 ## 6. Check the data, not only the description file
 
-**Finding 25. DONE, 12 November 2026.**
+**Finding 25. DONE, 11 November 2026.**
 
 A fifth verb, `hold data`: the file an entity stands for exists and is not
 empty. It catches a step that ran, wrote a zero byte file and exited
@@ -338,7 +339,23 @@ the prose.
 
 ## 8. The compose route
 
-**Findings 21, 22, 23 and 24.**
+**Findings 21, 22, 23 and 24. DONE, 11 November 2026.**
+
+All four fixed and checked by running it. `SENTINEL_CONTRACTS` serves your
+own folder, `SENTINEL_PORT` moves it off 8080 where it collided with
+`deploy.py`, checked crates go to a named volume instead of writing an
+`out` folder into the repository, and the header states the download as
+about 2 GB for the model server and about 9 GB for the model, with the
+Ollama image pinned to 0.5.7 rather than `latest`.
+
+It also binds to `127.0.0.1` by default, matching `deploy.py`, which
+finding 20 was about and this file would otherwise have undone.
+
+The file now says plainly that `deploy.py` is the ordinary route and names
+the three things Compose does not do: validate the contracts first, ask
+before downloading, and confirm afterwards.
+
+The rest of this entry is what was wrong.
 
 | | |
 |---|---|
@@ -353,11 +370,39 @@ with no figure.
 
 ---
 
-## 9. The documentation gaps
+## 9. The documentation gaps - DONE, 11 November 2026
 
-**Findings 2, 3, 4, 12, 14, 15 and 18, and two notes on tutorial steps.**
+**Findings 2, 3, 4, 12, 15 and 18, and the notes on tutorial steps.**
 
-Each is small, and a newcomer hits them in this order.
+Each is small, and a newcomer hits them in this order. Finding 14, the
+coating laboratory example, is item 7 and is not done.
+
+**What changed.**
+
+| Finding | What it says now |
+|---|---|
+| 2, 3, 4 | The front page has a "What you need" table (Python 3.11 or later, Docker running, Docker Desktop on a Mac) and an "About the model" paragraph naming Ollama, giving about 9 gigabytes to download and about 10 gigabytes of memory to run `qwen2.5:14b`, and saying Docker cannot reach a Mac's graphics hardware |
+| 5 | The two-minute example sets `SENTINEL_MODEL_URL=` and says what that means |
+| 12 | Without `--out` the printout says the crate was NOT saved and how to save it |
+| 15 | The plain-words contract ends with the RO-Crate words it used, each explained in a sentence, and marks each requirement a model may help with |
+| 18 | It now says each missing type is refused on its own, and why |
+| steps 4, 7 | Both commands are written out, the five crates as a loop that was run as written |
+| step 5 | It says to raise the version at each step, and why the version matters: it is copied into the record inside every checked crate |
+| curl | Step 10 shows both routes with real replies: the whole crate zipped, which is the one to use because the checked crate comes back and `hold data` needs the data files, and the description file alone, with a command that picks the verdict out of the 18 kilobyte reply |
+
+**Two faults found while writing it, both fixed.**
+
+The documents said there were four verbs when the code has five, because
+`hold data` was added earlier the same day. The error message a contract
+author sees said "adding a fifth"; it now counts the verbs itself rather
+than carrying a number that goes stale.
+
+Posting a crate's description file on its own, with no data files, gave a
+refusal carrying the contract author's sentence, "this file holds nothing,
+so the step that was meant to produce it produced no data". The data had
+never been sent. The reply now says the data file was not sent, that a
+check which could not run is refused rather than passed, and that the whole
+crate should be sent as a zip.
 
 | | What is missing |
 |---|---|
@@ -504,6 +549,27 @@ change to the code.
 
 ---
 
+### A crate checked from the command line does not say which code checked it
+
+**Found by the RunPod session on 11 November 2026**, while testing the
+model on a rented machine with graphics hardware. Running from the command
+line rather than from the built image, the printout says:
+
+```
+  service image tag                      unset
+  service commit                         unset
+  rules checksum                         unset
+```
+
+Those three go into the crate's lasting record. A crate checked this way
+therefore does not record which version of the service checked it, nor
+which version of the rules. That may be intended, since the values are
+stamped into the image when it is built, but it sits badly beside the rest
+of the day's work, which was all about a record saying what actually
+happened. At the least the printout and the record should say that the
+service was run from source rather than leaving three fields reading
+`unset`, which a reader cannot tell apart from a fault.
+
 ### The product itself
 
 ### A repository of its own
@@ -521,6 +587,82 @@ top of the file. The types belong to whoever specifies what that handover
 carries.
 
 ---
+
+---
+
+## 11. Deploy to a remote machine
+
+**Asked for by Neil on 11 November 2026**, in these words: "when somebody
+is deploying the sentinel we need to give them the option to deploy it
+remotely on a server".
+
+**Where it stands today.** `deploy.py` runs `docker` on the machine you run
+it on, and only there. The one part that can already live elsewhere is the
+model, through `--model-url`, added earlier the same week.
+
+**What prompted it.** Trying to run the model on Neil's laptop failed
+twice. Docker Desktop there is allocated 32768 MiB, which is 32 gigabytes
+of the machine's 36 gigabytes, and loading a model needing about 10
+gigabytes of memory inside that virtual machine brought the whole thing
+down with an internal virtualization error. The work moved to a rented
+machine with graphics hardware. That is the ordinary case, not the
+exception: the machine with the graphics hardware is usually not the
+machine the person deploying is sitting at.
+
+### The shape agreed with Neil
+
+One new option:
+
+```
+python deploy.py my-contracts --host ssh://neil@gpu-box.example
+```
+
+**Use Docker's own remote host support rather than inventing one.** The
+`docker` command line already understands an `ssh://` address, so the image
+is built on that machine, the containers run on that machine, and the
+connection uses the person's existing SSH key with no password written to
+any file. In practice that means setting `DOCKER_HOST` for every `docker`
+call the program makes.
+
+**The complication, which is real and must not be hidden.** Contracts are a
+folder on the deploying person's own machine, and today that folder is
+mounted into the container. A mount on a remote Docker host names a path on
+*that* machine, not on this one, so a remote deployment that simply passed
+the same path would mount whatever happened to be at that path on the
+server, or nothing.
+
+The answer: after validating the contracts and before starting anything,
+copy them into a named volume on the remote machine and mount that volume
+read only. Contracts are a few kilobytes, so copying them with `docker cp`
+is safe. **That is the one case where `docker cp` is fine. Never use it for
+anything of gigabyte size: on 11 November 2026 copying an 8.99 gigabyte
+model with it brought Docker Desktop down on Neil's laptop.**
+
+### What must not change
+
+- It still reads and checks every contract before building anything, and
+  refuses on the first one that does not make sense.
+- It still confirms afterwards that the running instance is serving exactly
+  the contracts it validated, by checksum.
+- It still publishes the port on `127.0.0.1` of the machine it runs on
+  rather than on every network interface. On a remote machine that means
+  reaching the service through an SSH tunnel rather than through a port
+  open to whatever network that machine is on. The service asks for no
+  password of any kind, so this matters more remotely, not less.
+
+### Still to decide
+
+- Whether `--host` should also move the model container to the remote
+  machine by default, or whether the model stays wherever `--model-url`
+  says. The likely answer: if the person gives `--host` and no
+  `--model-url`, the model container goes on the same remote machine, since
+  the reason for deploying there is usually that it has the graphics
+  hardware.
+- What `--stop` does with a remote deployment. It should stop the remote
+  containers, and it should refuse to stop containers on a machine the
+  person did not name.
+- Whether the documents need a short section on SSH tunnelling, written for
+  somebody who has not done it.
 
 ---
 

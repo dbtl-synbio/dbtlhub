@@ -170,10 +170,17 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {violation.severity.value.upper()}  {violation.message}")
             print(f"         at {violation.node}")
 
+    print()
     if args.out:
         written = run.crate.save(Path(args.out))
-        print()
-        print(f"written to {written}")
+        print(f"the checked crate was written to {written}")
+    else:
+        # Finding 12 of the deployment trial. It said "28 entities in, 41
+        # out" and nothing about where the 41 went, so a newcomer looked
+        # for a result that was never saved.
+        print("the checked crate was NOT saved. Pass --out <folder> to keep "
+              "it,")
+        print("which is the copy carrying the record of this check.")
 
     return 0 if run.blessing.verdict is not Verdict.REFUSED else 1
 

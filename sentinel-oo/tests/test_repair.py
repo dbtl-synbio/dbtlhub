@@ -33,6 +33,9 @@ from conftest import BROKEN, CONTRACTS
 
 IN_PROSE = BROKEN / "atmosphere-in-prose"
 NOTHING_SAYS = BROKEN / "missing-atmosphere"
+# A crate broken in a way no model can repair: it does not say which
+# profile it follows. Used to show a flag never outranks a refusal.
+MISSING_CONFORMSTO = BROKEN / "missing-conformsto"
 
 
 @pytest.fixture
@@ -94,7 +97,10 @@ def test_the_default_is_to_ask_the_model(writer, registry):
         Crate.from_path(IN_PROSE), contract_name="mixing_to_coating"
     )
     assert engine.asked != [], "the model was not asked"
-    assert run.verdict.value == "ACCEPTED"
+    # ACCEPTED_WITH_FLAGS rather than ACCEPTED since 11 November 2026: a
+    # value a model recovered raises a flag. The handover goes through and
+    # somebody is told to look.
+    assert run.verdict.value == "ACCEPTED_WITH_FLAGS"
 
 
 def test_a_budget_of_zero_still_asks_nothing(writer, registry):
@@ -114,7 +120,7 @@ def test_a_budget_of_zero_still_asks_nothing(writer, registry):
 def test_a_value_that_satisfies_the_rules_is_kept(writer, registry):
     run = run_on(IN_PROSE, writer, registry,
                  ScriptedEngine({"drying atmosphere": "dry"}))
-    assert run.verdict.value == "ACCEPTED"
+    assert run.verdict.value == "ACCEPTED_WITH_FLAGS"
     change = run.blessing.changes[0]
     assert change.after == "dry"
     assert change.proposed_by == "scripted"
@@ -176,7 +182,7 @@ def test_a_value_that_is_not_there_is_not_invented(writer, registry):
     recovered rather than stated."""
     run = run_on(NOTHING_SAYS, writer, registry,
                  ScriptedEngine({"drying atmosphere": "dry"}))
-    assert run.verdict.value == "ACCEPTED"
+    assert run.verdict.value == "ACCEPTED_WITH_FLAGS"
     change = run.blessing.changes[0]
     assert "recovered" in change.describe() or change.before is None
     assert "Recovered from the text" in run.crate.to_json()
@@ -440,3 +446,68 @@ class TestTheRecordSaysWhatHappened:
         engine.available = lambda: True
         run = run_on(IN_PROSE, writer, registry, engine)
         assert "asked once, 1 change(s) kept" in run.blessing.model_text()
+
+
+# ------------------------------------- a recovered value raises a flag
+#
+# Decided by Neil on 11 November 2026, after the test on a rented machine
+# with graphics hardware showed a crate going from REFUSED to ACCEPTED with
+# nothing in the verdict saying a model had supplied the missing value.
+
+
+def test_a_recovered_value_raises_exactly_one_flag(writer, registry):
+    run = run_on(IN_PROSE, writer, registry,
+                 ScriptedEngine({"drying atmosphere": "dry"}))
+    flags = [v for v in run.blessing.violations
+             if v.severity.value == "flag"]
+    assert len(flags) == 1, [v.requirement.name for v in flags]
+    assert len(run.blessing.changes) == 1
+
+
+def test_the_flag_names_the_model_the_value_and_the_rule(writer, registry):
+    """A person reading the flag can tell what was supplied, by what, and
+    what checked it, without opening the crate."""
+    run = run_on(IN_PROSE, writer, registry,
+                 ScriptedEngine({"drying atmosphere": "dry"}))
+    flag = [v for v in run.blessing.violations
+            if v.severity.value == "flag"][0]
+    assert "drying atmosphere" in flag.message
+    assert "'dry'" in flag.message
+    assert "scripted" in flag.message
+    assert "drying_atmosphere_is_recorded" in flag.message
+    assert flag.value == "dry"
+
+
+def test_the_flag_does_not_block_the_handover(writer, registry):
+    """A flag means look, not stop. The command line's exit code and the
+    report's own test of whether the handover may proceed must both say so."""
+    run = run_on(IN_PROSE, writer, registry,
+                 ScriptedEngine({"drying atmosphere": "dry"}))
+    assert run.verdict.value != "REFUSED"
+
+
+def test_no_recovery_means_no_flag(writer, registry):
+    """With no model, nothing is recovered, so nothing is flagged. The
+    verdict is whatever the rules alone decided."""
+    run = run_on(IN_PROSE, writer, registry, ScriptedEngine({}))
+    assert run.blessing.changes == ()
+    assert [v for v in run.blessing.violations
+            if v.severity.value == "flag"] == []
+    assert run.verdict.value == "REFUSED"
+
+
+def test_a_crate_still_broken_stays_refused(writer, registry):
+    """One value recovered does not rescue a crate that fails something
+    else. A flag never outranks a refusal."""
+    run = run_on(MISSING_CONFORMSTO, writer, registry,
+                 ScriptedEngine({"drying atmosphere": "dry"}))
+    assert run.verdict.value == "REFUSED"
+
+
+def test_the_flag_is_written_into_the_checked_crate(writer, registry):
+    """The crate is the lasting record, so the flag has to be in it and not
+    only in the reply a caller happened to read at the time."""
+    run = run_on(IN_PROSE, writer, registry,
+                 ScriptedEngine({"drying atmosphere": "dry"}))
+    text = run.crate.to_json()
+    assert "recovered by a model" in text

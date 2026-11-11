@@ -55,7 +55,7 @@ class Blessing:
 
     # What actually happened with the model, which is three separate facts.
     #
-    # Before 12 November 2026 the record carried only the engine's name, and
+    # Before 11 November 2026 the record carried only the engine's name, and
     # wrote it whether the model had answered, had never been asked, or could
     # not be reached. A crate refused on a repairable requirement, with no
     # model anywhere, carried "model engine: qwen2.5:14b at

@@ -133,7 +133,7 @@ service's opinion.
 | Verdict | Meaning | What the caller should do |
 |---|---|---|
 | `ACCEPTED` | Nothing found | Proceed |
-| `ACCEPTED_WITH_FLAGS` | Nothing stops it, something was recorded | Proceed, and read the flags |
+| `ACCEPTED_WITH_FLAGS` | Nothing stops it, something was recorded. A value a model recovered always lands here | Proceed, and read the flags |
 | `REFUSED` | At least one requirement with severity `refuse` failed | Do not proceed |
 
 **A refusal still returns the crate.** A refusal that exists only as an error
@@ -209,7 +209,7 @@ to a producing team.**
 |---|---|
 | `applies_to` | `root`, `descriptor`, or an entity type |
 | `reads` | The property, or the named value, this requirement looks at |
-| `must` | One of four verbs |
+| `must` | One of the five verbs |
 | `severity` | `refuse` or `flag` |
 | `message` | The sentence a person reads, from the contract file |
 | `one_of` | The only permitted values, or null |

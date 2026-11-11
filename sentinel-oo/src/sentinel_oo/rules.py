@@ -47,6 +47,67 @@ class Violation:
         return Severity(self.requirement.severity)
 
 
+# The name carried by the flag raised for a value a model recovered. It is
+# not a requirement anybody wrote in a contract, so it is named here rather
+# than coming from a file, and it reads as a sentence in a report.
+RECOVERED_VALUE = "a value was recovered by a model, not recorded"
+
+
+def flag_for(change) -> "Violation":
+    """One flag describing one value a model recovered.
+
+    Decided by Neil on 11 November 2026, after the RunPod test showed a
+    crate going from REFUSED to ACCEPTED with nothing in the verdict saying
+    a model had supplied the missing value. The crate's own record already
+    says a value read out of prose is less trustworthy than one somebody
+    wrote down. The verdict now says the same thing instead of contradicting
+    it.
+
+    The handover is not blocked. A flag means somebody should look, and the
+    person worth telling is the producing team, because a step relying on a
+    model to recover what it should be recording is a defect upstream.
+    """
+    sentence = (
+        f"The {change.reads} was not recorded on this entity. The value "
+        f"{change.after!r} was recovered from the text already in the crate "
+        f"by {change.proposed_by}, and confirmed by the requirement "
+        f"{change.confirmed_by}. A value somebody wrote down and a value "
+        "something read out of prose are not equally trustworthy, so "
+        "somebody should check it and ask the producing step to record it "
+        "properly."
+    )
+    requirement = Requirement(
+        name=RECOVERED_VALUE,
+        applies_to=change.node,
+        property=None,
+        named_value=change.reads,
+        must="be recorded",
+        severity=Severity.FLAG.value,
+        message=sentence,
+    )
+    return Violation(
+        requirement=requirement,
+        node=change.node,
+        message=sentence,
+        value=change.after,
+    )
+
+
+def with_flags_for(report: "Report", changes) -> "Report":
+    """The same report, plus one flag for each value a model recovered.
+
+    A fresh report is built rather than the verdict being set, because a
+    report settles its own verdict when it is made and there is no way to
+    set it afterwards. That property is worth more than the convenience of
+    editing one.
+    """
+    if not changes:
+        return report
+    return Report(
+        violations=tuple(report.violations) + tuple(flag_for(c) for c in changes)
+    )
+
+
 @dataclass(frozen=True)
 class Report:
     """What the rules found, and the verdict.
@@ -301,9 +362,22 @@ class ContractChecks(RuleEngine):
             identifier = str(entity.get("@id", ""))
 
             if crate.folder is None:
+                # Without this the reply carried the author's sentence,
+                # "this file holds nothing, so the step produced no data",
+                # when in fact the data files were never sent. Found on
+                # 11 November 2026 by posting a crate's description file on
+                # its own to the web interface.
                 found.append(self._fault(
                     requirement, entity,
                     value="the data did not arrive with this crate",
+                    message=(
+                        f"The data file {identifier!r} was not sent, so "
+                        "whether it holds anything could not be checked, "
+                        "and a check that could not run is refused rather "
+                        "than passed. Send the whole crate as a zip rather "
+                        "than ro-crate-metadata.json on its own. The "
+                        "requirement says: " + requirement.message
+                    ),
                 ))
                 continue
 
@@ -334,11 +408,20 @@ class ContractChecks(RuleEngine):
             return values_of(entity, requirement.property)
         return named_values_of(entity, requirement.named_value, crate)
 
-    def _fault(self, requirement, entity, value=None) -> Violation:
+    def _fault(self, requirement, entity, value=None,
+               message=None) -> Violation:
+        """One failure of one requirement by one entity.
+
+        The sentence a person reads is the contract author's own, which is
+        the point of writing it in the contract. `message` overrides it for
+        the one case where the author's sentence would mislead: the check
+        could not run at all, so saying what the author said about failing
+        it would describe something that was never looked at.
+        """
         return Violation(
             requirement=requirement,
             node=entity["@id"],
-            message=requirement.message,
+            message=message or requirement.message,
             value=value,
         )
 

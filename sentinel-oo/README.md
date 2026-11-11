@@ -29,7 +29,7 @@ There are three answers:
 | Verdict | What it means |
 |---|---|
 | `ACCEPTED` | Nothing was found. The next phase proceeds |
-| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded for somebody to read |
+| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded for somebody to read. A value a model recovered from the crate's own text always lands here |
 | `REFUSED` | At least one requirement failed. The next phase must not proceed |
 
 A refusal still returns the crate, with the findings written inside it. A
@@ -59,9 +59,29 @@ has and still be useless to the phase receiving it.
 
 ## Try it in two minutes
 
-**You need Python 3.11 or later.** On a Mac that is usually `python3` rather
-than `python`. Docker is not needed for this part; it is needed to deploy,
-further down.
+### What you need
+
+| For | What |
+|---|---|
+| The commands in this section | Python 3.11 or later. On a Mac that is usually `python3`, not `python` |
+| Deploying, further down | Docker, running. On a Mac that means Docker Desktop |
+| A model, which is optional | Nothing extra: `deploy.py` starts one for you |
+
+**About the model**, so there are no surprises. It runs under
+[Ollama](https://ollama.com) in its own container. The default,
+`qwen2.5:14b`, is about 9 gigabytes to download. Running it took 15,267
+mebibytes, which is about 15 gigabytes, of graphics card memory when
+measured on 11 November 2026 on an NVIDIA card: 8 gigabytes for the model
+itself and 6 gigabytes of working memory, because Ollama gives the model
+room for 32,768 tokens of text by default. A card with 16 gigabytes is
+therefore tight, and one with 24 gigabytes is comfortable.
+
+On that card the first answer took 39.6 seconds, of which about 19 seconds
+was loading the model onto the card, and later answers took well under a
+second. On a processor alone, including every Mac, because Docker cannot
+reach a Mac's graphics hardware, expect tens of seconds for every answer. A
+smaller model such as `qwen2.5:7b` is about 5 gigabytes and much faster,
+and was not measured on the one job this service gives a model.
 
 Everything below runs from this folder. Install it first, into a virtual
 environment so nothing else on your machine is touched:
@@ -77,9 +97,14 @@ path so the commands below work without setting `PYTHONPATH`.
 
 ```
 export SENTINEL_CONTRACTS=examples/contracts
+export SENTINEL_MODEL_URL=            # no model for these two minutes
 
 python -m sentinel_oo examples/coating-test/valid --contract mixing_to_coating
 ```
+
+Without that second line the service tries to reach a model, finds none on
+a machine that has not deployed one, and says so. It does not wait, and no
+verdict changes.
 
 That accepts. Now one that does not:
 

@@ -33,7 +33,7 @@ how the things in it relate to one another.
 | Verdict | What it means |
 |---|---|
 | `ACCEPTED` | Nothing was found |
-| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded for somebody to look at |
+| `ACCEPTED_WITH_FLAGS` | Nothing stops the handover, but something was recorded for somebody to look at. A value a model recovered from the crate's own text always lands here |
 | `REFUSED` | At least one requirement with severity `refuse` was violated |
 
 ### What makes your instance yours
@@ -172,7 +172,18 @@ requires:
     ...
 ```
 
-Now run both crates again:
+Now run both crates again. These are the same two commands as in steps 2
+and 3:
+
+```
+SENTINEL_CONTRACTS=<your folder> \
+  PYTHONPATH=src python -m sentinel_oo examples/coating-test/valid \
+  --contract my_handover
+
+SENTINEL_CONTRACTS=<your folder> \
+  PYTHONPATH=src python -m sentinel_oo examples/from-another-phase \
+  --contract my_handover
+```
 
 ```
   the coating crate     ACCEPTED
@@ -185,6 +196,15 @@ Now run both crates again:
 **Write this block in every contract you ever write.**
 
 ## Step 5: build up the requirements about your own entities
+
+**Raise the version number each time you change the contract**, from
+`0.2.0` to `0.3.0` here, and once more at each of steps 6, 7 and 8. That is
+what makes the printout at step 9 read `version 0.8.0`. The service does not
+force this on you: it reads whatever number is in the file. It matters
+because the version is copied into the lasting record inside every crate the
+service checks, so a crate checked last month says which wording of the
+contract it was checked against. Two different contracts sharing one version
+number make those records untrustworthy.
 
 Add the rest. Notice that references come in pairs: one requirement that the
 reference is recorded at all, and a second that it lands on something real.
@@ -280,7 +300,24 @@ free text? Everything it answers is checked by your rules before it counts,
 which is what makes having it on safe. A model runs in its own container
 and is called by default.
 
-Now run all five example crates:
+Now run all five example crates. Each is a separate command, the same shape
+as before, with the crate folder changed:
+
+```
+for crate in coating-test/valid \
+             coating-test/invalid/missing-conformsto \
+             coating-test/invalid/dangling-reference \
+             coating-test/invalid/missing-atmosphere \
+             coating-test/invalid/atmosphere-in-prose
+do
+  SENTINEL_CONTRACTS=<your folder> \
+    PYTHONPATH=src python -m sentinel_oo examples/$crate \
+    --contract my_handover
+done
+```
+
+**With no model reachable**, which is what you get if you have not set one
+up, all five come back like this:
 
 ```
   valid                          ACCEPTED
@@ -289,6 +326,37 @@ Now run all five example crates:
   invalid/missing-atmosphere     REFUSED
   invalid/atmosphere-in-prose    REFUSED
 ```
+
+**With a model reachable**, the last line changes, and that change is the
+whole point of this step:
+
+```
+  invalid/atmosphere-in-prose    ACCEPTED_WITH_FLAGS
+
+  FLAG  The drying atmosphere was not recorded on this entity. The value
+        'dry' was recovered from the text already in the crate by
+        qwen2.5:14b, and confirmed by the requirement
+        drying_atmosphere_is_recorded. A value somebody wrote down and a
+        value something read out of prose are not equally trustworthy, so
+        somebody should check it and ask the producing step to record it
+        properly.
+         at #act-drying
+```
+
+That crate does not record the drying atmosphere as a value, but the word
+is sitting in the text of a command inside it, written as
+`dryer --panels rack-A1 --atmosphere dry --hold 20 -q`. The model was asked
+one question, found `dry`, proposed it, and your own requirement checked the
+proposal before it was kept.
+
+`invalid/missing-atmosphere` stays `REFUSED` with a model, because in that
+crate the atmosphere is not written anywhere at all. Nothing is invented.
+
+**The verdict is `ACCEPTED_WITH_FLAGS` rather than `ACCEPTED` on purpose.**
+The handover goes through. The flag is there because the crate itself
+records that this value was read out of prose rather than stated outright,
+and because the team producing the handover should know their step is
+leaving out something a model had to go and find.
 
 ## Step 8: the second lesson
 
@@ -320,6 +388,8 @@ Add those:
 
 `applies_to: root` means the entity describing the crate as a whole.
 
+With no model reachable:
+
 ```
   valid                          ACCEPTED
   invalid/missing-conformsto     REFUSED
@@ -327,6 +397,11 @@ Add those:
   invalid/missing-atmosphere     REFUSED
   invalid/atmosphere-in-prose    REFUSED
 ```
+
+With a model reachable, `invalid/atmosphere-in-prose` is
+`ACCEPTED_WITH_FLAGS` instead, for the reason given in step 7. The other
+four are unchanged: a model is only ever asked about a requirement marked
+`repairable: true`, and only the drying atmosphere is marked that way.
 
 And a refusal reads like this:
 
@@ -379,21 +454,90 @@ That validates your contracts and refuses before building anything, builds
 the generic image, starts an instance with your folder mounted read only,
 and then confirms the running instance is serving exactly what it validated.
 
+Then send it a crate. There are two ways, and they do different things.
+
+**The whole crate, zipped. This is the one to use.** The service sends the
+checked crate back, which is the copy carrying the record of the check and
+the copy the next step in your workflow should receive. It is also the only
+way a requirement using the `hold data` verb can be answered, because that
+verb looks at the data files themselves.
+
+```
+cd <a crate> && zip -qr /tmp/crate.zip . && cd -
+
+curl -s -D - -o /tmp/checked.zip \
+  -X POST -H "Content-Type: application/zip" \
+  --data-binary @/tmp/crate.zip \
+  http://127.0.0.1:8080/check/my_handover
+```
+
+`-D -` prints the headers, which is where the verdict is, and `-o` saves the
+returned crate rather than printing a zip file into your terminal:
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/zip
+Content-Disposition: attachment; filename="checked-ac7326ea4fb4.zip"
+X-Sentinel-Run: ac7326ea4fb4
+X-Sentinel-Verdict: REFUSED
+X-Sentinel-Findings: 2
+```
+
+`HTTP/1.1 200 OK` means the service answered, not that the crate was
+accepted. The verdict is the `X-Sentinel-Verdict` line, and it is one of
+`ACCEPTED`, `ACCEPTED_WITH_FLAGS` or `REFUSED`. The reasons are inside the
+returned crate, in the record the service wrote into it.
+
+**The description file on its own.** Quicker, and useful while you are
+still writing the contract, but nothing comes back except a report, and any
+requirement about the data files is refused because they were not sent.
+
 ```
 curl -s -X POST --data-binary @<a crate>/ro-crate-metadata.json \
   http://127.0.0.1:8080/check/my_handover
 ```
 
-Full details in [DEPLOYING.md](DEPLOYING.md).
+That reply is JSON, and it is long: about 18 kilobytes for the small
+example crate, because it includes the whole checked description. Run as
+written it fills your terminal. Pick the verdict out of it instead:
+
+```
+curl -s -X POST --data-binary @<a crate>/ro-crate-metadata.json \
+  http://127.0.0.1:8080/check/my_handover \
+  | python -c "import json,sys
+r = json.load(sys.stdin)
+print(r['verdict'])
+for f in r['findings']:
+    print(' ', f['requirement'], '|', f['message'])"
+```
+
+For the `missing-atmosphere` crate and the contract built in this tutorial,
+that prints (the sentence is one long line in the terminal; it is wrapped
+here to fit the page):
+
+```
+REFUSED
+  drying_atmosphere_is_recorded | The drying step does not say what
+      atmosphere it ran in, so nobody can tell whether these thickness
+      readings are comparable with each other.
+```
+
+The reply has four fields: `run`, a twelve character identifier for this
+check; `verdict`; `findings`, one entry per requirement that failed, each
+naming the requirement, which entity failed it, and the contract author's
+sentence; and `crate`, the whole checked description.
+
+Full details in [DEPLOYING.md](DEPLOYING.md) and
+[API_MANUAL.md](API_MANUAL.md).
 
 ---
 
 # Part 2: the contract language
 
-Every field, all four verbs, and the three things the language cannot say
+Every field, all five verbs, and the three things the language cannot say
 yet: [WRITING_A_CONTRACT.md](WRITING_A_CONTRACT.md).
 
-The four verbs are the whole vocabulary:
+The five verbs are the whole vocabulary:
 
 | Verb | What it demands |
 |---|---|
@@ -401,9 +545,10 @@ The four verbs are the whole vocabulary:
 | `be unique` | No two entities of this type share it |
 | `point at something in the crate` | The reference resolves to something described here |
 | `be a number between` | It is a number, within a range |
+| `hold data` | The file this entity describes is really in the crate and is not empty |
 
-**You cannot add a fifth by writing a contract.** If you need one, you will
-get a message naming the four that exist and saying where a fifth would be
+**You cannot add a sixth by writing a contract.** If you need one, you will
+get a message naming the five that exist and saying where a sixth would be
 added, and you are blocked until somebody adds it to the product.
 
 ---

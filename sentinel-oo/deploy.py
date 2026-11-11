@@ -77,7 +77,7 @@ DEFAULT_MODEL = "qwen2.5:14b"
 # The model server image, before any model is downloaded into it. Announced
 # and timed separately, because `docker run` pulls it first and a 300 second
 # limit is not enough for a gigabyte and a half on conference wifi. Found on
-# 12 November 2026 by running this with nothing cached.
+# 11 November 2026 by running this with nothing cached.
 MODEL_IMAGE_GB = 2
 
 # Roughly, for the models likely to be asked for, so somebody on hackathon
@@ -341,7 +341,7 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
         "--name", name,
         # The loopback interface only, unless asked otherwise.
         #
-        # Before 12 November 2026 this published on every interface, so on
+        # Before 11 November 2026 this published on every interface, so on
         # shared wifi anyone on the same network could send the instance
         # requests. There is no password of any kind. The API manual warned
         # against exactly that and this program did it by default, which is

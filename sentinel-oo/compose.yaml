@@ -1,24 +1,41 @@
 # A running instance, with its model in a separate container.
 #
-#   docker compose up
+# **`deploy.py` is the ordinary way to deploy.** It does everything this
+# file does and three things this file cannot: it checks every contract and
+# refuses before starting anything, it tells you what it is about to
+# download and waits for a yes, and it confirms afterwards that the running
+# instance is serving what it validated. This file is here for somebody who
+# would rather use Compose.
 #
-# Three services. The sentinel, a model beside it, and a one shot job that
-# pulls the model the first time.
+#   SENTINEL_CONTRACTS=../my-deployment/contracts docker compose up
+#
+# WHICH CONTRACTS. Set SENTINEL_CONTRACTS to your own folder. Without it the
+# worked example is used, which is a coating laboratory and not anybody's
+# handover. Before 11 November 2026 this file always mounted the example and
+# gave no way to change it, so the only route was to edit this file.
+#
+# WHICH PORT. 8080 by default, which is also what `deploy.py` uses, so the
+# two collide. Stop one before starting the other, or set SENTINEL_PORT.
+#
+# WHAT IT DOWNLOADS, the first time only:
+#
+#     the model server, ollama/ollama   about 2 GB
+#     qwen2.5:14b                       about 9 GB
+#     ----------------------------------------------
+#     total                             about 11 GB
+#
+# On a hotel or conference connection that takes a long time. `deploy.py`
+# tells you this and waits; Compose does not ask, so it is written here.
+# The model is kept in a named volume, so it is downloaded once.
 #
 # THE MODEL DOES NOT HAVE TO BE HERE. A model worth using wants a GPU, and
-# the machine with the GPU is usually not the machine running the service.
-# To use one elsewhere, point the service at it and do not start the model
-# container at all:
+# the machine with the GPU is usually not the machine running the service:
 #
-#   SENTINEL_MODEL_URL=http://gpu-box.lan:11434 \
-#     docker compose up sentinel
+#   SENTINEL_MODEL_URL=http://gpu-box.lan:11434 docker compose up sentinel
 #
-# To run with no model, which is a deliberate state rather than a failure:
+# For no model at all, which is a deliberate state rather than a failure:
 #
 #   SENTINEL_MODEL_URL= docker compose up sentinel
-#
-# The contracts are the whole of the tailoring. This file mounts the worked
-# example; a deployment mounts its own folder instead.
 
 services:
 
@@ -30,20 +47,27 @@ services:
       args:
         IMAGE_TAG: dev
     image: sentinel-oo:dev
-    command: ["--serve", "--port", "8080"]
+    command: ["--serve", "--port", "${SENTINEL_PORT-8080}"]
     ports:
-      - "8080:8080"
+      # On this machine only. The service asks for no password of any kind,
+      # so on shared wifi publishing on every interface means anyone on it
+      # can send requests. Set SENTINEL_BIND to 0.0.0.0 to change that, and
+      # put something that authenticates in front of it first.
+      - "${SENTINEL_BIND-127.0.0.1}:${SENTINEL_PORT-8080}:${SENTINEL_PORT-8080}"
     environment:
-      # Where the model is, and which one. Both can be pointed anywhere.
       SENTINEL_MODEL_URL: ${SENTINEL_MODEL_URL-http://model:11434}
       SENTINEL_MODEL: ${SENTINEL_MODEL-qwen2.5:14b}
     volumes:
-      - ./examples/contracts:/contracts:ro
-      - ./examples:/crates:ro
-      - ./out:/out
+      # Your contracts, which are the whole of the tailoring.
+      - ${SENTINEL_CONTRACTS-./examples/contracts}:/contracts:ro
+      - ${SENTINEL_CRATES-./examples}:/crates:ro
+      # Checked crates. A named volume rather than a folder, because
+      # mounting ./out wrote into the repository and nothing said so.
+      # Copy results out with: docker compose cp sentinel:/out ./out
+      - checked-crates:/out
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${SENTINEL_PORT-8080}/health')"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -51,15 +75,15 @@ services:
   # The model, in its own container. Ollama serves an HTTP interface on
   # 11434, needs no key, and nothing leaves the network it is on.
   #
-  # On a machine with an NVIDIA GPU, uncomment the deploy block below to
-  # hand the GPU to this container. Without it the model runs on the CPU,
-  # which works and is slow.
+  # Pinned, because an unpinned image is a different program on a different
+  # day while the model beside it is described as pinned by name.
   model:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
     volumes:
       - model-store:/root/.ollama
-    ports:
-      - "11434:11434"
+    # On a machine with an NVIDIA GPU, uncomment to hand the GPU to this
+    # container. Without it the model runs on the processor, which works and
+    # is slow. On a Mac, Docker cannot reach the graphics hardware at all.
     # deploy:
     #   resources:
     #     reservations:
@@ -68,10 +92,10 @@ services:
     #           count: all
     #           capabilities: [gpu]
 
-  # Pulls the model once, so the first check does not time out waiting for a
-  # download. It exits when the model is there.
+  # Downloads the model once, then exits, so the first check does not wait
+  # on it. This is the slow part: about 9 GB.
   model-pull:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
     depends_on:
       - model
     environment:
@@ -82,6 +106,8 @@ services:
     restart: "no"
 
 volumes:
-  # Keeps the pulled model between runs. Without it every start downloads
-  # several gigabytes again.
+  # Keeps the model between runs. Without it every start downloads about
+  # 9 GB again.
   model-store:
+  # Checked crates, kept out of the repository.
+  checked-crates:
