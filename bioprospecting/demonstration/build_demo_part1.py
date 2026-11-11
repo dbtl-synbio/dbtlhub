@@ -130,11 +130,11 @@ if not accounts:
 if len(accounts) > 1:
     print("More than one open billing account:")
     for line in accounts:
-        print("   ", line.split("\t")[-1])
-    print("Using the first. Set BILLING by hand if that is the wrong one.\n")
+        print("   ", line.split("\\t")[-1])
+    print("Using the first. Set BILLING by hand if that is the wrong one.")
 
-BILLING = accounts[0].split("\t")[0]
-BILLING_NAME = accounts[0].split("\t")[-1]
+BILLING = accounts[0].split("\\t")[0]
+BILLING_NAME = accounts[0].split("\\t")[-1]
 
 print(f"project : {PROJECT}")
 print(f"billing : {BILLING_NAME}")
@@ -745,6 +745,47 @@ notebook = {
     "nbformat": 4,
     "nbformat_minor": 0,
 }
+
+def every_code_cell_compiles(cells) -> int:
+    """Refuse to write a notebook whose Python will not run.
+
+    Every code cell here is written inside a triple-quoted string, so a
+    backslash has to survive one more round of reading than it looks like
+    it does. On 12 November 2026 a `\\n` and a `\\t` became a real newline
+    and a real tab, which broke the first cell of the notebook: an
+    unterminated string. Nothing in the notebook itself would have shown
+    that until somebody ran it in front of an audience.
+    """
+    broken = 0
+    for number, cell in enumerate([c for c in cells
+                                   if c["cell_type"] == "code"], 1):
+        text = "".join(cell["source"])
+        # Colab's shell and magic lines are not Python. A shell line can be
+        # continued with a backslash, so its continuation goes with it.
+        out, skipping = [], False
+        for line in text.splitlines():
+            if skipping:
+                out.append("pass")
+                skipping = line.rstrip().endswith("\\")
+            elif line.lstrip().startswith(("!", "%")):
+                out.append("pass")
+                skipping = line.rstrip().endswith("\\")
+            else:
+                out.append(line)
+        try:
+            compile("\n".join(out), f"cell {number}", "exec")
+        except SyntaxError as exc:
+            broken += 1
+            print(f"  cell {number}: {exc.msg}, line {exc.lineno}")
+            for line in "\n".join(out).splitlines()[max(0, exc.lineno - 2):
+                                                    exc.lineno + 1]:
+                print(f"      {line}")
+    return broken
+
+
+broken = every_code_cell_compiles(cells)
+if broken:
+    raise SystemExit(f"\n{broken} cell(s) will not run. Nothing was written.")
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(json.dumps(notebook, indent=1))
