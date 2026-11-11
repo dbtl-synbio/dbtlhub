@@ -245,8 +245,16 @@ allowed to do. The specific debts are listed under
 
 Three further constraints:
 
-**The default calls nothing.** The repair budget is 0 unless a caller asks
-otherwise, so by default no model is contacted at all. A service with no
+**A model is called by default**, and runs in its own container, which does
+not have to be on this machine. A model worth using wants a GPU, and the
+machine with the GPU is usually not the machine running the service. Where
+it is and which one it is are both environment variables,
+`SENTINEL_MODEL_URL` and `SENTINEL_MODEL`, so a deployment points at its own
+without anything being rebuilt.
+
+Setting the address to nothing, or passing a repair budget of 0, turns it
+off. That is a deliberate state rather than a failure, and `GET /health`
+tells it apart from a model that was wanted and could not be reached. A service with no
 model configured refuses and accepts exactly as one with a model does.
 
 **A proposal is applied only at the entity the rules named.** Without that, a

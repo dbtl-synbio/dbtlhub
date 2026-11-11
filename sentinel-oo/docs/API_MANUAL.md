@@ -224,13 +224,46 @@ For a run the service is not holding, it returns **404** instead.
   "image_tag": "dev",
   "git_commit": "c0525b0",
   "rules_checksum": "none",
-  "model_engine": "none",
+  "model": {
+    "state": "reachable",
+    "engine": "qwen2.5:14b at http://model:11434"
+  },
+  "model_engine": "qwen2.5:14b at http://model:11434",
   "contracts": 2
 }
 ```
 
-`model_engine` of `none` is a recorded fact rather than an absence: this
-instance calls no model.
+### The three model states
+
+A model is called by default and runs in its own container, which does not
+have to be on this machine. `state` is one of three:
+
+| `state` | Meaning |
+|---|---|
+| `none configured` | No model was asked for. A deliberate state |
+| `reachable` | A model is configured and answering |
+| `configured but not answering` | A model was wanted and cannot be reached |
+
+The third carries two more fields, `detail` with the error and `effect`
+saying what follows:
+
+```json
+{
+  "state": "configured but not answering",
+  "engine": "qwen2.5:14b at http://gpu-box.lan:11434",
+  "detail": "URLError: <urlopen error [Errno 8] nodename nor servname provided>",
+  "effect": "checks run normally and no verdict changes. A value recorded only in free text cannot be recovered."
+}
+```
+
+**It is still status 200 in all three cases**, because being without a model
+is a deliberate state and not a failure, and no verdict depends on it.
+
+Before 11 November 2026 all three looked identical, which is how an instance
+can appear to be working while doing none of what it was deployed to do.
+
+`model_engine` is the same name as a plain string, kept so that anything
+already reading that field still works.
 
 ---
 

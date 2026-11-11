@@ -110,11 +110,12 @@ def how_one_check_flows():
     s.message(30, 56, 57.0, "validate(crate, contract)")
     s.message(56, 30, 52.5, "Report, with the verdict already settled", dashed=True)
 
-    s.plain(4, 47.0, "if the repair budget is 0, which is the default:", size=8.8,
-            colour=INK, bold=True)
+    s.plain(4, 47.0, "if the repair budget is 0, or no model is configured:",
+            size=8.8, colour=INK, bold=True)
     s.note(30, 41.5, 50, 4.4, "the model is never asked anything at all", "grey")
 
-    s.plain(4, 36.0, "if a budget was given:", size=8.8, colour=INK, bold=True)
+    s.plain(4, 36.0, "otherwise, which is the default:", size=8.8, colour=INK,
+            bold=True)
     s.message(30, 80, 32.0, "propose a value for one repairable violation")
     s.message(80, 30, 27.5, "a value, or nothing", dashed=True)
     s.message(30, 56, 23.0, "validate(the repaired copy, contract)")
@@ -212,7 +213,8 @@ def the_repair_path():
     s.arrow((30, 22), (22, 13.2), "no", colour=RED, label_offset=(-3.6, 1.6))
 
     s.plain(48, 1.2,
-            "The default repair budget is 0, so by default no model is contacted at all.",
+            "A model is called by default, and runs in its own container, "
+            "which need not be on this machine.",
             size=9.2, colour=INK, ha="center", bold=True)
     s.save("07-the-repair-path.png")
 

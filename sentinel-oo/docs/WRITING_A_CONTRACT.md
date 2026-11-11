@@ -358,8 +358,9 @@ absent or confidently mistaken changes no verdict. Mark a requirement
 repairable because it would be useful if it worked, not because you are
 relying on it.
 
-**By default no model is called at all.** The repair budget defaults to 0, so
-`repairable: true` does nothing until a caller asks for repair.
+**A model is called by default**, so `repairable: true` takes effect as soon
+as a contract is deployed. A deployment turns it off by setting the model
+address to nothing, or a caller by passing a repair budget of 0.
 
 ## What happens when you get it wrong
 

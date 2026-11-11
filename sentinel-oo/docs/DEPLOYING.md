@@ -91,6 +91,8 @@ Deployed.
 | `--port <n>` | Which port to serve on. The default is 8080 |
 | `--name <n>` | The container name. The default is `sentinel-<your folder's parent>` |
 | `--image <n>` | The image to build and run. The default is `sentinel-oo:dev` |
+| `--model-url <url>` | Where the model is. An empty value means no model |
+| `--model <name>` | Which model to use, pinned by name |
 | `--stop` | Stop and remove the instance |
 
 ## Using it once it is running
@@ -150,17 +152,62 @@ A test fails if the two interfaces ever give different verdicts.
 **Not yet tested against a real Model Context Protocol client.** It is tested
 against the protocol as written down.
 
-## A model is optional
+## The model, and where it runs
 
-With no model configured the service refuses and accepts exactly as it does
-with one, except that it cannot recover a value that is present in a crate
-only inside free text. The repair budget defaults to 0, so by default no
-model is called at all.
+**A model is called by default.** A sentinel at a handover without one is
+not what this project is about.
 
-Two local models with 14 billion parameters each were measured on this on
-10 November 2026 and neither could do the job. That measurement is in the
-product README. A model being wrong, slow, absent or confidently mistaken
-changes no verdict and writes nothing into any record.
+**It runs in its own container, which does not have to be on this machine.**
+A model worth using wants a GPU, and the machine with the GPU is usually not
+the machine running the service.
+
+| Option | Environment variable | What it is |
+|---|---|---|
+| `--model-url` | `SENTINEL_MODEL_URL` | Where the model is. Default `http://model:11434` |
+| `--model` | `SENTINEL_MODEL` | Which model, pinned by name. Default `qwen2.5:14b` |
+
+```
+python deploy.py <contracts>                                 a model beside it
+python deploy.py <contracts> --model-url http://gpu:11434    a model elsewhere
+python deploy.py <contracts> --model-url ""                  no model at all
+```
+
+`compose.yaml` starts a model container alongside the service, using the
+`ollama/ollama` image, with a volume so the model is not downloaded again on
+every start. On a machine with an NVIDIA GPU, uncomment the `deploy` block
+in that file to hand the GPU to the model container.
+
+### Knowing whether it is actually there
+
+`deploy.py` says so at step 4, and `GET /health` reports one of three
+states:
+
+| State | Meaning |
+|---|---|
+| `none configured` | No model was asked for. Deliberate |
+| `reachable` | A model is configured and answering |
+| `configured but not answering` | A model was wanted and cannot be reached |
+
+The third carries the error and says what follows from it: checks run
+normally, no verdict changes, and a value recorded only in free text cannot
+be recovered. Before 11 November 2026 all three looked identical, which is
+how an instance can appear to be working while doing none of what it was
+deployed to do.
+
+### Why having it on is safe
+
+Not because models are reliable. Because of where it sits.
+
+It is asked one question, about a check that has already failed, at a place
+the rules named. Whatever it answers is written to a copy and the whole
+contract is run again, and the change is kept only if every requirement
+reading that value now passes and nothing new broke anywhere.
+
+Measured on 11 November 2026 against a running instance: given a crate whose
+value sits inside a command line, a 14 billion parameter model recovered it
+and the handover was accepted in about half a second. Given a crate where
+the value is not present at all, it wrote nothing and the handover was
+refused.
 
 ## What your deployment folder needs
 

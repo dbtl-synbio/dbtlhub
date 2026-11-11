@@ -1,22 +1,28 @@
-# The product, for development.
+# A running instance, with its model in a separate container.
 #
-# This file builds the generic image and nothing else. It mounts no contracts,
-# so a service started from here knows no handovers and refuses to check
-# anything, which is correct: the product ships no contracts.
+#   docker compose up
 #
-#   docker compose -f sentinel-oo/compose.yaml build
+# Three services. The sentinel, a model beside it, and a one shot job that
+# pulls the model the first time.
 #
-# To run a tailored instance, use a deployment's own compose file, which
-# mounts that deployment's contracts into this same image. For example:
+# THE MODEL DOES NOT HAVE TO BE HERE. A model worth using wants a GPU, and
+# the machine with the GPU is usually not the machine running the service.
+# To use one elsewhere, point the service at it and do not start the model
+# container at all:
 #
-#   docker compose -f deployments/bioprospecting/compose.yaml up
+#   SENTINEL_MODEL_URL=http://gpu-box.lan:11434 \
+#     docker compose up sentinel
 #
-# The build context is this folder. Nothing outside sentinel-oo/ is read,
-# which is what lets the product be copied out of this repository on its own
-# and still build, test and run.
+# To run with no model, which is a deliberate state rather than a failure:
+#
+#   SENTINEL_MODEL_URL= docker compose up sentinel
+#
+# The contracts are the whole of the tailoring. This file mounts the worked
+# example; a deployment mounts its own folder instead.
+
 services:
 
-  build-only:
+  sentinel:
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,4 +30,58 @@ services:
       args:
         IMAGE_TAG: dev
     image: sentinel-oo:dev
-    command: ["--help"]
+    command: ["--serve", "--port", "8080"]
+    ports:
+      - "8080:8080"
+    environment:
+      # Where the model is, and which one. Both can be pointed anywhere.
+      SENTINEL_MODEL_URL: ${SENTINEL_MODEL_URL-http://model:11434}
+      SENTINEL_MODEL: ${SENTINEL_MODEL-qwen2.5:14b}
+    volumes:
+      - ./examples/contracts:/contracts:ro
+      - ./examples:/crates:ro
+      - ./out:/out
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # The model, in its own container. Ollama serves an HTTP interface on
+  # 11434, needs no key, and nothing leaves the network it is on.
+  #
+  # On a machine with an NVIDIA GPU, uncomment the deploy block below to
+  # hand the GPU to this container. Without it the model runs on the CPU,
+  # which works and is slow.
+  model:
+    image: ollama/ollama:latest
+    volumes:
+      - model-store:/root/.ollama
+    ports:
+      - "11434:11434"
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Pulls the model once, so the first check does not time out waiting for a
+  # download. It exits when the model is there.
+  model-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      - model
+    environment:
+      OLLAMA_HOST: http://model:11434
+    entrypoint: ["sh", "-c",
+                 "until ollama list >/dev/null 2>&1; do sleep 1; done;
+                  ollama pull ${SENTINEL_MODEL-qwen2.5:14b}"]
+    restart: "no"
+
+volumes:
+  # Keeps the pulled model between runs. Without it every start downloads
+  # several gigabytes again.
+  model-store:

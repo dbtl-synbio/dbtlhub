@@ -142,7 +142,7 @@ one document, the API manual, and the system manual. Rebuild them with
 | `src/sentinel_oo/crate.py` | The crate, held immutably. Reading, checksums, writing |
 | `src/sentinel_oo/contract.py` | Reading contract files. Executes nothing |
 | `src/sentinel_oo/rules.py` | Applying a contract. The only component that may decide |
-| `src/sentinel_oo/engines.py` | The model adapter. Advisory, and off by default |
+| `src/sentinel_oo/engines.py` | The model adapter. On by default, over the network |
 | `src/sentinel_oo/repair.py` | Writing a proposed value, then handing it back to the rules |
 | `src/sentinel_oo/provenance.py` | Writing the record into a crate |
 | `src/sentinel_oo/blessing.py` | That record, as pure data |
@@ -176,17 +176,58 @@ docker build -t sentinel-oo:dev .
 The image runs the test suite at build time and cannot be produced if it
 fails.
 
-## A model is optional, and off by default
+## The model, which is on by default and in its own container
 
-The only job a model has here is to say whether a value the rules could not
-find is written down somewhere in free text. Whatever it answers is checked
-by the rules before it counts, and by default no model is contacted at all.
+A sentinel at a handover without a model is not what this project is about,
+so one is called unless a deployment says otherwise.
 
-Two models running locally, each with 14 billion parameters, were measured
-on that job on 10 November 2026 and neither could do it. Every outcome was a
-refusal with nothing written, which is the system behaving correctly. The
-measurement is in section 7 of
-[docs/SYSTEM_MANUAL.md](docs/SYSTEM_MANUAL.md).
+**It has exactly one job.** When a check fails, it is asked whether the
+value is already written down somewhere in the record, including inside free
+text. A rule can only read a value recorded as a value; a fact sitting in a
+sentence is invisible to it.
+
+**Whatever it answers goes back through the rules before it counts.** That is
+what makes turning it on safe, and it is a property of where the model sits
+rather than of models being reliable. A proposal is kept only if every
+requirement reading that value now passes and nothing new broke. Measured
+over two days, every wrong answer was discarded and nothing was written.
+
+**The model runs in its own container**, and that container does not have to
+be on this machine. A model worth using wants a GPU, and the machine with
+the GPU is usually not the machine running the service. Two settings, both
+environment variables:
+
+| Setting | What it is | Default |
+|---|---|---|
+| `SENTINEL_MODEL_URL` | Where the model is | `http://model:11434` |
+| `SENTINEL_MODEL` | Which model, pinned by name | `qwen2.5:14b` |
+
+```
+docker compose up                                      model beside it
+SENTINEL_MODEL_URL=http://gpu-box.lan:11434 ...        model elsewhere
+SENTINEL_MODEL_URL= ...                                no model at all
+```
+
+`GET /health` says which of three states it is in: no model configured, a
+model configured and answering, or a model configured and not answering.
+Before 11 November 2026 all three looked identical, which is how an instance
+can appear to be working while doing none of what it was deployed to do.
+
+**What it can and cannot do, measured.** Given a crate whose drying
+atmosphere is recorded only inside the command line `dryer --atmosphere dry`,
+a 14 billion parameter model running locally recovered it and the handover
+was accepted. Given a crate where the value is not present at all, it wrote
+nothing and the handover was refused.
+
+Given a harder case, a gene calling setting recorded only as the flag `-c`,
+where recovering the value means knowing what the flag means, two models of
+the same size failed on 10 November 2026 and both stated a wrong meaning
+without hedging. Every one of those outcomes was a refusal with nothing
+written.
+
+So it helps when the value is in the text and fails safely when it is not.
+Section 7 of [docs/SYSTEM_MANUAL.md](docs/SYSTEM_MANUAL.md) has the full
+measurement.
 
 ## Authors
 

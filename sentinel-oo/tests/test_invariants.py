@@ -179,9 +179,29 @@ def test_fixtures_stay_inside_the_product():
 # network. The conftest fixture makes any socket use fail, so this test passing
 # with that fixture active is the assertion.
 # How it would break: a convenience default that quietly needs a key.
-def test_default_path_touches_no_network(published, sentinel):
-    run = sentinel.check(published)
+def test_no_network_when_no_model_is_configured(published, writer):
+    """Rewritten on 11 November 2026, when the model became the default.
+
+    The old version checked a crate with no contract, so the repair path
+    was never entered and the engine was never called. It passed for a
+    reason that had nothing to do with what it claimed.
+
+    What is true now: a service told to use no model touches no network,
+    and every test in this suite runs with sockets disabled, so a test that
+    quietly needed one would fail rather than pass on a machine that
+    happens to have a model running.
+    """
+    from conftest import CONTRACTS, a_sentinel
+    from sentinel_oo.contract import ContractRegistry
+    from sentinel_oo.engines import NullEngine
+    from sentinel_oo.rules import ContractChecks
+
+    service = a_sentinel(writer, rules=ContractChecks(),
+                         registry=ContractRegistry.from_dir(CONTRACTS))
+    service.engine = NullEngine()
+    run = service.check(published, contract_name="mixing_to_coating")
     assert run.crate is not None
+    assert run.blessing.engine_used == "none"
 
 
 # Decision: the returned crate is still a valid crate.

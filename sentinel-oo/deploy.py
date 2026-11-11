@@ -160,7 +160,7 @@ def stop_instance(name: str, quiet: bool = False) -> None:
 
 
 def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
-                   port: int) -> None:
+                   port: int, model_url: str | None, model: str | None) -> None:
     stop_instance(name, quiet=True)
 
     command = [
@@ -173,6 +173,19 @@ def start_instance(name: str, image: str, contracts: Path, crates: Path | None,
     ]
     if crates is not None:
         command += ["-v", f"{crates.resolve()}:/crates:ro"]
+
+    # Where the model is, and which one. The model runs in its own
+    # container, and that container does not have to be on this machine: a
+    # model worth using wants a GPU, and the machine with the GPU is
+    # usually not the machine running the service.
+    #
+    # An empty address is how a deployment says it wants no model, which is
+    # a deliberate state rather than a failure.
+    if model_url is not None:
+        command += ["-e", f"SENTINEL_MODEL_URL={model_url}"]
+    if model:
+        command += ["-e", f"SENTINEL_MODEL={model}"]
+
     command += [image, "--serve", "--port", str(port)]
 
     started = run(command, timeout=120)
@@ -281,13 +294,19 @@ def deploy(args) -> int:
         build_image(args.image)
 
     say("3. Starting the instance")
-    start_instance(name, args.image, contracts, crates, args.port)
+    start_instance(name, args.image, contracts, crates, args.port,
+                   args.model_url, args.model)
 
     say("4. Checking the instance serves what was validated")
     health = wait_until_answering(name, args.port)
     print(f"   answering on http://127.0.0.1:{args.port}")
-    print(f"   image {health.get('image_tag')}, commit {health.get('git_commit')}, "
-          f"model engine {health.get('model_engine')}")
+    print(f"   image {health.get('image_tag')}, commit {health.get('git_commit')}")
+    model_state = (health.get("model") or {})
+    print(f"   model: {model_state.get('state', 'unknown')}"
+          f"  ({model_state.get('engine', 'none')})")
+    if model_state.get("state") == "configured but not answering":
+        print(f"   WARNING: {model_state.get('detail', '')}")
+        print(f"            {model_state.get('effect', '')}")
     confirm_it_serves_what_was_validated(registry, args.port)
 
     # The one with the most requirements, because a folder often holds a
@@ -330,6 +349,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--port", type=int, default=DEFAULT_PORT,
                         help=f"the port to serve on, default {DEFAULT_PORT}")
+    parser.add_argument(
+        "--model-url", default=os.environ.get("SENTINEL_MODEL_URL"),
+        help=("where the model is, such as http://gpu-box.lan:11434. The "
+              "model runs in its own container and does not have to be on "
+              "this machine. Pass an empty value for no model at all"),
+    )
+    parser.add_argument(
+        "--model", default=os.environ.get("SENTINEL_MODEL"),
+        help="which model to use, pinned by name so a run repeats",
+    )
     parser.add_argument("--image", default=DEFAULT_IMAGE,
                         help=f"the image to build and run, default {DEFAULT_IMAGE}")
     parser.add_argument("--name",

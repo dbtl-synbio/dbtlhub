@@ -79,10 +79,30 @@ def test_a_budget_of_one_makes_at_most_one_change(writer, registry):
     assert len(run.blessing.changes) == 1
 
 
-def test_the_default_is_no_repair_at_all(writer, registry):
+def test_the_default_is_to_ask_the_model(writer, registry):
+    """Changed on 11 November 2026. It used to be that no model was called
+    unless a caller asked for one, and a capability that is off by default
+    is a capability nobody uses.
+
+    Turning it on is safe because of where the model sits, not because
+    models are reliable: it is asked one question about a check that has
+    already failed, and everything it answers goes back through the rules.
+    The tests below are the ones that hold that in place.
+    """
     engine = ScriptedEngine({"drying atmosphere": "dry"})
     run = service(writer, registry, engine).check(
         Crate.from_path(IN_PROSE), contract_name="mixing_to_coating"
+    )
+    assert engine.asked != [], "the model was not asked"
+    assert run.verdict.value == "ACCEPTED"
+
+
+def test_a_budget_of_zero_still_asks_nothing(writer, registry):
+    """The way to turn it off, for a caller that wants determinism."""
+    engine = ScriptedEngine({"drying atmosphere": "dry"})
+    run = service(writer, registry, engine).check(
+        Crate.from_path(IN_PROSE), contract_name="mixing_to_coating",
+        repair_budget=0,
     )
     assert engine.asked == []
     assert run.blessing.changes == ()
@@ -269,3 +289,69 @@ def test_a_model_that_is_not_installed_does_not_raise(writer, registry):
     run = run_on(IN_PROSE, writer, registry, engine)
     assert run.verdict.value == "REFUSED"
     assert run.blessing.changes == ()
+
+
+# ------------------------------------------------- the model over the network
+
+
+class TestHttpEngine:
+    """The engine a deployment actually uses.
+
+    The model runs in its own container, which does not have to be on this
+    machine, so this engine reaches it over the network rather than running
+    a command. These tests never make a real request: every test in this
+    suite runs with sockets disabled, so one that quietly needed a model
+    would fail rather than pass on a machine that happens to have one
+    running.
+    """
+
+    def engine(self, **kwargs):
+        from sentinel_oo.engines import HttpEngine
+
+        return HttpEngine(**kwargs)
+
+    def test_it_reads_its_address_and_model_from_the_environment(self, monkeypatch):
+        """So a deployment points at its own without anything being rebuilt."""
+        monkeypatch.setenv("SENTINEL_MODEL_URL", "http://gpu-box.lan:11434")
+        monkeypatch.setenv("SENTINEL_MODEL", "llama3.3:70b")
+        e = self.engine()
+        assert e.url == "http://gpu-box.lan:11434"
+        assert e.model == "llama3.3:70b"
+        assert "llama3.3:70b" in e.name and "gpu-box" in e.name
+
+    def test_an_empty_address_means_no_model(self, monkeypatch):
+        """A deliberate state rather than a failure."""
+        monkeypatch.setenv("SENTINEL_MODEL_URL", "")
+        e = self.engine()
+        assert e.name == "none"
+        assert e.available() is False
+        assert e.ask("anything") == ""
+
+    def test_a_model_that_is_not_there_answers_nothing(self):
+        """Not an exception. A model being absent must never refuse a good
+        crate, so being unreachable is reported the same way as finding
+        nothing, which is a correct and expected answer."""
+        e = self.engine(url="http://nowhere.invalid:11434")
+        assert e.ask("anything") == ""
+        assert e.available() is False
+
+    def test_it_says_why_it_could_not_be_reached(self):
+        """`GET /health` reports this, so a deployment that wanted a model
+        and cannot reach one does not look like one that wanted none."""
+        e = self.engine(url="http://nowhere.invalid:11434")
+        e.available()
+        assert e.last_error
+        assert "Error" in e.last_error or "error" in e.last_error
+
+    def test_a_trailing_slash_does_not_produce_a_double_one(self):
+        e = self.engine(url="http://model:11434/")
+        assert e.url == "http://model:11434"
+
+    def test_an_unreachable_model_proposes_nothing_and_changes_no_verdict(
+        self, writer, registry
+    ):
+        """The whole safety argument, with the engine a deployment uses."""
+        run = run_on(IN_PROSE, writer, registry,
+                     self.engine(url="http://nowhere.invalid:11434"))
+        assert run.verdict.value == "REFUSED"
+        assert run.blessing.changes == ()

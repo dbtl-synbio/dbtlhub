@@ -41,6 +41,74 @@ for it.
 
 ---
 
+---
+
+## The model
+
+Today the model has exactly one job: when a requirement fails, it is asked
+whether that value is already written down somewhere in the record,
+including inside free text. It proposes and the rules dispose.
+
+### A second job: say which agreed term an unrecognised one means
+
+**Agreed on 11 November 2026.**
+
+When a crate uses a term no contract recognises, ask the model which agreed
+term it means. **Record the suggestion and never apply it.** The handover
+stays failed until a person confirms, and answering "no term fits" is useful
+rather than a failure, because it tells somebody a new term has to be
+agreed.
+
+**Why it is the right second job.** It has the same shape as the first. The
+model is asked one narrow question about something that has already failed,
+it cannot decide anything, and what it offers is checked or confirmed before
+it counts. A second job of that shape is worth having; a job of any other
+shape is not.
+
+**Why it matters.** Two sites doing the same work will not use the same
+words for it. The rule that holds the vocabulary together is that **a site
+may rename an agreed term but may not coin one**, and the thing that makes
+that rule usable rather than irritating is something that suggests which
+agreed term a local word probably means.
+
+**What it needs.**
+
+| | |
+|---|---|
+| The `vocabulary/` folder | Exists and is empty. It needs the agreed core terms, and one file per site mapping local names onto them |
+| A way to record a suggestion | Written into the returned crate, clearly marked as unconfirmed, in the way a recovered value already is |
+| A rule that it is never applied | The equivalent of the test that says a discarded proposal leaves no trace |
+| A way for a person to confirm one | Which is a decision about process, not only about code |
+
+**Where it comes from.** The `sentinel` framework already does this, and the
+thinking behind it is the strongest part of that work. This would be
+`sentinel-oo` catching up rather than inventing anything.
+
+### A slow model delays a handover
+
+The model is called during a check, and a check is what a pipeline waits
+for. The timeout is 300 seconds, which is long enough for a cold model on
+another machine to load, and that is 300 seconds a pipeline can block for.
+
+**Why it has not bitten yet.** A warm model answers in about half a second,
+and only requirements marked `repairable` are ever asked about, which is
+typically one in a contract of nineteen.
+
+**What it needs.** Either a shorter timeout with the long one only on the
+first call, or the repair moved off the path the caller waits on. Both are
+a change in shape rather than a tweak, which is why neither is done.
+
+**Found** on 11 November 2026, when the model became the default.
+
+### The network engine has not been tested against a slow or broken server
+
+It is tested against a server that is not there, and by hand against a real
+one. It has never been given a server that accepts a connection and then
+never answers, or that returns something that is not JSON. Both are things
+a real model host does.
+
+---
+
 ## The contract language
 
 These three are the limits people will hit. Each needs a new verb or a new

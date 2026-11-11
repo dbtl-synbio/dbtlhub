@@ -34,9 +34,13 @@ writing the model's instructions.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
+import urllib.request
 from abc import ABC, abstractmethod
+
+NO_MODEL = "none"
 
 PROMPT = """A check failed on a laboratory record.
 
@@ -61,7 +65,12 @@ EXCERPT_LIMIT = 4000
 class Engine(ABC):
     """What a model adapter must do. Nothing here decides anything."""
 
-    name = "none"
+    name = NO_MODEL
+
+    def available(self) -> bool:
+        """Whether a model is actually reachable. Overridden where it can be
+        found out. Asked by `GET /health`, never by a check."""
+        return False
 
     @abstractmethod
     def propose_value(self, crate, violation, contract=None) -> str | None:
@@ -77,9 +86,13 @@ class Engine(ABC):
 
 
 class NullEngine(Engine):
-    """The default. Calls nothing, opens nothing, proposes nothing."""
+    """Calls nothing, opens nothing, proposes nothing.
 
-    name = "none"
+    Not the default any more. It is what a deployment gets when it asks for
+    no model, and what every test uses that is not about the model.
+    """
+
+    name = NO_MODEL
 
     def propose_value(self, crate, violation, contract=None) -> str | None:
         return None
@@ -141,6 +154,105 @@ class CommandEngine(Engine):
         except (OSError, subprocess.TimeoutExpired):
             return ""
         return done.stdout if done.returncode == 0 else ""
+
+    def propose_value(self, crate, violation, contract=None) -> str | None:
+        return read_answer(self.ask(build_prompt(crate, violation, contract)))
+
+
+class HttpEngine(Engine):
+    """A model reached over the network, which is how a deployment reaches one.
+
+    This is the default, because a sentinel without a model is not what this
+    project is about. The model runs in its own container, and that container
+    does not have to be on this machine: a model worth using wants a GPU, and
+    the machine with the GPU is usually not the machine running the service.
+
+    Two settings, both environment variables, so a deployment points at its
+    own model without anything being rebuilt:
+
+        SENTINEL_MODEL_URL   http://model:11434   a container alongside
+                             http://gpu-box:11434 a machine with a GPU
+        SENTINEL_MODEL       which model to use, pinned by name so a run
+                             repeats
+
+    Set SENTINEL_MODEL_URL to nothing to run with no model at all.
+
+    Ollama's interface is used because it is what the measured models ran
+    under, it needs no key, and nothing leaves the network it is on.
+
+    **Being unreachable is not an error.** A model that is absent, slow,
+    broken or wrong must never change a verdict, and a failure here is
+    reported as "I found nothing", which is a correct and expected answer.
+    Whether it was reachable is reported separately, by `available()`, so a
+    deployment can tell the difference between a model that found nothing and
+    a model that was never there.
+    """
+
+    DEFAULT_URL = "http://model:11434"
+    DEFAULT_MODEL = "qwen2.5:14b"
+
+    def __init__(self, url: str | None = None, model: str | None = None,
+                 timeout: int = 300):
+        if url is None:
+            url = os.environ.get("SENTINEL_MODEL_URL", self.DEFAULT_URL)
+        self.url = (url or "").rstrip("/")
+        self.model = model or os.environ.get("SENTINEL_MODEL",
+                                             self.DEFAULT_MODEL)
+        # Longer than a local subprocess would need. A model on another
+        # machine, asked for the first time, has to be loaded onto the GPU
+        # before it answers at all.
+        self.timeout = timeout
+        self.last_error: str | None = None
+
+    @property
+    def name(self) -> str:
+        if not self.url:
+            return NO_MODEL
+        return f"{self.model} at {self.url}"
+
+    def available(self) -> bool:
+        """Is a model actually there? Asked by `GET /health`, never by a check.
+
+        A deployment that wanted a model and cannot reach one is in a
+        different state from one that wanted none, and it should be able to
+        say so rather than looking identical.
+        """
+        if not self.url:
+            return False
+        try:
+            with urllib.request.urlopen(f"{self.url}/api/tags", timeout=5) as r:
+                json.loads(r.read().decode())
+            self.last_error = None
+            return True
+        except Exception as exc:  # noqa: BLE001
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return False
+
+    def ask(self, prompt: str) -> str:
+        """Send the prompt. Any failure is an empty answer, never an exception."""
+        if not self.url:
+            return ""
+        body = json.dumps({
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            # Nothing invented. The job is to read a value that is already
+            # in the record, so there is nothing for a high temperature to
+            # help with and a great deal for it to spoil.
+            "options": {"temperature": 0},
+        }).encode()
+        request = urllib.request.Request(
+            f"{self.url}/api/generate", data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as r:
+                answer = json.loads(r.read().decode())
+            self.last_error = None
+            return answer.get("response", "")
+        except Exception as exc:  # noqa: BLE001
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return ""
 
     def propose_value(self, crate, violation, contract=None) -> str | None:
         return read_answer(self.ask(build_prompt(crate, violation, contract)))

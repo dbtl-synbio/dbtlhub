@@ -270,10 +270,11 @@ against a temperature.
       thickness readings cannot be compared with each other.
 ```
 
-`repairable: true` means a model may be asked one question when this fails:
-is the value already written down somewhere in the record, including inside
+`repairable: true` means a model is asked one question when this fails: is
+the value already written down somewhere in the record, including inside
 free text? Everything it answers is checked by your rules before it counts,
-and by default no model is called at all.
+which is what makes having it on safe. A model runs in its own container
+and is called by default.
 
 Now run all five example crates:
 

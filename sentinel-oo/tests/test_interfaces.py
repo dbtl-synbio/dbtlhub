@@ -22,11 +22,15 @@ from sentinel_oo.rules import ContractChecks
 from conftest import BROKEN, CONTRACTS, PUBLISHED
 
 
-def a_service(writer):
+def a_service(writer, engine=None):
+    from sentinel_oo.engines import NullEngine
+
     return Sentinel(
         provenance=writer,
         rules=ContractChecks(),
         registry=ContractRegistry.from_dir(CONTRACTS),
+        # No model unless a test asks for one. See conftest.a_sentinel.
+        engine=engine or NullEngine(),
         build=BuildIdentity("test", "0000000", "none"),
     )
 
@@ -149,7 +153,36 @@ def test_health_reports_the_build_and_the_engine(api):
     status, body = api.dispatch("GET", "/health", b"")
     assert status == 200
     assert body["alive"] is True
+    # These tests construct a service with no model, which is one of the
+    # three states health must tell apart.
+    assert body["model"]["state"] == "none configured"
     assert body["model_engine"] == "none"
+
+
+def test_health_tells_a_missing_model_from_no_model(writer):
+    """A deployment that wanted a model and cannot reach one used to look
+    exactly like one that wanted none. That is how an instance can appear
+    to be working while doing none of what it was deployed to do.
+
+    Still 200 in both cases, because being without a model is a deliberate
+    state rather than a failure, and no verdict depends on it.
+    """
+    from sentinel_oo.engines import HttpEngine
+
+    service = Sentinel(
+        provenance=writer,
+        rules=ContractChecks(),
+        registry=ContractRegistry.from_dir(CONTRACTS),
+        engine=HttpEngine(url="http://nowhere.invalid:11434"),
+        build=BuildIdentity("test", "0000000", "none"),
+    )
+    status, body = Api(service, RunStore(limit=5)).dispatch("GET", "/health", b"")
+
+    assert status == 200
+    assert body["model"]["state"] == "configured but not answering"
+    assert "nowhere.invalid" in body["model"]["engine"]
+    assert body["model"]["detail"], "it should say what went wrong"
+    assert "no verdict changes" in body["model"]["effect"]
 
 
 def test_the_wrong_method_says_so(api):

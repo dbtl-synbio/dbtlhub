@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from sentinel_oo import BuildIdentity, Crate, ProvenanceWriter, Sentinel
+from sentinel_oo.engines import NullEngine
 from sentinel_oo.contract import ContractRegistry, Requirement
 from sentinel_oo.rules import ContractChecks, Report, RuleEngine, Severity, Violation
 
@@ -115,11 +116,19 @@ def registry() -> ContractRegistry:
     return ContractRegistry.from_dir(CONTRACTS)
 
 
-def a_sentinel(writer, rules=None, registry=None) -> Sentinel:
+def a_sentinel(writer, rules=None, registry=None, engine=None) -> Sentinel:
+    """No model unless a test asks for one.
+
+    The default engine became a real one over the network on 11 November
+    2026. A test that picked that up would pass or fail depending on
+    whether a model happened to be running on the machine, which is not a
+    property of this code. Tests that are about the model pass their own.
+    """
     return Sentinel(
         provenance=writer,
         rules=rules,
         registry=registry,
+        engine=engine or NullEngine(),
         build=BuildIdentity(
             image_tag="test",
             git_commit="0000000",

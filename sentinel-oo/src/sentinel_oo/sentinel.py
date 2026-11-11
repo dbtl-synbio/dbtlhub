@@ -19,7 +19,18 @@ from .blessing import Blessing, ContractSource
 from .contract import Contract, ContractRegistry
 from .crate import Crate
 from .identity import BuildIdentity
-from .engines import Engine, NullEngine
+from .engines import Engine, HttpEngine, NullEngine
+
+# How many violations a model may be asked about in one check.
+#
+# Not zero, because a model that is never asked is a model that is not
+# there. Not large, because each question is a round trip to another
+# machine and a handover with many repairable violations is a handover with
+# a bigger problem than a missing value.
+#
+# Only violations the contract marks `repairable` are ever counted against
+# this, and in a contract of nineteen requirements typically one is.
+DEFAULT_REPAIR_BUDGET = 3
 from .provenance import ProvenanceWriter, now
 from .repair import Repairer
 from .rules import Report, RuleEngine
@@ -51,10 +62,21 @@ class Sentinel:
         self.provenance = provenance
         self.rules = rules
         self.registry = registry
-        # Attached whether used or not. The default calls nothing, so a
-        # service with no model configured works exactly as one with a model
-        # does, except that it cannot read a value out of prose.
-        self.engine = engine or NullEngine()
+        # A model by default, reached over the network from its own
+        # container. A sentinel at a handover without one is not what this
+        # project is about, and a capability that is off by default is a
+        # capability nobody uses.
+        #
+        # Turning it on is safe because of where the model sits in the
+        # design, not because models are reliable. It is asked one question,
+        # about a check that has already failed, and everything it answers
+        # goes back through the rules before it counts. Measured on
+        # 10 November 2026, two models that answered wrongly changed no
+        # verdict and wrote nothing.
+        #
+        # Pass NullEngine() for no model, or set SENTINEL_MODEL_URL to
+        # nothing, which is a deliberate state rather than a failure.
+        self.engine = engine if engine is not None else HttpEngine()
         self.repairer = Repairer(rules) if rules is not None else None
         self.build = build or BuildIdentity()
 
@@ -63,7 +85,7 @@ class Sentinel:
         crate: Crate,
         contract_name: str | None = None,
         contract: Contract | None = None,
-        repair_budget: int = 0,
+        repair_budget: int = DEFAULT_REPAIR_BUDGET,
     ) -> Run:
         """Read a crate, check it against a contract, record what was found.
 

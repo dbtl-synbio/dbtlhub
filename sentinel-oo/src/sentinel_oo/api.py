@@ -25,6 +25,7 @@ from typing import Callable
 
 from . import __version__
 from .contract import ContractNotFound
+from .engines import NO_MODEL
 from .crate import Crate, CrateMalformed
 
 
@@ -200,8 +201,36 @@ class Api:
         }
 
     def health(self, params, body):
+        """Including which of three states the model is in.
+
+        A deployment that wanted a model and cannot reach one used to look
+        exactly like one that wanted none: both reported "none" and both
+        carried on quietly. That is how an instance can appear to be working
+        while doing none of what it was deployed to do.
+
+        The three states are told apart and named, and the answer is still
+        200 in all three, because being without a model is a deliberate
+        state and not a failure. Nothing here affects a verdict.
+        """
         build = self.sentinel.build
         engine = getattr(self.sentinel, "engine", None)
+        name = getattr(engine, "name", NO_MODEL)
+
+        if name == NO_MODEL:
+            model = {"state": "none configured", "engine": NO_MODEL}
+        elif engine.available():
+            model = {"state": "reachable", "engine": name}
+        else:
+            model = {
+                "state": "configured but not answering",
+                "engine": name,
+                "detail": getattr(engine, "last_error", None),
+                "effect": (
+                    "checks run normally and no verdict changes. A value "
+                    "recorded only in free text cannot be recovered."
+                ),
+            }
+
         return 200, {
             "alive": True,
             "service": "sentinel-oo",
@@ -209,7 +238,9 @@ class Api:
             "image_tag": build.image_tag,
             "git_commit": build.git_commit,
             "rules_checksum": build.rules_checksum,
-            "model_engine": getattr(engine, "name", "none"),
+            "model": model,
+            # Kept so that anything already reading this field still works.
+            "model_engine": name,
             "contracts": (
                 len(self.sentinel.registry) if self.sentinel.registry else 0
             ),
