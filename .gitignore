@@ -1,3 +1,10 @@
 
 # Microsoft Office lock files
 ~$*
+
+# Python's own caches. Added 11 November 2026, when running the
+# demonstration's tests put 3 compiled files into a commit.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/

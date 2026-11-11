@@ -112,6 +112,18 @@
         },
         {
           "@id": "#construct-CON-004"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A1"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A2"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A3"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A4"
         }
       ],
       "about": [
@@ -549,13 +561,14 @@
     {
       "@id": "#pv-gene-calling-mode",
       "@type": "PropertyValue",
-      "name": "gene calling mode",
-      "value": "open ends",
-      "description": "One of complete ends or open ends. Open ends allows a prediction that runs off the end of a contig, so a sequence may be a truncated fragment."
+      "name": "edge handling",
+      "value": "closed",
+      "description": "Prodigal was run with -c, which its documentation describes as \"Closed ends. Do not allow partial genes at edges of sequence.\" So no gene that runs off the end of a contig was reported, and every protein here has a start codon and a stop codon. The cost is that a gene spanning a contig edge is not reported at all, and nothing records that it was dropped."
     },
     {
       "@id": "#act-sampling",
       "@type": "CreateAction",
+      "additionalType": "SamplingStep",
       "name": "Collect the environmental sample",
       "instrument": {
         "@id": "https://example.org/bioprospecting/equipment/sediment-corer"
@@ -580,6 +593,7 @@
     {
       "@id": "#act-dna-extraction",
       "@type": "CreateAction",
+      "additionalType": "DnaExtractionStep",
       "name": "Extract metagenomic DNA",
       "instrument": {
         "@id": "https://example.org/bioprospecting/kit/dneasy-powersoil-pro"
@@ -603,6 +617,7 @@
     {
       "@id": "#act-library-prep",
       "@type": "CreateAction",
+      "additionalType": "LibraryPreparationStep",
       "name": "Prepare the shotgun library",
       "instrument": {
         "@id": "https://example.org/bioprospecting/service/novogene-shotgun"
@@ -626,6 +641,7 @@
     {
       "@id": "#act-sequencing",
       "@type": "CreateAction",
+      "additionalType": "SequencingStep",
       "name": "Sequence the library",
       "instrument": {
         "@id": "https://example.org/bioprospecting/service/novogene-shotgun"
@@ -662,6 +678,7 @@
     {
       "@id": "#act-read-qc",
       "@type": "CreateAction",
+      "additionalType": "ReadTrimmingStep",
       "name": "Trim and quality filter the reads",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/read-trimmer"
@@ -686,6 +703,7 @@
     {
       "@id": "#act-assembly",
       "@type": "CreateAction",
+      "additionalType": "AssemblyStep",
       "name": "Assemble the reads into contigs",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/assembler"
@@ -715,6 +733,7 @@
     {
       "@id": "#act-gene-calling",
       "@type": "CreateAction",
+      "additionalType": "GeneCallingStep",
       "name": "Predict protein coding genes",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/gene-caller"
@@ -741,6 +760,7 @@
     {
       "@id": "#act-annotation",
       "@type": "CreateAction",
+      "additionalType": "AnnotationStep",
       "name": "Annotate the predicted proteins",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/domain-scanner"
@@ -767,6 +787,7 @@
     {
       "@id": "#act-clustering",
       "@type": "CreateAction",
+      "additionalType": "ClusteringStep",
       "name": "Cluster the annotated proteins",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/clustering-tool"
@@ -796,6 +817,7 @@
     {
       "@id": "#act-panel-selection",
       "@type": "CreateAction",
+      "additionalType": "PanelSelectionStep",
       "name": "Select the panel",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/panel-designer"
@@ -823,6 +845,7 @@
     {
       "@id": "#act-construct-design",
       "@type": "CreateAction",
+      "additionalType": "ConstructDesignStep",
       "name": "Specify the constructs",
       "instrument": {
         "@id": "https://example.org/bioprospecting/tool/codon-optimiser"
@@ -849,12 +872,27 @@
     {
       "@id": "#plate-AB-12-01",
       "@type": "CreativeWork",
+      "additionalType": "IntendedPlateLayout",
       "name": "Intended plate layout for panel AB-12",
       "identifier": "PLATE-AB-12-01",
       "description": "What Design asked the synthesis vendor for. It is NOT a record of the plate that arrives. Build records that separately, and the difference between the two is the synthesis failures.",
       "additionalProperty": [
         {
           "@id": "#pv-plate-format"
+        }
+      ],
+      "hasPart": [
+        {
+          "@id": "#well-PLATE-AB-12-01-A1"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A2"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A3"
+        },
+        {
+          "@id": "#well-PLATE-AB-12-01-A4"
         }
       ]
     },
@@ -867,7 +905,7 @@
     },
     {
       "@id": "#protein-ENR-001",
-      "@type": "BioChemEntity",
+      "@type": "Protein",
       "identifier": "ENR-001",
       "name": "Candidate ene-reductase ENR-001",
       "description": "SIMULATED sequence. Not a real protein.",
@@ -908,9 +946,9 @@
     {
       "@id": "#pv-ENR-001-complete",
       "@type": "PropertyValue",
-      "name": "coding sequence completeness",
-      "value": "complete",
-      "description": "complete, left partial, right partial or both partial. Anything but complete means the sequence may be truncated."
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
     },
     {
       "@id": "#pv-ENR-001-cluster",
@@ -928,7 +966,7 @@
     },
     {
       "@id": "#protein-ENR-002",
-      "@type": "BioChemEntity",
+      "@type": "Protein",
       "identifier": "ENR-002",
       "name": "Candidate ene-reductase ENR-002",
       "description": "SIMULATED sequence. Not a real protein.",
@@ -969,9 +1007,9 @@
     {
       "@id": "#pv-ENR-002-complete",
       "@type": "PropertyValue",
-      "name": "coding sequence completeness",
-      "value": "complete",
-      "description": "complete, left partial, right partial or both partial. Anything but complete means the sequence may be truncated."
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
     },
     {
       "@id": "#pv-ENR-002-cluster",
@@ -989,7 +1027,7 @@
     },
     {
       "@id": "#protein-ENR-003",
-      "@type": "BioChemEntity",
+      "@type": "Protein",
       "identifier": "ENR-003",
       "name": "Candidate ene-reductase ENR-003",
       "description": "SIMULATED sequence. Not a real protein.",
@@ -1030,9 +1068,9 @@
     {
       "@id": "#pv-ENR-003-complete",
       "@type": "PropertyValue",
-      "name": "coding sequence completeness",
-      "value": "right partial",
-      "description": "complete, left partial, right partial or both partial. Anything but complete means the sequence may be truncated."
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
     },
     {
       "@id": "#pv-ENR-003-cluster",
@@ -1050,7 +1088,7 @@
     },
     {
       "@id": "#protein-ENR-004",
-      "@type": "BioChemEntity",
+      "@type": "Protein",
       "identifier": "ENR-004",
       "name": "Candidate ene-reductase ENR-004",
       "description": "SIMULATED sequence. Not a real protein.",
@@ -1091,9 +1129,9 @@
     {
       "@id": "#pv-ENR-004-complete",
       "@type": "PropertyValue",
-      "name": "coding sequence completeness",
-      "value": "complete",
-      "description": "complete, left partial, right partial or both partial. Anything but complete means the sequence may be truncated."
+      "name": "partial",
+      "value": "00",
+      "description": "Prodigal's partial attribute. Each digit is one boundary: 0 means a true start or stop codon is present, 1 means the gene is unfinished at that edge. 00 is a complete gene. Run with -c, every gene is 00."
     },
     {
       "@id": "#pv-ENR-004-cluster",
@@ -1112,6 +1150,7 @@
     {
       "@id": "#construct-CON-001",
       "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
       "identifier": "CON-001",
       "name": "Expression construct CON-001",
       "description": "SIMULATED sequence. Not a real construct.",
@@ -1126,7 +1165,7 @@
           "@id": "#pv-CON-001-dna"
         },
         {
-          "@id": "#pv-CON-001-well"
+          "@id": "#pv-CON-001-length"
         },
         {
           "@id": "#pv-CON-001-host"
@@ -1141,11 +1180,11 @@
       "unitText": "DNA bases"
     },
     {
-      "@id": "#pv-CON-001-well",
+      "@id": "#pv-CON-001-length",
       "@type": "PropertyValue",
-      "name": "intended well",
-      "value": "A1",
-      "description": "row letter then column number, A1 to H12"
+      "name": "coding sequence length",
+      "value": "1080",
+      "unitText": "base pairs"
     },
     {
       "@id": "#pv-CON-001-host",
@@ -1156,6 +1195,7 @@
     {
       "@id": "#construct-CON-002",
       "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
       "identifier": "CON-002",
       "name": "Expression construct CON-002",
       "description": "SIMULATED sequence. Not a real construct.",
@@ -1170,7 +1210,7 @@
           "@id": "#pv-CON-002-dna"
         },
         {
-          "@id": "#pv-CON-002-well"
+          "@id": "#pv-CON-002-length"
         },
         {
           "@id": "#pv-CON-002-host"
@@ -1185,11 +1225,11 @@
       "unitText": "DNA bases"
     },
     {
-      "@id": "#pv-CON-002-well",
+      "@id": "#pv-CON-002-length",
       "@type": "PropertyValue",
-      "name": "intended well",
-      "value": "A2",
-      "description": "row letter then column number, A1 to H12"
+      "name": "coding sequence length",
+      "value": "1101",
+      "unitText": "base pairs"
     },
     {
       "@id": "#pv-CON-002-host",
@@ -1200,6 +1240,7 @@
     {
       "@id": "#construct-CON-003",
       "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
       "identifier": "CON-003",
       "name": "Expression construct CON-003",
       "description": "SIMULATED sequence. Not a real construct.",
@@ -1214,7 +1255,7 @@
           "@id": "#pv-CON-003-dna"
         },
         {
-          "@id": "#pv-CON-003-well"
+          "@id": "#pv-CON-003-length"
         },
         {
           "@id": "#pv-CON-003-host"
@@ -1229,11 +1270,11 @@
       "unitText": "DNA bases"
     },
     {
-      "@id": "#pv-CON-003-well",
+      "@id": "#pv-CON-003-length",
       "@type": "PropertyValue",
-      "name": "intended well",
-      "value": "A3",
-      "description": "row letter then column number, A1 to H12"
+      "name": "coding sequence length",
+      "value": "1053",
+      "unitText": "base pairs"
     },
     {
       "@id": "#pv-CON-003-host",
@@ -1244,6 +1285,7 @@
     {
       "@id": "#construct-CON-004",
       "@type": "CreativeWork",
+      "additionalType": "ExpressionConstruct",
       "identifier": "CON-004",
       "name": "Expression construct CON-004",
       "description": "SIMULATED sequence. Not a real construct.",
@@ -1258,7 +1300,7 @@
           "@id": "#pv-CON-004-dna"
         },
         {
-          "@id": "#pv-CON-004-well"
+          "@id": "#pv-CON-004-length"
         },
         {
           "@id": "#pv-CON-004-host"
@@ -1273,17 +1315,69 @@
       "unitText": "DNA bases"
     },
     {
-      "@id": "#pv-CON-004-well",
+      "@id": "#pv-CON-004-length",
       "@type": "PropertyValue",
-      "name": "intended well",
-      "value": "A4",
-      "description": "row letter then column number, A1 to H12"
+      "name": "coding sequence length",
+      "value": "1179",
+      "unitText": "base pairs"
     },
     {
       "@id": "#pv-CON-004-host",
       "@type": "PropertyValue",
       "name": "expression host",
       "value": "Escherichia coli BL21(DE3)"
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A1",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A1",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-001"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A2",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A2",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-002"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A3",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A3",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-003"
+      }
+    },
+    {
+      "@id": "#well-PLATE-AB-12-01-A4",
+      "@type": "CreativeWork",
+      "additionalType": "PlateWell",
+      "name": "A4",
+      "description": "Row letter then column number, A1 to H12. What Design asked for in this well. Not a record of what arrived.",
+      "isPartOf": {
+        "@id": "#plate-AB-12-01"
+      },
+      "mainEntity": {
+        "@id": "#construct-CON-004"
+      }
     }
   ]
 }

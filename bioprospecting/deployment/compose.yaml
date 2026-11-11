@@ -1,0 +1,66 @@
+# One tailored instance: the bioprospecting DBTL cycle.
+#
+# Everything that makes this instance specific to bioprospecting is in this
+# folder. The image is the generic product, unmodified, and the tailoring is
+# the contracts mounted at /contracts. No code in this folder, and no code
+# written to deploy it.
+#
+#   docker compose -f bioprospecting/deployment/compose.yaml up
+#
+# Then, from another terminal:
+#
+#   curl -s -X POST --data-binary \
+#     @crates/design-to-build-simple/ro-crate-metadata.json \
+#     http://127.0.0.1:8080/check/design_to_build
+#
+# To deploy a different DBTL cycle, copy this file, point the contracts mount
+# at your own folder of contract files, and start it. The image does not
+# change.
+
+services:
+
+  # The service, speaking the web interface on port 8080.
+  sentinel:
+    image: sentinel-oo:dev
+    build:
+      context: ../../sentinel-oo
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        IMAGE_TAG: dev
+    command: ["--serve", "--port", "8080"]
+    ports:
+      - "8080:8080"
+    volumes:
+      # The whole of the tailoring.
+      - ./contracts:/contracts:ro
+      # The crates this cycle hands over, read only. A real deployment would
+      # mount wherever its upstream phase writes instead.
+      - ./crates:/crates:ro
+      # Where checked crates are written.
+      - ./out:/out
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # The same image, speaking the Model Context Protocol on standard input and
+  # output instead, for a coordinator agent to call. Not started by default:
+  # an agent starts it when it wants it.
+  agent-interface:
+    image: sentinel-oo:dev
+    command: ["--agent-interface"]
+    stdin_open: true
+    volumes:
+      - ./contracts:/contracts:ro
+      - ./crates:/crates:ro
+      - ./out:/out
+    profiles: ["agent"]
+
+  # A model is optional and advisory. With none configured the service
+  # refuses and accepts exactly as it does with one, except that it cannot
+  # recover a value present in a crate only inside free text. Two local
+  # models were measured on 10 November 2026 and neither could do that job,
+  # which is recorded in sentinel-oo/README.md.

@@ -46,7 +46,7 @@ about to be ordered from a vendor.
 
 The `@graph` holds 11 `CreateAction` entries, one per step, 10
 `SoftwareApplication` entries for the things that performed them, 11 `File`
-entries, 2 `Collection` entries for the paired-end reads, 4 `BioChemEntity`
+entries, 2 `Collection` entries for the paired-end reads, 4 `Protein`
 entries for the proteins, and 54 `PropertyValue` entries carrying the named
 parameters and measurements.
 

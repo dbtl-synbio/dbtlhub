@@ -1,0 +1,300 @@
+contract: design_to_build
+version: 0.10.0
+
+description: >
+  What the Design phase must hand to the Build phase in the bioprospecting
+  use case. Design finishes with a panel of proteins chosen from a metagenome
+  and a synthetic construct designed for each one. Build orders those
+  constructs from a synthesis vendor and spends money, so anything Build
+  cannot judge from the crate is a well that may be wasted.
+
+  Each requirement answers one question: what does Build do, and what goes
+  wrong if this is missing? Anything with no answer to that is a preference
+  rather than a requirement, and preferences accumulate until a contract is
+  too irritating to use.
+
+  A note on the pairs below. Presence and soundness are two separate
+  requirements, because one rule doing both would make one of them impossible
+  to say. So every reference needs two: one that it is recorded at all, and
+  one that it lands on something real.
+
+  Nothing in this file is Python. Adding a handover means writing a file like
+  this one and nothing else.
+
+# What this contract is for. Every type named here must be present in the
+# crate, or the handover is refused before a single requirement is applied.
+#
+# This block exists because of a fault measured on 11 November 2026. A crate
+# from an unrelated domain was posted to this contract and came back ACCEPTED
+# with 0 findings, because 12 of its 18 requirements name types that crate
+# did not contain, so each matched nothing and passed. Only 6 requirements
+# looked at anything at all.
+#
+# Blessing a crate that was never checked is worse than refusing a good one.
+expects:
+  - PlateWell
+  - IntendedPlateLayout
+  - ExpressionConstruct
+  - Protein
+  - GeneCallingStep
+
+requires:
+
+  # ---------------------------------------------------------------
+  # The packaging. True of any crate, whatever is inside it.
+  # ---------------------------------------------------------------
+
+  - name: declares_a_profile
+    applies_to: root
+    property: conformsTo
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate does not say which profile it follows, so nothing can be
+      agreed about what its contents mean.
+
+  - name: names_itself
+    applies_to: root
+    property: name
+    must: be recorded
+    severity: refuse
+    message: >-
+      The crate has no name, so nobody receiving it can say what it is.
+
+  - name: says_how_it_may_be_used
+    applies_to: root
+    property: license
+    must: be recorded
+    severity: flag
+    message: >-
+      The crate does not say how it may be used. Build can proceed, but
+      whoever receives the data afterwards has nothing to go on.
+
+  # ---------------------------------------------------------------
+  # The plate. Where each thing is meant to go.
+  # ---------------------------------------------------------------
+
+  - name: well_has_a_position
+    applies_to: PlateWell
+    property: name
+    must: be recorded
+    severity: refuse
+    message: >-
+      This well has no position, so nobody can find it on the physical
+      plate.
+
+  - name: one_well_per_position
+    applies_to: PlateWell
+    property: name
+    must: be unique
+    severity: refuse
+    message: >-
+      Two wells claim the same position on the plate, so what is physically
+      in that position is undefined.
+
+  - name: well_names_a_construct
+    applies_to: PlateWell
+    property: mainEntity
+    must: be recorded
+    severity: refuse
+    message: >-
+      This well does not say which construct is meant to go in it, so
+      nothing measured from it later can be attributed to a sequence.
+
+  - name: well_names_a_real_construct
+    applies_to: PlateWell
+    property: mainEntity
+    must: point at something in the crate
+    of_type: ExpressionConstruct
+    severity: refuse
+    message: >-
+      This well names something that is not a construct in this crate, so
+      whatever is in it cannot be identified.
+
+  # Refusal rather than a flag, decided on 10 November 2026 and recorded so
+  # it is not reopened. Putting one construct in two wells is a normal thing
+  # to do elsewhere: it is how a technical replicate or a positive control is
+  # included, and a check that fires on correct practice is worse than no
+  # check. Neil confirmed that this panel never does it deliberately. Every
+  # well holds a different candidate, so a duplicate can only mean a
+  # candidate has been lost, and losing one silently is exactly what this
+  # handover exists to stop.
+  #
+  # A laboratory that does include replicates should change this line to
+  # flag. That is a one word edit to this file and needs no code.
+
+  - name: one_well_per_construct
+    applies_to: PlateWell
+    property: mainEntity
+    must: be unique
+    severity: refuse
+    message: >-
+      Two wells hold the same construct. This panel carries no deliberate
+      replicates, so a candidate that should be on this plate is missing
+      from it.
+
+  # ---------------------------------------------------------------
+  # The chain. Where the sequences came from.
+  # ---------------------------------------------------------------
+
+  # A protein in this panel is seven steps from the sediment it came out of:
+  # sample, DNA extract, library, reads, trimmed reads, contigs, proteins.
+  # No rule here walks that chain, because a requirement follows one
+  # reference and the chain is a search backwards across the graph.
+  #
+  # What these do instead is check that no link in it is missing. If every
+  # step's inputs and outputs are present, the chain holds, and a protein is
+  # reachable from the sample whether or not anybody walks it.
+  #
+  # Why it matters is not that an experiment fails. It is that if one of
+  # these enzymes works, the first question anybody asks is which physical
+  # material it came from, collected where and under what agreement. The
+  # Nagoya Protocol makes that a condition of use rather than a courtesy.
+
+  - name: every_step_input_is_present
+    applies_to: CreateAction
+    property: object
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      A step says it used something that is not described in this crate, so
+      the chain back to the physical sample is broken at that point.
+
+  - name: every_step_output_is_present
+    applies_to: CreateAction
+    property: result
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      A step says it produced something that is not described in this crate,
+      so what the next step worked on cannot be identified.
+
+  - name: everything_the_crate_lists_is_present
+    applies_to: root
+    property: hasPart
+    must: point at something in the crate
+    severity: refuse
+    message: >-
+      The crate lists a file as part of itself that is described nowhere in
+      it. Whoever receives this will look for it and not find it.
+
+  # ---------------------------------------------------------------
+  # The analysis. Settings the next phase cannot work without.
+  # ---------------------------------------------------------------
+
+  # Gene calling reads assembled DNA and decides where each gene starts and
+  # stops. A gene may run off the end of a contig, so only part of it is in
+  # the data, and a fragment looks like a perfectly ordinary protein
+  # sequence.
+  #
+  # This pipeline runs Prodigal with -c, which its documentation describes as
+  # "Closed ends. Do not allow partial genes at edges of sequence." So no
+  # fragment is reported at all, and the requirements below say so rather
+  # than asking anybody to look out for fragments.
+  #
+  # The cost of -c is a different problem, and one this handover cannot
+  # catch: a gene spanning a contig edge is not reported, so a candidate can
+  # be lost silently and nothing records that it was dropped. You cannot
+  # check for what was never written down.
+
+  # Repairable, which means a model may be asked whether the value is
+  # already written down somewhere in the record. It usually is: most real
+  # crates carry the command line that ran, and the flag is in it. Whatever
+  # the model proposes is checked by the rules before it counts, and the
+  # returned crate records that the value was recovered rather than stated.
+  #
+  # Repairable is not the same as guessable. Nothing may be invented here:
+  # the value either is in the record or it is not.
+
+  - name: edge_handling_is_recorded
+    applies_to: GeneCallingStep
+    named_value: edge handling
+    must: be recorded
+    repairable: true
+    severity: refuse
+    message: >-
+      The gene calling step does not say how it treated the edges of contigs,
+      so nobody can tell whether any sequence in this panel may be a
+      fragment.
+
+  - name: edge_handling_is_closed
+    applies_to: GeneCallingStep
+    named_value: edge handling
+    must: be recorded
+    one_of: ["closed"]
+    severity: refuse
+    message: >-
+      This contract is written for a panel called with closed ends, meaning
+      Prodigal run with -c. A panel called any other way may contain
+      fragments, and needs a contract that says what to do about them.
+
+  - name: protein_records_its_completeness
+    applies_to: Protein
+    named_value: partial
+    must: be recorded
+    severity: refuse
+    message: >-
+      This protein does not carry Prodigal's partial attribute, so nobody can
+      tell whether its start and stop codons were both present.
+
+  - name: protein_is_a_complete_gene
+    applies_to: Protein
+    named_value: partial
+    must: be recorded
+    one_of: ["00"]
+    severity: refuse
+    message: >-
+      This protein is not a complete gene. Prodigal writes 00 when both a
+      start and a stop codon are present, and run with -c it writes nothing
+      else, so this sequence either came from somewhere other than this run
+      or the edge handling has been recorded wrongly.
+
+  # ---------------------------------------------------------------
+  # The constructs. What is being ordered.
+  # ---------------------------------------------------------------
+
+  - name: construct_says_what_it_is_based_on
+    applies_to: ExpressionConstruct
+    property: isBasedOn
+    must: be recorded
+    severity: refuse
+    message: >-
+      This construct does not say which protein it was designed from, so if
+      the well fails nobody can say which candidate was lost.
+
+  - name: construct_names_a_real_protein
+    applies_to: ExpressionConstruct
+    property: isBasedOn
+    must: point at something in the crate
+    of_type: Protein
+    severity: refuse
+    message: >-
+      This construct names something that is not a protein in this crate, so
+      the candidate it was designed from cannot be identified.
+
+  - name: construct_records_its_length
+    applies_to: ExpressionConstruct
+    named_value: coding sequence length
+    must: be recorded
+    severity: refuse
+    message: >-
+      This construct does not say how long its coding sequence is, so
+      nothing downstream can check it without counting letters.
+
+  # Two things deliberately not required here.
+  #
+  # No vendor length limit. That is a fact about a supplier, not about this
+  # handover. It goes stale the day the supplier changes and nobody
+  # remembers it is here, the supplier enforces its own limits at upload
+  # anyway, and a refusal for a reason that has nothing to do with the
+  # science is how a contract earns a reputation for being in the way. If a
+  # vendor limit is wanted it belongs in the order tool, which is the thing
+  # that talks to the vendor.
+  #
+  # No consistency check between a construct's length and its protein's
+  # length, which is the one that would catch a real fault: a construct half
+  # or double the expected size means a truncation, a duplication or a wrong
+  # sequence pasted in. The contract language cannot compare one value
+  # against another value on a different entity. That is a genuine gap, and
+  # the first requirement met so far that is out of reach rather than merely
+  # unwritten.
