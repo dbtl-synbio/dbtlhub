@@ -230,7 +230,34 @@ for it.
 
 ## 6. Check the data, not only the description file
 
-**Finding 25. A new requirement rather than a fault.**
+**Finding 25. DONE, 12 November 2026.**
+
+A fifth verb, `hold data`: the file an entity stands for exists and is not
+empty. It catches a step that ran, wrote a zero byte file and exited
+successfully, which every other verb is blind to because they all read the
+description.
+
+**The web interface now carries a whole crate.** Neil's reason, which is
+better than the one this entry started with: the crate has to be passed to
+the next process in the workflow, so it must come out the other side
+complete. `POST /check` takes a zipped crate and returns a zipped crate,
+data and all, with the record written in. The verdict travels in headers so
+a pipeline need not unpack anything. A bare `ro-crate-metadata.json` still
+works and is refused by a contract that checks data, because a check that
+could not run must not look like a check that passed.
+
+A zip naming a path outside the folder it unpacks into is refused, which is
+the one thing that matters when a service unpacks what it is sent.
+
+Levels 3 and 4, whether the data matches what the crate says about it and
+whether it is scientifically sound, are devolved to the architect. Not this
+service's job.
+
+Seven tests, four confirmed to fail with the verb disabled. Verified through
+a running container: a crate with an empty data file is refused over HTTP,
+where before it passed.
+
+The rest of this entry is what was wrong.
 
 `POST /check/{contract}` takes the contents of an `ro-crate-metadata.json`
 and nothing else. The crate's data files never reach the service, and none

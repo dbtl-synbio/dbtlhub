@@ -187,3 +187,23 @@ def minimal() -> Crate:
     import json
 
     return Crate.from_bytes(json.dumps(minimal_crate_dict()).encode())
+
+
+@pytest.fixture
+def zipped_crate() -> bytes:
+    """The worked example as a zipped crate: the description and its data.
+
+    This is what a handover actually is. A crate sent as a bare
+    ro-crate-metadata.json is its description with the data left behind,
+    and from 12 November 2026 a contract that checks the data says so
+    rather than passing.
+    """
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for path in sorted(PUBLISHED.parent.iterdir()):
+            if path.is_file():
+                archive.write(path, path.name)
+    return buffer.getvalue()

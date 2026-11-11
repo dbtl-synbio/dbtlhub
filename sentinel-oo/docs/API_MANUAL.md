@@ -54,8 +54,43 @@ test checks that.
 
 ## `POST /check/{contract}`
 
-The only endpoint that does anything. Send the contents of an
-`ro-crate-metadata.json` file as the body.
+The only endpoint that does anything. **Send a zipped crate**: the
+description and its data files together.
+
+```
+cd <your crate> && zip -r /tmp/crate.zip .
+
+curl -s -X POST --data-binary @/tmp/crate.zip \
+  -H "Content-Type: application/zip" \
+  http://127.0.0.1:8080/check/design_to_build \
+  -o /tmp/checked.zip -D /tmp/headers
+```
+
+**Back comes the whole crate**, data and all, with the record of the check
+written into it, ready to hand to the next process in the workflow. That is
+what a handover is: the data, not a description of it.
+
+The verdict travels in headers, so a pipeline can act on it without
+unpacking anything:
+
+```
+X-Sentinel-Run:       31ec502b36ad
+X-Sentinel-Verdict:   ACCEPTED
+X-Sentinel-Findings:  0
+```
+
+A zip is told apart from JSON by its first two bytes, so no header is
+required.
+
+### Sending a description on its own
+
+The older form still works: send the contents of an `ro-crate-metadata.json`
+and get JSON back. **The data was then never here.** A contract using the
+`hold data` verb will refuse, saying the data did not arrive, rather than
+passing a check it could not make.
+
+Limits: 512 MB zipped, 2 GB unpacked. A zip naming a path outside the folder
+it unpacks into is refused.
 
 ```
 curl -s -X POST --data-binary @<a crate>/ro-crate-metadata.json \

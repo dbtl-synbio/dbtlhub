@@ -370,6 +370,25 @@ def test_both_interfaces_give_the_same_verdict(writer, tmp_path):
     from sentinel_oo.contract import ContractRegistry
     from sentinel_oo.rules import ContractChecks
 
+    def zipped(folder):
+        """The crate as a handover is: its description and its data.
+
+        Restated on 12 November 2026, when the web interface learned to
+        carry a whole crate. The two interfaces agree when given the SAME
+        crate. A bare ro-crate-metadata.json is not the same crate as a
+        folder with data in it, and a contract that checks the data is
+        right to tell them apart.
+        """
+        import io
+        import zipfile
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            for path in sorted(Path(folder).iterdir()):
+                if path.is_file():
+                    archive.write(path, path.name)
+        return buffer.getvalue()
+
     def service():
         return Sentinel(
             provenance=writer,
@@ -383,18 +402,14 @@ def test_both_interfaces_give_the_same_verdict(writer, tmp_path):
         ("broken", BROKEN / "dangling-reference"),
     ]:
         over_http = Api(service(), RunStore(5)).dispatch(
-            "POST", "/check/mixing_to_coating",
-            (folder / "ro-crate-metadata.json").read_bytes(),
+            "POST", "/check/mixing_to_coating", zipped(folder),
         )[1]
         to_an_agent = AgentInterface(service(), RunStore(5)).check_handover(
             "mixing_to_coating", str(folder), str(tmp_path / label)
         )
 
-        assert over_http["verdict"] == to_an_agent["verdict"], label
-        assert (
-            [f["requirement"] for f in over_http["findings"]]
-            == [f["requirement"] for f in to_an_agent["findings"]]
-        ), label
+        assert over_http.verdict == to_an_agent["verdict"], label
+        assert over_http.findings == len(to_an_agent["findings"]), label
 
 
 # Decision: the agent interface never returns the crate.

@@ -53,10 +53,49 @@ def crate_bytes():
 # ------------------------------------------------------- the web interface
 
 
-def test_check_returns_the_crate_and_a_run_identifier(api, crate_bytes):
-    status, body = api.dispatch("POST", "/check/mixing_to_coating", crate_bytes)
+def test_a_zipped_crate_comes_back_whole(api, zipped_crate):
+    """What a handover is: the data, not a description of it.
+
+    The next process in the workflow needs the files, so the reply is the
+    crate rather than JSON. Before 12 November 2026 the description went in
+    and the description came out, and whoever sent it had to put the data
+    and the record back together by hand.
+    """
+    import io
+    import zipfile
+
+    status, payload = api.dispatch(
+        "POST", "/check/mixing_to_coating", zipped_crate)
+
     assert status == 200
-    assert body["verdict"] == "ACCEPTED"
+    assert payload.verdict == "ACCEPTED"
+    assert payload.run
+
+    with zipfile.ZipFile(io.BytesIO(payload.body)) as archive:
+        inside = set(archive.namelist())
+    assert "ro-crate-metadata.json" in inside
+    assert "recipes.csv" in inside, "the data did not come back"
+    assert "rack-layout.csv" in inside
+
+
+def test_a_description_on_its_own_is_refused_by_a_contract_that_checks_data(
+    api, crate_bytes
+):
+    """It must not pass. A check that could not run must never look like a
+    check that passed, which is the lesson of every fault found in this
+    service."""
+    status, body = api.dispatch(
+        "POST", "/check/mixing_to_coating", crate_bytes)
+
+    assert status == 200
+    assert body["verdict"] == "REFUSED"
+    assert any("did not arrive" in str(f["value"]) for f in body["findings"])
+
+
+def test_check_returns_the_crate_and_a_run_identifier(api, crate_bytes):
+    status, body = api.dispatch(
+        "POST", "/check/coating_to_inspection", crate_bytes)
+    assert status == 200
     assert body["run"]
     # The example crate has 28 entities going in. The returned crate carries
     # the service's record as well, so it has more.

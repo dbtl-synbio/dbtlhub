@@ -26,6 +26,8 @@ from typing import Callable
 from . import __version__
 from .contract import ContractNotFound
 from .engines import NO_MODEL
+from pathlib import Path
+
 from .crate import Crate, CrateMalformed
 
 
@@ -46,6 +48,26 @@ class Route:
     def path(self) -> str:
         """The pattern written the way OpenAPI writes it."""
         return re.sub(r"\(\?P<(\w+)>[^)]+\)", r"{\1}", self.pattern).strip("^$")
+
+
+def _looks_like_a_zip(body: bytes) -> bool:
+    """Told apart by what the bytes are, not by a header a caller may omit."""
+    return body[:2] == b"PK"
+
+
+@dataclass(frozen=True)
+class Zipped:
+    """A reply that is a crate rather than JSON.
+
+    The verdict and the count of findings go in headers, so a pipeline can
+    decide what to do without unpacking anything, and the body is the crate
+    to hand on.
+    """
+
+    body: bytes
+    run: str
+    verdict: str
+    findings: int
 
 
 class Api:
@@ -79,14 +101,29 @@ class Api:
     # Each returns (status, body). A body that is bytes is sent as it is.
 
     def check(self, params, body):
+        """A crate in, a checked crate out, in whichever of two forms.
+
+        A zipped crate carries its data files, so the contract can check
+        them and the reply can be handed straight to the next process in
+        the workflow. That is what a handover is: the data, not a
+        description of it.
+
+        A bare `ro-crate-metadata.json` still works, for a caller that has
+        nothing else, and then the data was never here. A contract that
+        checks the data says so rather than passing, because a check that
+        could not run must not look like a check that passed.
+        """
+        if _looks_like_a_zip(body):
+            return self._check_zipped(params, body)
+
         try:
             crate = Crate.from_bytes(body)
         except CrateMalformed as exc:
             return 400, {
                 "error": "not a crate",
                 "detail": str(exc),
-                "hint": "the body should be the contents of an "
-                        "ro-crate-metadata.json file",
+                "hint": "the body should be a zipped crate, or the contents "
+                        "of an ro-crate-metadata.json file",
             }
 
         try:
@@ -112,6 +149,50 @@ class Api:
             ],
             "crate": json.loads(run.crate.to_json()),
         }
+
+    def _check_zipped(self, params, body):
+        """The whole crate, in and out.
+
+        The reply is the zip itself rather than JSON, because the thing the
+        caller wants back is the crate. The verdict and the findings travel
+        in headers so a pipeline can read them without unpacking anything.
+        """
+        import shutil
+        import tempfile
+
+        from .crate import pack, unpack
+
+        workspace = tempfile.mkdtemp(prefix="sentinel-oo-")
+        try:
+            try:
+                crate = unpack(body, Path(workspace) / "in")
+            except CrateMalformed as exc:
+                return 400, {
+                    "error": "not a crate",
+                    "detail": str(exc),
+                    "hint": "a zipped crate holds an ro-crate-metadata.json, "
+                            "at the top or inside one folder, with its data "
+                            "files beside it",
+                }
+
+            try:
+                run = self.sentinel.check(
+                    crate, contract_name=params["contract"]
+                )
+            except ContractNotFound as exc:
+                return 404, {"error": "no such contract", "detail": str(exc)}
+
+            if self.runs is not None:
+                self.runs.put(run)
+
+            return 200, Zipped(
+                body=pack(run.crate),
+                run=run.id,
+                verdict=run.blessing.verdict_text(),
+                findings=len(run.blessing.violations),
+            )
+        finally:
+            shutil.rmtree(workspace, ignore_errors=True)
 
     def contracts(self, params, body):
         registry = self.sentinel.registry
@@ -327,6 +408,23 @@ def make_handler(api: Api):
                     "error": "the service failed while answering",
                     "detail": f"{type(exc).__name__}: {exc}",
                 }
+            if isinstance(payload, Zipped):
+                # The reply is the crate itself, to hand to the next
+                # process. The verdict travels in headers so a pipeline can
+                # act on it without unpacking anything.
+                self.send_response(status)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header(
+                    "Content-Disposition",
+                    f'attachment; filename="checked-{payload.run}.zip"')
+                self.send_header("X-Sentinel-Run", payload.run)
+                self.send_header("X-Sentinel-Verdict", payload.verdict)
+                self.send_header("X-Sentinel-Findings", str(payload.findings))
+                self.send_header("Content-Length", str(len(payload.body)))
+                self.end_headers()
+                self.wfile.write(payload.body)
+                return
+
             if isinstance(payload, dict) and "run" in payload:
                 self.send_response(status)
                 body_out = json.dumps(payload, indent=2).encode("utf-8")

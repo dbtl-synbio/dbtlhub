@@ -1,5 +1,5 @@
 contract: mixing_to_coating
-version: 1.1.0
+version: 1.2.0
 
 description: >
   The product's own worked example, and the thing to read first when learning
@@ -82,6 +82,32 @@ requires:
     message: >-
       The crate does not say how it may be used. Coating can proceed, but
       whoever receives the data afterwards has nothing to go on.
+
+  # ---------------------------------------------------------------
+  # The data itself, not only what the crate says about it.
+  # ---------------------------------------------------------------
+  #
+  # Every other requirement here reads the description. A description can be
+  # perfectly correct about a file that is empty, which is what happens when
+  # a step runs, writes nothing, and exits successfully. Nothing above would
+  # notice.
+  #
+  # `hold data` means the file is in the crate and is not zero bytes. It says
+  # nothing about whether the data is right, which is a different question
+  # and not this service's to answer.
+  #
+  # It can only be checked where the data actually arrived. A crate posted to
+  # the web interface is its description and nothing else, and this refuses
+  # rather than passing in that case, because a check that could not run must
+  # not look like a check that passed.
+
+  - name: every_file_holds_data
+    applies_to: File
+    must: hold data
+    severity: refuse
+    message: >-
+      This file is named in the crate and holds nothing, so the step that was
+      meant to produce it produced no data.
 
   # ---------------------------------------------------------------
   # The rack. Where each recipe is meant to go.

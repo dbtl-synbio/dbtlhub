@@ -188,7 +188,7 @@ reference the entity makes is followed, and only entities of type
 and a setting will give up only the setting, and a file that happens to have
 a name is not mistaken for a value.
 
-## `must`: the four verbs
+## `must`: the five verbs
 
 This is the whole vocabulary. It is deliberately short, and it grows one
 entry at a time, because a language that can say anything can also say things
@@ -288,6 +288,39 @@ The value must be a number, and within the range.
 **State the units in the message every time.** The contract has no field for
 units, and a number with no unit in a finding is an invitation to compare a
 thickness against a temperature.
+
+### `hold data`
+
+The file this entity stands for exists and is not empty.
+
+```yaml
+  - name: every_file_holds_data
+    applies_to: File
+    must: hold data
+    severity: refuse
+    message: >-
+      This file is named in the crate and holds nothing, so the step that
+      was meant to produce it produced no data.
+```
+
+**Every other verb reads the description.** A description can be perfectly
+correct about a file that is empty, which is what happens when a step runs,
+writes nothing and exits successfully. Nothing else here would notice.
+
+It takes no `property` and no `named_value`, because it is about the file an
+entity stands for rather than anything written on it.
+
+**It says nothing about whether the data is right.** That is a different
+question and not this service's to answer.
+
+**The data has to be there.** A crate sent as a bare
+`ro-crate-metadata.json` is its description with the data left behind, and
+this refuses rather than passing in that case, because a check that could
+not run must not look like a check that passed. Send a zipped crate, or
+give the service a folder.
+
+**A file identified by a URL is not looked at.** The crate does not carry
+it, and fetching it is a different act with different consequences.
 
 ## `severity`: how hard it bites
 

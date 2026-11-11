@@ -72,6 +72,7 @@ MUSTS = {
     "be unique",
     "point at something in the crate",
     "be a number between",
+    "hold data",
 }
 
 # Which extra field each demand needs, if any.
@@ -299,12 +300,25 @@ def _parse_requirement(raw, where: str, position: int, seen: set) -> Requirement
 
     prop = raw.get("property")
     named = raw.get("named_value")
-    _require(
-        bool(prop) != bool(named),
-        f"{at} ({name}) must say either `property`, for something written on "
-        "the entity itself, or `named_value`, for a value hanging off it. "
-        "It says both or neither.",
-    )
+
+    # `hold data` is the only demand that reads no property and no named
+    # value. It is about the file an entity stands for, not about anything
+    # written on it, so insisting on one of the two would be asking for a
+    # field with nothing to put in it.
+    if raw.get("must") == "hold data":
+        _require(
+            not prop and not named,
+            f"{at} ({name}) says 'hold data', which is about the file an "
+            "entity stands for, so it takes neither `property` nor "
+            "`named_value`.",
+        )
+    else:
+        _require(
+            bool(prop) != bool(named),
+            f"{at} ({name}) must say either `property`, for something "
+            "written on the entity itself, or `named_value`, for a value "
+            "hanging off it. It says both or neither.",
+        )
     if prop is not None:
         _require(isinstance(prop, str) and prop, f"{at} ({name}): property is a name")
     if named is not None:

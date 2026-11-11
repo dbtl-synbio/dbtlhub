@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from sentinel_oo import Crate, Verdict
-from sentinel_oo.contract import parse
+from sentinel_oo.contract import ContractError, parse
 from sentinel_oo.rules import (
     ContractChecks,
     Report,
@@ -23,7 +23,7 @@ from sentinel_oo.rules import (
     values_of,
 )
 
-from conftest import minimal_crate_dict
+from conftest import PUBLISHED, minimal_crate_dict
 
 # The worked example with the root's declaration of its profile deliberately
 # removed. A whole generated crate rather than one invented inline here, and
@@ -574,3 +574,125 @@ def test_only_property_values_are_read_as_named_values(published):
     assert named_values_of(
         step, "The three recipes, one per row", published
     ) == ()
+
+
+# --------------------------------------------------- the data, not only the
+# description
+
+
+class TestHoldData:
+    """Neil's requirement, 11 November 2026: one of the basic things a
+    sentinel should check is that data has actually been produced by every
+    step in the workflow.
+
+    Every other verb reads the description. A description can be perfectly
+    correct about a file that is empty, which is what happens when a step
+    runs, writes nothing and exits successfully. Found by a deployment
+    trial, finding 25.
+
+    Whether the data is RIGHT is not this service's job. That is devolved
+    to the architect.
+    """
+
+    CONTRACT = parse('''
+contract: data
+version: 1.0.0
+requires:
+  - name: every_file_holds_data
+    applies_to: File
+    must: hold data
+    severity: refuse
+    message: "A step was meant to write this file and it holds nothing."
+''')
+
+    def check(self, folder):
+        return ContractChecks().validate(Crate.from_path(folder), self.CONTRACT)
+
+    def crate_with_files(self, tmp_path, **files):
+        """A crate on disk whose data files are whatever is asked for."""
+        import json
+        import shutil
+
+        source = PUBLISHED.parent
+        folder = tmp_path / "crate"
+        shutil.copytree(source, folder)
+        for name, content in files.items():
+            target = folder / name
+            if content is None:
+                target.unlink(missing_ok=True)
+            else:
+                target.write_text(content)
+        return folder
+
+    def test_a_crate_whose_files_are_all_there_passes(self, tmp_path):
+        assert self.check(self.crate_with_files(tmp_path)).verdict is Verdict.ACCEPTED
+
+    def test_a_file_a_step_wrote_nothing_into_is_caught(self, tmp_path):
+        """The failure this exists for. The description is correct and the
+        file is empty."""
+        report = self.check(self.crate_with_files(tmp_path, **{"recipes.csv": ""}))
+        assert report.verdict is Verdict.REFUSED
+        assert any(v.value == "the file is empty" for v in report.violations)
+
+    def test_a_file_that_is_not_there_is_caught(self, tmp_path):
+        report = self.check(self.crate_with_files(tmp_path, **{"recipes.csv": None}))
+        assert report.verdict is Verdict.REFUSED
+        assert any(v.value == "no such file" for v in report.violations)
+
+    def test_it_names_which_file(self, tmp_path):
+        """So somebody knows which step to go and look at."""
+        report = self.check(self.crate_with_files(tmp_path, **{"recipes.csv": ""}))
+        assert any(v.node == "recipes.csv" for v in report.violations)
+
+    def test_a_crate_with_no_data_refuses_rather_than_passing(self):
+        """A crate posted to the web interface is its description and
+        nothing else, so a contract that checks data cannot be answered
+        from it.
+
+        It must refuse rather than pass. A check that could not run must
+        never look like a check that passed, which is the lesson of every
+        fault found in this service so far.
+        """
+        posted = Crate.from_bytes(PUBLISHED.read_bytes())
+        assert posted.folder is None
+
+        report = ContractChecks().validate(posted, self.CONTRACT)
+        assert report.verdict is Verdict.REFUSED
+        assert any("did not arrive" in str(v.value) for v in report.violations)
+
+    def test_a_file_held_somewhere_else_is_not_looked_at(self, tmp_path):
+        """A File identified by a URL is not in the crate. Fetching it is a
+        different act with different consequences, so this says nothing
+        about it rather than guessing."""
+        import json
+
+        folder = self.crate_with_files(tmp_path)
+        p = folder / "ro-crate-metadata.json"
+        doc = json.loads(p.read_text())
+        doc["@graph"].append({
+            "@id": "https://example.org/elsewhere/big.dat",
+            "@type": "File",
+            "name": "held somewhere else",
+        })
+        p.write_text(json.dumps(doc))
+
+        report = self.check(folder)
+        assert report.verdict is Verdict.ACCEPTED
+
+    def test_the_verb_takes_no_property(self):
+        """It is about the file an entity stands for, not about anything
+        written on it, so asking for a property would be asking for a field
+        with nothing to put in it."""
+        with pytest.raises(ContractError) as caught:
+            parse('''
+contract: t
+version: 1.0.0
+requires:
+  - name: r
+    applies_to: File
+    property: name
+    must: hold data
+    severity: refuse
+    message: "m"
+''')
+        assert "takes neither" in str(caught.value)

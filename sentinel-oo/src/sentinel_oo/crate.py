@@ -12,7 +12,9 @@ input correct without anybody having to remember it separately.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import shutil
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterator
@@ -80,9 +82,19 @@ def _thaw(value: Any) -> Any:
 class Crate:
     """An RO-Crate. Immutable."""
 
-    __slots__ = ("_entities", "_context", "_by_id", "_checksum", "_root_id")
+    __slots__ = ("_entities", "_context", "_by_id", "_checksum", "_root_id", "_folder")
 
-    def __init__(self, context: Any, entities: list[dict]):
+    def __init__(self, context: Any, entities: list[dict],
+                 folder: "Path | None" = None):
+        # Where the data files are, when they are anywhere.
+        #
+        # None is the honest answer for a crate that arrived as bytes, which
+        # is every crate posted to the web interface: the description came
+        # and the data did not. A check on the data must be able to tell
+        # that from a crate whose files are all present, rather than
+        # passing because it looked at nothing.
+        self._folder = Path(folder) if folder is not None else None
+
         seen: set[str] = set()
         for entity in entities:
             # A string in the graph passes an `"@id" in entity` test whenever it
@@ -165,6 +177,11 @@ class Crate:
     def checksum(self) -> str:
         return self._checksum
 
+    @property
+    def folder(self) -> "Path | None":
+        """Where the data files are, or None if the data never arrived."""
+        return self._folder
+
     def get(self, identifier: str):
         """The entity with this identifier, or None.
 
@@ -210,12 +227,13 @@ class Crate:
                 )
         incoming = {e["@id"]: dict(e) for e in entities}
         kept = [_thaw(e) for e in self._entities if e["@id"] not in incoming]
-        return Crate(_thaw(self._context), kept + list(incoming.values()))
+        return Crate(_thaw(self._context), kept + list(incoming.values()),
+                     folder=self._folder)
 
     # ------------------------------------------------------------ in and out
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "Crate":
+    def from_bytes(cls, data: bytes, folder: "Path | None" = None) -> "Crate":
         try:
             parsed = json.loads(data)
         except (ValueError, UnicodeDecodeError) as exc:
@@ -227,7 +245,7 @@ class Crate:
         graph = parsed["@graph"]
         if not isinstance(graph, list):
             raise CrateMalformed("@graph must be a list of entities")
-        return cls(parsed.get("@context"), graph)
+        return cls(parsed.get("@context"), graph, folder=folder)
 
     @classmethod
     def from_path(cls, path: str | Path) -> "Crate":
@@ -239,7 +257,8 @@ class Crate:
             data = path.read_bytes()
         except OSError as exc:
             raise CrateMalformed(f"cannot read {path}: {exc}") from exc
-        return cls.from_bytes(data)
+        # The folder holding the metadata file is where its data files are.
+        return cls.from_bytes(data, folder=path.parent)
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(
@@ -337,3 +356,104 @@ def describe(crate) -> str:
         "`CoatingRecipe` matches nothing and passes in silence.",
     ]
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- zipped
+
+# A handover is the data, not a description of it. The next process in the
+# workflow needs the files, so a crate has to be able to arrive and leave
+# whole, over the one interface a pipeline uses.
+#
+# Until 12 November 2026 `POST /check` took the description and returned the
+# description, and whoever sent it had to put the data and the record back
+# together by hand. It also meant no contract could check the data over the
+# web, because the data was never there.
+
+MAX_ZIP_BYTES = 512 * 1024 * 1024
+MAX_UNPACKED_BYTES = 2 * 1024 * 1024 * 1024
+
+
+def unpack(data: bytes, into: "Path") -> "Crate":
+    """Read a zipped crate into a folder and return it, data and all.
+
+    Refuses a zip that would write outside the folder it was given. An
+    archive can name an entry `../../somewhere/else`, and a service that
+    unpacks whatever it is sent is a service that writes wherever it is
+    told. This is the one place that matters, because the bytes come from
+    whoever sent the handover.
+    """
+    import zipfile
+
+    if len(data) > MAX_ZIP_BYTES:
+        raise CrateMalformed(
+            f"the zip is {len(data) // (1024 * 1024)} MB, over the "
+            f"{MAX_ZIP_BYTES // (1024 * 1024)} MB limit"
+        )
+
+    into = Path(into)
+    into.mkdir(parents=True, exist_ok=True)
+    root = into.resolve()
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile as exc:
+        raise CrateMalformed(f"not a readable zip: {exc}") from exc
+
+    total = 0
+    with archive:
+        for member in archive.infolist():
+            if member.is_dir():
+                continue
+            total += member.file_size
+            if total > MAX_UNPACKED_BYTES:
+                raise CrateMalformed(
+                    "the zip unpacks to more than "
+                    f"{MAX_UNPACKED_BYTES // (1024 * 1024 * 1024)} GB"
+                )
+            target = (root / member.filename).resolve()
+            if root not in target.parents and target != root:
+                raise CrateMalformed(
+                    f"the zip contains {member.filename!r}, which would be "
+                    "written outside the folder it was unpacked into"
+                )
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(member) as source, open(target, "wb") as sink:
+                shutil.copyfileobj(source, sink)
+
+    # The metadata file may be at the top, or inside one folder, which is how
+    # most tools zip a directory.
+    here = root / METADATA_FILE
+    if not here.is_file():
+        found = sorted(root.glob(f"*/{METADATA_FILE}"))
+        if not found:
+            raise CrateMalformed(
+                f"the zip holds no {METADATA_FILE}, so it is not a crate"
+            )
+        here = found[0]
+    return Crate.from_path(here)
+
+
+def pack(crate: "Crate") -> bytes:
+    """The whole crate as a zip: the record and every data file beside it.
+
+    This is what the next process in the workflow receives, so it must be
+    complete. A reply holding only the description would leave somebody to
+    reunite it with the data by hand, which is the thing this exists to
+    stop.
+    """
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(METADATA_FILE, crate.to_json())
+        if crate.folder is not None:
+            for path in sorted(Path(crate.folder).rglob("*")):
+                if not path.is_file():
+                    continue
+                name = path.relative_to(crate.folder).as_posix()
+                if name == METADATA_FILE:
+                    # The one written above, which carries the record. The
+                    # one on disk does not.
+                    continue
+                archive.write(path, name)
+    return buffer.getvalue()

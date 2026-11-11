@@ -262,6 +262,8 @@ class ContractChecks(RuleEngine):
             return self._must_point_somewhere(requirement, targets, crate)
         if requirement.must == "be a number between":
             return self._must_be_in_range(requirement, targets, crate)
+        if requirement.must == "hold data":
+            return self._must_hold_data(requirement, targets, crate)
 
         # Unreachable: the contract reader refuses anything not listed above,
         # and this is here so that adding a demand there without adding it here
@@ -270,6 +272,56 @@ class ContractChecks(RuleEngine):
             f"the contract asks for {requirement.must!r} and this engine does "
             "not know how to check it"
         )
+
+    def _must_hold_data(self, requirement, targets, crate) -> list[Violation]:
+        """The file this entity stands for exists and is not empty.
+
+        Neil's requirement, 11 November 2026: one of the basic things a
+        sentinel should check is that data has actually been produced by
+        every step in the workflow. Everything else in this language reads
+        the description. A description can be perfectly correct about a file
+        that is empty, which is what happens when a step runs, writes
+        nothing, and exits successfully.
+
+        Whether the data is RIGHT is not this service's job. That belongs to
+        the architect.
+
+        WHEN THE DATA NEVER ARRIVED, this refuses rather than passing. A
+        crate posted to the web interface is its description and nothing
+        else, so a contract that checks data cannot be answered from it. A
+        check that could not run must never look like a check that passed,
+        which is the lesson of every fault found in this service so far.
+
+        A file identified by a URL is not looked at. The crate does not
+        carry it, fetching it is a different act with different
+        consequences, and this says so rather than guessing.
+        """
+        found = []
+        for entity in targets:
+            identifier = str(entity.get("@id", ""))
+
+            if crate.folder is None:
+                found.append(self._fault(
+                    requirement, entity,
+                    value="the data did not arrive with this crate",
+                ))
+                continue
+
+            if identifier.startswith(("http://", "https://")):
+                continue
+
+            path = crate.folder / identifier
+            try:
+                if not path.is_file():
+                    found.append(self._fault(requirement, entity,
+                                             value="no such file"))
+                elif path.stat().st_size == 0:
+                    found.append(self._fault(requirement, entity,
+                                             value="the file is empty"))
+            except OSError as exc:
+                found.append(self._fault(requirement, entity,
+                                         value=f"cannot be read: {exc}"))
+        return found
 
     @staticmethod
     def _read(requirement: Requirement, entity, crate) -> tuple[str, ...]:
