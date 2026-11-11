@@ -1,0 +1,366 @@
+{
+  "@context": "https://w3id.org/ro/crate/1.1/context",
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "conformsTo": { "@id": "https://w3id.org/ro/crate/1.1" },
+      "about": { "@id": "./" },
+      "description": "RO-Crate metadata descriptor for the Design stage of DBTL cycle 1, (2S)-pinocembrin production in E. coli (Carbonell et al. 2018, Commun Biol 1:66)."
+    },
+
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "SYNBIOCHEM DBTL cycle 1 - Design stage, (2S)-pinocembrin",
+      "description": "Design-stage information package for the first Design-Build-Test-Learn cycle targeting (2S)-pinocembrin production in Escherichia coli. Covers pathway selection (RetroPath), enzyme selection (Selenzyme), DNA part design (PartsGenie), statistical design of experiments (orthogonal arrays + Latin square), and generation of plasmid assembly instructions and robot worklists (PlasmidGenie/DominoGenie). Payload entities that the publication does not distribute directly are referenced by their persistent location (ICE registry, Mendeley Data, journal supplementary material).",
+      "datePublished": "2018-06-08",
+      "license": { "@id": "https://creativecommons.org/licenses/by/4.0/" },
+      "identifier": { "@id": "https://doi.org/10.1038/s42003-018-0076-9" },
+      "keywords": [
+        "synthetic biology", "metabolic engineering", "design of experiments",
+        "pinocembrin", "flavonoid", "Escherichia coli", "biofoundry", "DBTL"
+      ],
+      "creator": [
+        { "@id": "#person-carbonell" },
+        { "@id": "#person-swainston" },
+        { "@id": "#person-jervis" },
+        { "@id": "#person-dunstan" },
+        { "@id": "#person-robinson" },
+        { "@id": "#person-yan" },
+        { "@id": "#person-faulon" },
+        { "@id": "#person-scrutton" }
+      ],
+      "publisher": { "@id": "#org-synbiochem" },
+      "funder": [{ "@id": "#grant-bbsrc" }, { "@id": "#grant-anr" }],
+      "isBasedOn": [{ "@id": "https://doi.org/10.1002/biot.201400055" }],
+      "isPartOf": { "@id": "#dbtl-cycle-1" },
+      "mentions": [
+        { "@id": "#action-pathway-selection" },
+        { "@id": "#action-enzyme-selection" },
+        { "@id": "#action-parts-design" },
+        { "@id": "#action-doe" },
+        { "@id": "#action-assembly-instructions" }
+      ],
+      "hasPart": [
+        { "@id": "#target-pinocembrin" },
+        { "@id": "#precursor-phenylalanine" },
+        { "@id": "#intermediate-cinnamic-acid" },
+        { "@id": "#cofactor-malonyl-coa" },
+        { "@id": "#chassis-dh5alpha" },
+        { "@id": "pathway/retropath-selected-pathway.xml" },
+        { "@id": "enzymes/selenzyme-candidates.csv" },
+        { "@id": "enzymes/selected-enzymes.fasta" },
+        { "@id": "parts/parts-sbol-v1/" },
+        { "@id": "doe/factor-definitions.json" },
+        { "@id": "doe/design-matrix-16.csv" },
+        { "@id": "plasmids/constructs-genbank/" },
+        { "@id": "assembly/bridging-oligos.csv" },
+        { "@id": "assembly/part-amplification-primers.csv" },
+        { "@id": "assembly/hamilton-worklists/" },
+        { "@id": "assembly/plate-map.csv" }
+      ]
+    },
+
+    { "@id": "https://creativecommons.org/licenses/by/4.0/", "@type": "CreativeWork", "name": "CC BY 4.0" },
+    {
+      "@id": "https://doi.org/10.1038/s42003-018-0076-9",
+      "@type": "ScholarlyArticle",
+      "name": "An automated Design-Build-Test-Learn pipeline for enhanced microbial production of fine chemicals",
+      "datePublished": "2018-06-08"
+    },
+    {
+      "@id": "https://doi.org/10.1002/biot.201400055",
+      "@type": "ScholarlyArticle",
+      "name": "Validation of RetroPath, a computer-aided design tool for metabolic pathway engineering (Feher et al. 2014)",
+      "description": "Source of the initial RetroPath pinocembrin design and of the reference growth/media conditions."
+    },
+    {
+      "@id": "https://doi.org/10.17632/8g4wfwtd43.1",
+      "@type": "Dataset",
+      "name": "SYNBIOCHEM Design-Build-Test-Learn pipeline - Mendeley Data v1",
+      "description": "Authoritative deposit of the datasets generated and analysed in the study."
+    },
+    {
+      "@id": "https://ice.synbiochem.co.uk",
+      "@type": "Dataset",
+      "name": "SYNBIOCHEM JBEI-ICE registry",
+      "description": "Registry of parts, plasmids and strains; source of unique IDs used for Design-to-Build sample tracking."
+    },
+
+    {
+      "@id": "#dbtl-cycle-1",
+      "@type": "Dataset",
+      "name": "DBTL cycle 1 (pinocembrin)",
+      "description": "Umbrella record for cycle 1. The Build, Test and Learn crates of this cycle, and the Design crate of cycle 2, link back to this entity.",
+      "hasPart": [{ "@id": "./" }]
+    },
+
+    { "@id": "#person-carbonell", "@type": "Person", "name": "Pablo Carbonell", "affiliation": { "@id": "#org-synbiochem" }, "jobTitle": "Design and Learn" },
+    { "@id": "#person-swainston", "@type": "Person", "name": "Neil Swainston", "affiliation": { "@id": "#org-synbiochem" }, "jobTitle": "Design and Learn" },
+    { "@id": "#person-jervis", "@type": "Person", "name": "Adrian J. Jervis", "affiliation": { "@id": "#org-synbiochem" } },
+    { "@id": "#person-dunstan", "@type": "Person", "name": "Mark Dunstan", "affiliation": { "@id": "#org-synbiochem" } },
+    { "@id": "#person-robinson", "@type": "Person", "name": "Christopher J. Robinson", "affiliation": { "@id": "#org-synbiochem" } },
+    { "@id": "#person-yan", "@type": "Person", "name": "Cunyu Yan", "affiliation": { "@id": "#org-synbiochem" } },
+    { "@id": "#person-faulon", "@type": "Person", "name": "Jean-Loup Faulon", "affiliation": { "@id": "#org-synbiochem" } },
+    { "@id": "#person-scrutton", "@type": "Person", "name": "Nigel S. Scrutton", "affiliation": { "@id": "#org-synbiochem" }, "email": "nigel.scrutton@manchester.ac.uk" },
+
+    {
+      "@id": "#org-synbiochem",
+      "@type": "Organization",
+      "name": "Manchester Centre for Synthetic Biology of Fine and Speciality Chemicals (SYNBIOCHEM)",
+      "parentOrganization": { "@id": "https://ror.org/027m9bs27" },
+      "address": "Manchester Institute of Biotechnology, 131 Princess Street, Manchester M1 7DN, UK"
+    },
+    { "@id": "https://ror.org/027m9bs27", "@type": "Organization", "name": "The University of Manchester" },
+    { "@id": "#grant-bbsrc", "@type": "Grant", "identifier": "BB/M017702/1", "name": "Centre for synthetic biology of fine and speciality chemicals (SYNBIOCHEM)", "funder": { "@id": "https://ror.org/00cwqg982" } },
+    { "@id": "#grant-anr", "@type": "Grant", "identifier": "ANR-15-CE1-0008", "funder": { "@id": "https://ror.org/00rbzpz17" } },
+    { "@id": "https://ror.org/00cwqg982", "@type": "Organization", "name": "Biotechnology and Biological Sciences Research Council" },
+    { "@id": "https://ror.org/00rbzpz17", "@type": "Organization", "name": "Agence Nationale de la Recherche" },
+
+    {
+      "@id": "#target-pinocembrin",
+      "@type": ["MolecularEntity", "DefinedTerm"],
+      "name": "(2S)-pinocembrin",
+      "roleName": "design target",
+      "inChIKey": "URFCJEUYXNAHFI-ZDUSSCGKSA-N",
+      "smiles": "O=C1C[C@H](c2ccccc2)Oc2cc(O)cc(O)c21",
+      "sameAs": [{ "@id": "https://pubchem.ncbi.nlm.nih.gov/compound/73201" }],
+      "description": "Flavanone target of DBTL cycle 1; key precursor to flavonoid diversity."
+    },
+    { "@id": "#precursor-phenylalanine", "@type": "MolecularEntity", "name": "L-phenylalanine", "roleName": "pathway substrate / sink compound", "inChIKey": "COLNVLDHVKWLRT-QMMMGPOBSA-N" },
+    { "@id": "#intermediate-cinnamic-acid", "@type": "MolecularEntity", "name": "trans-cinnamic acid", "roleName": "monitored pathway intermediate (product of PAL)", "inChIKey": "WBYWAXJHAXSJNI-VOTSOKGWSA-N" },
+    { "@id": "#cofactor-malonyl-coa", "@type": "MolecularEntity", "name": "malonyl-CoA", "roleName": "limiting cofactor; design constraint for CHS step" },
+
+    {
+      "@id": "#chassis-dh5alpha",
+      "@type": "BioChemEntity",
+      "name": "Escherichia coli DH5-alpha (NEB 5-alpha)",
+      "taxonomicRange": { "@id": "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=562" },
+      "description": "Chassis assumed at Design time for library screening; K-12 derivative, supplied by New England Biolabs."
+    },
+
+    {
+      "@id": "#software-retropath",
+      "@type": "SoftwareApplication",
+      "name": "RetroPath",
+      "softwareVersion": "RetroPath (2014 design) / RetroPath2.0",
+      "url": "https://doi.org/10.1016/j.ymben.2017.12.002",
+      "description": "Retrosynthesis workflow applying reaction rules to select candidate production pathways. Version MUST be pinned before reuse."
+    },
+    { "@id": "#software-selenzyme", "@type": "SoftwareApplication", "name": "Selenzyme", "url": "http://selenzyme.synbiochem.co.uk", "identifier": "https://doi.org/10.1093/bioinformatics/bty065", "description": "Enzyme sequence selection by biochemical reaction similarity." },
+    { "@id": "#software-partsgenie", "@type": "SoftwareApplication", "name": "PartsGenie", "url": "https://parts.synbiochem.co.uk", "identifier": "https://doi.org/10.1093/bioinformatics/bty105", "description": "Integrated design and optimisation of synthetic biology parts (RBS + CDS)." },
+    { "@id": "#software-plasmidgenie", "@type": "SoftwareApplication", "name": "PlasmidGenie / DominoGenie", "url": "https://parts.synbiochem.co.uk/plasmidGenie", "description": "Generates plasmid assembly recipes, bridging oligos and robot worklists for ligase cycling reaction." },
+    { "@id": "#software-rbs-calculator", "@type": "SoftwareApplication", "name": "RBS Calculator", "identifier": "https://doi.org/10.1016/B978-0-12-385120-8.00002-4", "description": "Thermodynamic model used by PartsGenie to reach the target translation initiation rate." },
+    { "@id": "#software-doebase", "@type": "SoftwareApplication", "name": "DoE.base (R package)", "description": "Orthogonal arrays, a generalised form of mutually orthogonal Latin squares." },
+    { "@id": "#software-planor", "@type": "SoftwareApplication", "name": "planor (R package)", "description": "Automatic generation of generalised regular factorial designs." },
+    { "@id": "#software-biochem4j", "@type": "SoftwareApplication", "name": "biochem4j", "identifier": "https://doi.org/10.1371/journal.pone.0179130", "description": "Graph-database knowledge base mined during pathway and enzyme selection." },
+
+    {
+      "@id": "#action-pathway-selection",
+      "@type": "CreateAction",
+      "name": "Pathway selection by retrosynthesis",
+      "instrument": [{ "@id": "#software-retropath" }, { "@id": "#software-biochem4j" }],
+      "object": [{ "@id": "#target-pinocembrin" }, { "@id": "#precursor-phenylalanine" }, { "@id": "#chassis-dh5alpha" }],
+      "result": { "@id": "pathway/retropath-selected-pathway.xml" },
+      "agent": { "@id": "#person-carbonell" },
+      "description": "Reaction-rule-based retrosynthesis from (2S)-pinocembrin back to the E. coli metabolite sink. The selected four-step route reproduces the previously validated RetroPath design of Feher et al. 2014. Rule diameter, rule set version, step limit and scoring function MUST be recorded here before reuse."
+    },
+    {
+      "@id": "pathway/retropath-selected-pathway.xml",
+      "@type": ["File", "SoftwareSourceCode"],
+      "name": "Selected pinocembrin pathway",
+      "encodingFormat": "application/sbml+xml",
+      "description": "Four enzymatic steps: L-phenylalanine -(PAL)-> trans-cinnamic acid -(4CL)-> cinnamoyl-CoA -(CHS, +3 malonyl-CoA)-> pinocembrin chalcone -(CHI)-> (2S)-pinocembrin.",
+      "hasPart": [{ "@id": "#step-pal" }, { "@id": "#step-4cl" }, { "@id": "#step-chs" }, { "@id": "#step-chi" }]
+    },
+    { "@id": "#step-pal", "@type": "DefinedTerm", "name": "Step 1: phenylalanine ammonia-lyase", "termCode": "EC 4.3.1.24" },
+    { "@id": "#step-4cl", "@type": "DefinedTerm", "name": "Step 2: 4-coumarate:CoA ligase (cinnamate:CoA ligase activity)", "termCode": "EC 6.2.1.12" },
+    { "@id": "#step-chs", "@type": "DefinedTerm", "name": "Step 3: chalcone synthase", "termCode": "EC 2.3.1.74" },
+    { "@id": "#step-chi", "@type": "DefinedTerm", "name": "Step 4: chalcone isomerase", "termCode": "EC 5.5.1.6" },
+
+    {
+      "@id": "#action-enzyme-selection",
+      "@type": "CreateAction",
+      "name": "Enzyme sequence selection",
+      "instrument": { "@id": "#software-selenzyme" },
+      "object": { "@id": "pathway/retropath-selected-pathway.xml" },
+      "result": [{ "@id": "enzymes/selenzyme-candidates.csv" }, { "@id": "enzymes/selected-enzymes.fasta" }],
+      "agent": { "@id": "#person-carbonell" },
+      "description": "Candidate sequences ranked per reaction step by reaction similarity, with taxonomic distance to the chassis as a secondary criterion."
+    },
+    { "@id": "enzymes/selenzyme-candidates.csv", "@type": "File", "name": "Selenzyme candidate sequences with scores", "encodingFormat": "text/csv" },
+    {
+      "@id": "enzymes/selected-enzymes.fasta",
+      "@type": "File",
+      "name": "Selected enzyme protein sequences",
+      "encodingFormat": "application/x-fasta",
+      "about": [{ "@id": "#enzyme-pal" }, { "@id": "#enzyme-4cl" }, { "@id": "#enzyme-chs" }, { "@id": "#enzyme-chi" }]
+    },
+    { "@id": "#enzyme-pal", "@type": "BioChemEntity", "name": "PAL - phenylalanine ammonia-lyase", "taxonomicRange": "Arabidopsis thaliana", "description": "UniProt accession to be resolved from the ICE part record (Supplementary Table 2)." },
+    { "@id": "#enzyme-4cl", "@type": "BioChemEntity", "name": "4CL - 4-coumarate:CoA ligase", "taxonomicRange": "Streptomyces coelicolor ATCC BAA-471 / A3(2) / M145", "description": "UniProt accession to be resolved from the ICE part record (Supplementary Table 2)." },
+    { "@id": "#enzyme-chs", "@type": "BioChemEntity", "name": "CHS - chalcone synthase", "taxonomicRange": "Arabidopsis thaliana" },
+    { "@id": "#enzyme-chi", "@type": "BioChemEntity", "name": "CHI - chalcone isomerase", "taxonomicRange": "Arabidopsis thaliana" },
+
+    {
+      "@id": "#action-parts-design",
+      "@type": "CreateAction",
+      "name": "DNA part design and sequence optimisation",
+      "instrument": [{ "@id": "#software-partsgenie" }, { "@id": "#software-rbs-calculator" }],
+      "object": { "@id": "enzymes/selected-enzymes.fasta" },
+      "result": { "@id": "parts/parts-sbol-v1/" },
+      "agent": { "@id": "#person-swainston" },
+      "description": "CDSs codon-optimised for E. coli; RBS designed to a target translation initiation rate of 15000 au; 5-prime and 3-prime sequences optimised for ligase cycling reaction; parts also made compatible with BglBrick and Golden Gate assembly.",
+      "parameterValue": [
+        { "@id": "#param-tir" }, { "@id": "#param-codon-host" }, { "@id": "#param-assembly-compat" }
+      ]
+    },
+    { "@id": "#param-tir", "@type": "PropertyValue", "name": "RBS target translation initiation rate", "value": 15000, "unitText": "arbitrary units (RBS Calculator)" },
+    { "@id": "#param-codon-host", "@type": "PropertyValue", "name": "Codon optimisation host", "value": "Escherichia coli" },
+    { "@id": "#param-assembly-compat", "@type": "PropertyValue", "name": "Assembly standard compatibility", "value": "ligase cycling reaction; BglBrick; Golden Gate" },
+
+    {
+      "@id": "parts/parts-sbol-v1/",
+      "@type": "Dataset",
+      "name": "Designed DNA parts (SBOL v1)",
+      "description": "One SBOL v1 document per part. Authoritative copies and unique IDs are held in the ICE registry.",
+      "sameAs": { "@id": "https://ice.synbiochem.co.uk" },
+      "hasPart": [
+        { "@id": "#part-cds-pal" }, { "@id": "#part-cds-4cl" }, { "@id": "#part-cds-chs" }, { "@id": "#part-cds-chi" },
+        { "@id": "#part-promoter-ptrc" }, { "@id": "#part-promoter-placuv5" }, { "@id": "#part-no-promoter" },
+        { "@id": "#part-ori-psc101" }, { "@id": "#part-ori-p15a" }, { "@id": "#part-ori-cole1" }
+      ]
+    },
+    { "@id": "#part-cds-pal", "@type": "File", "name": "PAL CDS + RBS part", "encodingFormat": "application/sbol+xml", "about": { "@id": "#enzyme-pal" } },
+    { "@id": "#part-cds-4cl", "@type": "File", "name": "4CL CDS + RBS part", "encodingFormat": "application/sbol+xml", "about": { "@id": "#enzyme-4cl" } },
+    { "@id": "#part-cds-chs", "@type": "File", "name": "CHS CDS + RBS part", "encodingFormat": "application/sbol+xml", "about": { "@id": "#enzyme-chs" } },
+    { "@id": "#part-cds-chi", "@type": "File", "name": "CHI CDS + RBS part", "encodingFormat": "application/sbol+xml", "about": { "@id": "#enzyme-chi" } },
+    { "@id": "#part-promoter-ptrc", "@type": "File", "name": "Ptrc promoter part (strong)", "encodingFormat": "application/sbol+xml" },
+    { "@id": "#part-promoter-placuv5", "@type": "File", "name": "PlacUV5 promoter part (weak)", "encodingFormat": "application/sbol+xml" },
+    { "@id": "#part-no-promoter", "@type": "DefinedTerm", "name": "No promoter", "description": "Explicit factor level: intergenic region left without a promoter, so the downstream gene is read from the upstream promoter." },
+    { "@id": "#part-ori-psc101", "@type": "File", "name": "pSC101 origin, BglBrick backbone (low copy)", "encodingFormat": "application/sbol+xml" },
+    { "@id": "#part-ori-p15a", "@type": "File", "name": "p15A origin, BglBrick backbone (medium copy)", "encodingFormat": "application/sbol+xml" },
+    { "@id": "#part-ori-cole1", "@type": "File", "name": "ColE1 origin, BglBrick backbone (high copy)", "encodingFormat": "application/sbol+xml", "description": "Not used in cycle 1; fixed for all constructs in cycle 2 following the cycle-1 Learn stage." },
+
+    {
+      "@id": "#action-doe",
+      "@type": "CreateAction",
+      "name": "Statistical design of experiments",
+      "instrument": [{ "@id": "#software-doebase" }, { "@id": "#software-planor" }],
+      "object": { "@id": "doe/factor-definitions.json" },
+      "result": { "@id": "doe/design-matrix-16.csv" },
+      "agent": { "@id": "#person-carbonell" },
+      "description": "Orthogonal array design combined with a Latin square for the positional arrangement of genes, reducing 2592 possible configurations to 16 representative constructs (compression ratio 162:1). The random seed and generating array MUST be recorded here for the design to be reproducible.",
+      "parameterValue": [
+        { "@id": "#param-design-space" }, { "@id": "#param-library-size" },
+        { "@id": "#param-compression" }, { "@id": "#param-doe-method" }, { "@id": "#param-replicates" }
+      ]
+    },
+    { "@id": "#param-design-space", "@type": "PropertyValue", "name": "Full combinatorial design space", "value": 2592, "description": "4 x 3 x 3 x 3 x 24" },
+    { "@id": "#param-library-size", "@type": "PropertyValue", "name": "Selected library size", "value": 16 },
+    { "@id": "#param-compression", "@type": "PropertyValue", "name": "Compression ratio", "value": "162:1" },
+    { "@id": "#param-doe-method", "@type": "PropertyValue", "name": "DoE method", "value": "orthogonal array + Latin square for gene position" },
+    { "@id": "#param-replicates", "@type": "PropertyValue", "name": "Planned replication at Test stage", "value": "triplicate colonies per construct" },
+
+    {
+      "@id": "doe/factor-definitions.json",
+      "@type": "File",
+      "name": "DoE factor and level definitions",
+      "encodingFormat": "application/json",
+      "about": [
+        { "@id": "#factor-backbone" }, { "@id": "#factor-promoter-ig1" },
+        { "@id": "#factor-promoter-ig2" }, { "@id": "#factor-promoter-ig3" },
+        { "@id": "#factor-gene-order" }
+      ]
+    },
+    {
+      "@id": "#factor-backbone",
+      "@type": "PropertyValue",
+      "name": "Vector backbone (copy number x leading promoter strength)",
+      "value": "4 levels",
+      "description": "p15A (medium copy) or pSC101 (low copy), each with a strong (Ptrc) or weak (PlacUV5) promoter. Treated as an ORDINAL factor (low / high copy number) in the Learn-stage model.",
+      "measurementTechnique": "ordinal"
+    },
+    { "@id": "#factor-promoter-ig1", "@type": "PropertyValue", "name": "Promoter in intergenic region 1", "value": "3 levels: none / PlacUV5 / Ptrc", "measurementTechnique": "categorical" },
+    { "@id": "#factor-promoter-ig2", "@type": "PropertyValue", "name": "Promoter in intergenic region 2", "value": "3 levels: none / PlacUV5 / Ptrc", "measurementTechnique": "categorical" },
+    { "@id": "#factor-promoter-ig3", "@type": "PropertyValue", "name": "Promoter in intergenic region 3", "value": "3 levels: none / PlacUV5 / Ptrc", "measurementTechnique": "categorical" },
+    { "@id": "#factor-gene-order", "@type": "PropertyValue", "name": "Positional order of the four genes", "value": "24 permutations, reduced to n levels by Latin square", "measurementTechnique": "categorical" },
+
+    {
+      "@id": "doe/design-matrix-16.csv",
+      "@type": "File",
+      "name": "Design matrix - 16 representative constructs",
+      "encodingFormat": "text/csv",
+      "description": "One row per construct, giving the level of each factor. Construct identifiers 1040-1055, matching Fig. 2a and the ICE records. Populate from Supplementary Data 3 / the Mendeley deposit.",
+      "sameAs": { "@id": "https://doi.org/10.17632/8g4wfwtd43.1" },
+      "variableMeasured": [
+        { "@id": "#factor-backbone" }, { "@id": "#factor-promoter-ig1" },
+        { "@id": "#factor-promoter-ig2" }, { "@id": "#factor-promoter-ig3" },
+        { "@id": "#factor-gene-order" }
+      ],
+      "mentions": [
+        { "@id": "#construct-1040" }, { "@id": "#construct-1041" }, { "@id": "#construct-1042" }, { "@id": "#construct-1043" },
+        { "@id": "#construct-1044" }, { "@id": "#construct-1045" }, { "@id": "#construct-1046" }, { "@id": "#construct-1047" },
+        { "@id": "#construct-1048" }, { "@id": "#construct-1049" }, { "@id": "#construct-1050" }, { "@id": "#construct-1051" },
+        { "@id": "#construct-1052" }, { "@id": "#construct-1053" }, { "@id": "#construct-1054" }, { "@id": "#construct-1055" }
+      ]
+    },
+
+    { "@id": "#construct-1040", "@type": "BioChemEntity", "name": "Pathway construct 1040", "identifier": "1040" },
+    { "@id": "#construct-1041", "@type": "BioChemEntity", "name": "Pathway construct 1041", "identifier": "1041" },
+    { "@id": "#construct-1042", "@type": "BioChemEntity", "name": "Pathway construct 1042", "identifier": "1042" },
+    { "@id": "#construct-1043", "@type": "BioChemEntity", "name": "Pathway construct 1043", "identifier": "1043" },
+    { "@id": "#construct-1044", "@type": "BioChemEntity", "name": "Pathway construct 1044", "identifier": "1044" },
+    { "@id": "#construct-1045", "@type": "BioChemEntity", "name": "Pathway construct 1045", "identifier": "1045" },
+    { "@id": "#construct-1046", "@type": "BioChemEntity", "name": "Pathway construct 1046", "identifier": "1046" },
+    { "@id": "#construct-1047", "@type": "BioChemEntity", "name": "Pathway construct 1047", "identifier": "1047" },
+    { "@id": "#construct-1048", "@type": "BioChemEntity", "name": "Pathway construct 1048", "identifier": "1048" },
+    { "@id": "#construct-1049", "@type": "BioChemEntity", "name": "Pathway construct 1049", "identifier": "1049" },
+    { "@id": "#construct-1050", "@type": "BioChemEntity", "name": "Pathway construct 1050", "identifier": "1050" },
+    { "@id": "#construct-1051", "@type": "BioChemEntity", "name": "Pathway construct 1051", "identifier": "1051" },
+    { "@id": "#construct-1052", "@type": "BioChemEntity", "name": "Pathway construct 1052", "identifier": "1052" },
+    { "@id": "#construct-1053", "@type": "BioChemEntity", "name": "Pathway construct 1053", "identifier": "1053" },
+    { "@id": "#construct-1054", "@type": "BioChemEntity", "name": "Pathway construct 1054", "identifier": "1054" },
+    { "@id": "#construct-1055", "@type": "BioChemEntity", "name": "Pathway construct 1055", "identifier": "1055" },
+
+    {
+      "@id": "#action-assembly-instructions",
+      "@type": "CreateAction",
+      "name": "Generation of plasmid designs and assembly instructions",
+      "instrument": { "@id": "#software-plasmidgenie" },
+      "object": [{ "@id": "doe/design-matrix-16.csv" }, { "@id": "parts/parts-sbol-v1/" }],
+      "result": [
+        { "@id": "plasmids/constructs-genbank/" },
+        { "@id": "assembly/bridging-oligos.csv" },
+        { "@id": "assembly/part-amplification-primers.csv" },
+        { "@id": "assembly/hamilton-worklists/" },
+        { "@id": "assembly/plate-map.csv" }
+      ],
+      "agent": { "@id": "#person-swainston" },
+      "description": "Produces the full annotated plasmid sequence for each design, the bridging oligos for ligase cycling reaction assembly, and the worklists that drive the Hamilton STAR liquid handler. All plasmid designs are deposited to ICE, which provides the unique IDs carried forward into the Build stage.",
+      "parameterValue": [{ "@id": "#param-lcr-tm" }, { "@id": "#param-part-conc" }]
+    },
+    { "@id": "#param-lcr-tm", "@type": "PropertyValue", "name": "Assumed ligase cycling reaction melting temperature for bridging oligo design", "value": 70, "unitCode": "CEL" },
+    { "@id": "#param-part-conc", "@type": "PropertyValue", "name": "Part working concentration for LCR setup", "value": 75, "unitText": "nM" },
+
+    {
+      "@id": "plasmids/constructs-genbank/",
+      "@type": "Dataset",
+      "name": "Annotated plasmid designs (GenBank)",
+      "description": "One record per construct 1040-1055, annotated with origin, promoters, RBSs, CDSs and terminators. Authoritative copies in ICE.",
+      "sameAs": { "@id": "https://ice.synbiochem.co.uk" }
+    },
+    { "@id": "assembly/bridging-oligos.csv", "@type": "File", "name": "Bridging oligonucleotides for ligase cycling reaction", "encodingFormat": "text/csv", "description": "Corresponds to Supplementary Data 1/2 of the publication." },
+    { "@id": "assembly/part-amplification-primers.csv", "@type": "File", "name": "5-prime-phosphorylated part amplification primers", "encodingFormat": "text/csv", "description": "Ordered from Integrated DNA Technologies; corresponds to Supplementary Data 1." },
+    { "@id": "assembly/hamilton-worklists/", "@type": "Dataset", "name": "Hamilton STAR robot worklists", "description": "Automatically generated worklists for bridging-oligo pooling and LCR reaction setup, with integrated barcode reading for sample tracking." },
+    { "@id": "assembly/plate-map.csv", "@type": "File", "name": "Plate map and barcode assignments", "encodingFormat": "text/csv", "description": "Well assignments linking construct IDs to physical positions; the Design-to-Build handover record." },
+
+    {
+      "@id": "#synthesis-order",
+      "@type": "Order",
+      "name": "Commercial DNA synthesis order",
+      "description": "Designed parts ordered from Life Technologies (Germany), Gen9 (USA) and Twist Bioscience (USA). Vendor assignment per part is recorded in Supplementary Table 3.",
+      "object": { "@id": "parts/parts-sbol-v1/" }
+    }
+  ]
+}
