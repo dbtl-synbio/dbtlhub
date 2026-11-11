@@ -32,10 +32,15 @@ does the whole deployment:
 python deploy.py <your folder of contracts>
 ```
 
-Built by Anil Wipat, Newcastle University, for Project 25 at ELIXIR
-BioHackathon Europe 2026. It owes its thinking about what a model is for to
-Marco Anteghini's framework for the same project, which is set out under
-Acknowledgements in [docs/SYSTEM_MANUAL.md](docs/SYSTEM_MANUAL.md).
+Built by Anil Wipat and Marco Anteghini.
+
+sentinel-oo is a deployable version of sentinel. The generic system is
+combined with a hand written contract file that tailors the sentinel to a
+system and deploys it to a container. A REST API is provided, and Model
+Context Protocol access for other agents.
+
+What it takes from the sentinel framework is set out under Acknowledgements
+in [docs/SYSTEM_MANUAL.md](docs/SYSTEM_MANUAL.md).
 
 The rest of this file is the record of how it was built and what was found
 while building it, which is useful if you are changing the service and not
