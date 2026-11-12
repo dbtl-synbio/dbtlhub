@@ -34,6 +34,7 @@ discipline the contracts get, in the same words.
 """
 from __future__ import annotations
 
+import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -343,21 +344,29 @@ class Workflow:
 #  Reading them off disk
 # --------------------------------------------------------------------------- #
 def _read(path: Path) -> dict:
-    """YAML if PyYAML is here, and a plain refusal if it is not.
+    """YAML when PyYAML is here, and the JSON twin when it is not.
 
-    Unlike the contracts, a workflow has no JSON twin: a contract must be
-    readable with the standard library alone because the validator is the one
-    thing that may never need an install, and a workflow is not that.
+    Each workflow exists twice: the `.yaml`, which is the one a person edits
+    because YAML can carry the reason for a step beside the step, and the
+    `.json`, the same content with the comments stripped. This is the pattern
+    the contracts already use, and it is here for the same reason plus one
+    more: the deployment image installs nothing, so a workflow that could only
+    be read with PyYAML would simply be absent on the machine where the
+    interface actually runs. The interface would come up with no workflows and
+    say so politely, which is worse than not shipping them at all.
+
+    `tests/test_framework.py` fails if the two ever disagree.
     """
-    text = path.read_text(encoding="utf-8")
     try:
         import yaml                                        # noqa: PLC0415
-    except ImportError as exc:                             # pragma: no cover
-        raise RuntimeError(
-            f"{path.name} is YAML and PyYAML is not installed. The framework "
-            f"itself runs on the standard library alone; the workflows do not. "
-            f"`pip install 'PyYAML>=5.1'`") from exc
-    return yaml.safe_load(text) or {}
+    except ImportError:                                    # pragma: no cover
+        twin = path.with_suffix(".json")
+        if not twin.is_file():
+            raise RuntimeError(
+                f"{path.name} is YAML, PyYAML is not installed, and there is "
+                f"no {twin.name} to read instead") from None
+        return json.loads(twin.read_text(encoding="utf-8"))
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
 def from_dict(raw: dict, path: Path | None = None) -> Workflow:
@@ -394,13 +403,17 @@ def load_file(path: Path | str) -> Workflow:
 
 def available() -> list[str]:
     """Every workflow on disk, with the one they are all modelled on first."""
-    names = sorted(p.stem for p in HERE.glob("*.yaml"))
+    names = sorted({p.stem for p in HERE.glob("*.yaml")}
+                   | {p.stem for p in HERE.glob("*.json")})
     first = [n for n in ("bioprospecting",) if n in names]
     return first + [n for n in names if n not in first]
 
 
 def load(name: str) -> Workflow:
     path = HERE / f"{name}.yaml"
+    if not path.is_file() and (HERE / f"{name}.json").is_file():
+        return from_dict(json.loads((HERE / f"{name}.json").read_text()),
+                         HERE / f"{name}.json")
     if not path.is_file():
         raise FileNotFoundError(
             f"no workflow named {name!r}. There is: {', '.join(available())}")

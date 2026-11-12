@@ -382,6 +382,33 @@ class TestWorkflows(unittest.TestCase):
         # The blank one counts nothing on purpose, and must not invent a size.
         self.assertEqual(self.loader.load("blank").to_inputs(), {})
 
+    def test_each_workflow_and_its_json_twin_agree(self):
+        """Two files holding one workflow is two files that can drift.
+
+        The twin exists because the deployment image installs nothing, so a
+        YAML-only workflow would be absent on the machine where the interface
+        actually runs. That is only worth having while the two say the same
+        thing.
+        """
+        import json                                         # noqa: PLC0415
+        for name in self.loader.available():
+            twin = Path(self.loader.HERE) / f"{name}.json"
+            with self.subTest(workflow=name):
+                self.assertTrue(twin.is_file(),
+                                f"{name}.yaml has no .json twin; the image "
+                                f"has no PyYAML and would not see it")
+                from_yaml = self.loader.load(name)
+                from_json = self.loader.from_dict(
+                    json.loads(twin.read_text()), twin)
+                self.assertEqual(
+                    [(s.number, s.name, s.phase, s.count_observed,
+                      s.manual_parts, s.routes, s.handover_after)
+                     for s in from_json.steps],
+                    [(s.number, s.name, s.phase, s.count_observed,
+                      s.manual_parts, s.routes, s.handover_after)
+                     for s in from_yaml.steps],
+                    f"{name}.json and {name}.yaml have drifted apart")
+
     def test_a_workflow_survives_the_trip_through_a_crate(self):
         """The crate form is a format, not a summary.
 

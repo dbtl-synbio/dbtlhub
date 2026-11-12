@@ -1,0 +1,133 @@
+{
+ "name": "directed_evolution",
+ "title": "Directed evolution of an enzyme, one machine-learning-guided round",
+ "use_case": "directed_evolution",
+ "based_on": "bioprospecting",
+ "source": "Step order and counts follow the single published case study named in the repository, Zhang et al. (2025) \"Integrating protein language models and automatic biofoundry for enhanced protein evolution\", Nature Communications 16, doi 10.1038/s41467-025-56751-8 (read via PMC11814318; Methods and Results only, the last quarter of the text was not read), together with dbtlhub/directed_evolution/README.md and its two interface-agent diagrams. Steps marked as generic have no specific source.",
+ "description": "One turn of a directed-evolution cycle: choose where to mutate, build a\nvariant library, measure each variant, call the winners, and retrain the\nmodel that proposes the next round. Counts are from round 1 of the Zhang et\nal. case study (tRNA synthetase pCNF-RS, 96 variants per round, four rounds\nin about 10 days). Grounding is thin: one paper plus the repository\ndiagrams. The classical routes (error-prone PCR, DNA shuffling, selection)\nare listed as alternatives but are not from that paper and are not detailed.",
+ "steps": [
+  {
+   "number": 1,
+   "name": "Rank mutation sites and variants with a language model",
+   "phase": "design",
+   "note": "From the repository diagrams and Zhang et al.: ESM-2 zero-shot ranking in round 1, with a fitness predictor in later rounds.",
+   "count_observed": 256
+  },
+  {
+   "number": 2,
+   "name": "Select the variants to build",
+   "phase": "design",
+   "note": "From Zhang et al.: 96 of 256 candidates in round 1, one plate. The limit is a design constraint set by the equipment, so it has to be stated before the list exists.",
+   "count_observed": 96
+  },
+  {
+   "number": 3,
+   "name": "Choose the mutagenesis route and design primers",
+   "phase": "design",
+   "note": "Primer design in Python is from the repository diagram; the route list beyond site-directed mutagenesis is generic and not from the case study. The route changes what the build contract must carry, so it has to travel with the variant list.",
+   "routes": [
+    "site-directed (QuikChange PCR, as in the case study)",
+    "site-saturation",
+    "error-prone PCR",
+    "DNA shuffling"
+   ],
+   "handover_after": "design_to_build",
+   "handover_number": 1
+  },
+  {
+   "number": 4,
+   "name": "Order primers",
+   "phase": "build",
+   "note": "From Zhang et al.: primer shipping was about 24 h of the roughly 59 h per round, so it is the longest single wait in the cycle."
+  },
+  {
+   "number": 5,
+   "name": "Run mutagenesis PCR and digest template with DpnI",
+   "phase": "build",
+   "note": "From Zhang et al. (QuikChange PCR, then DpnI for 30 min at 37 C). Which steps a person does by hand against the robot is not stated in the material read.",
+   "manual_parts": [
+    "setting up or loading the liquid handler"
+   ]
+  },
+  {
+   "number": 6,
+   "name": "Transform cells and plate",
+   "phase": "build",
+   "note": "From Zhang et al. (heat shock, recovery, agar plates). The manual part is generic: the repository diagram names liquid handlers, not who moves plates between them.",
+   "manual_parts": [
+    "moving plates between instruments"
+   ]
+  },
+  {
+   "number": 7,
+   "name": "Pick colonies and grow cultures",
+   "phase": "build",
+   "note": "From Zhang et al. Whether picking was by hand or by instrument is not established in the material read. The sample identity and plate position of each culture must be recorded here; the later sequence check is what confirms which variant each well holds.",
+   "manual_parts": [
+    "colony picking checks"
+   ],
+   "handover_after": "build_to_test",
+   "handover_number": 2
+  },
+  {
+   "number": 8,
+   "name": "Express the variants",
+   "phase": "test",
+   "note": "The case study is a screen, with inducer and an unnatural amino acid added. A selection route is a real alternative in directed evolution but is generic here and not described by the case study.",
+   "routes": [
+    "screen each variant in a plate",
+    "selection under growth pressure"
+   ]
+  },
+  {
+   "number": 9,
+   "name": "Check culture density before reading",
+   "phase": "test",
+   "note": "From Zhang et al.: OD600 of at least 0.4 after 11 h, otherwise the colony is repicked. A reading taken below this is not comparable with the rest of the plate."
+  },
+  {
+   "number": 10,
+   "name": "Measure fluorescence on a plate reader",
+   "phase": "test",
+   "note": "From Zhang et al.: sfGFP fluorescence on a CLARIOstar. 91 of 96 variants gave a result in round 1; the five lost need a reason each.",
+   "count_observed": 91
+  },
+  {
+   "number": 11,
+   "name": "Sequence-verify the variants (Sanger)",
+   "phase": "test",
+   "note": "Sanger verification is named in Zhang et al. and the diagrams. That sample preparation is by hand is generic, not stated there.",
+   "manual_parts": [
+    "preparing samples for the sequencing vendor"
+   ]
+  },
+  {
+   "number": 12,
+   "name": "Normalise activity and call hits",
+   "phase": "test",
+   "note": "Activity is reported relative to wild type in Zhang et al.; the rule that calls a hit is not given in the material read, and it is the thing this handover needs a field for.",
+   "handover_after": "test_to_learn",
+   "handover_number": 3
+  },
+  {
+   "number": 13,
+   "name": "Add the measurements to the training set",
+   "phase": "learn",
+   "note": "Generic step with no specific source; the repository diagram only says the test-to-learn agent prepares a curated fitness dataset."
+  },
+  {
+   "number": 14,
+   "name": "Retrain the fitness predictor",
+   "phase": "learn",
+   "note": "From Zhang et al.: a two-layer MLP on frozen ESM-2 embeddings, retrained each round, under 1 h."
+  },
+  {
+   "number": 15,
+   "name": "Predict fitness and propose the next library",
+   "phase": "learn",
+   "note": "From Zhang et al.: the retrained predictor scored about 160,000 variants and the top 96 went to the next round. The repository places uncertainty and mutation priorities in this handover, which is a proposal and was not implemented in the original study.",
+   "handover_after": "learn_to_design",
+   "handover_number": 4
+  }
+ ]
+}
