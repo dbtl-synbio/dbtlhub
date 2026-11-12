@@ -516,6 +516,9 @@ class Session:
         self.theme: str = theme.DEFAULT_THEME
         self.arch: Architect | None = None
         self.run_id = f"web-{session_id[:6]}"
+        # How many runs this browser has started. It names them apart, so a
+        # second one never lands in the first one's crate.
+        self.runs_started = 1
         self.thread: threading.Thread | None = None
         self.finished = False
         self.question: Question | None = None   # what is being asked
@@ -524,6 +527,66 @@ class Session:
         self._answer: list[str] = []
         self._answered = threading.Event()
         self._lock = threading.Lock()
+
+    # ---- starting over -----------------------------------------------------
+    def restart(self, keep_specification: bool = True) -> str:
+        """Clear the run so another one can start. Returns what it did.
+
+        A NEW RUN ID, ALWAYS. The crate is append-only and `CrateStore` opens
+        whatever is already at that path, so running again under the same id
+        adds to the previous crate rather than starting one - which is correct
+        behaviour and the wrong thing to get by accident. It was met exactly
+        that way: a second run under `BP-round-1` went from 448 entities to
+        743 and the growth column stopped meaning what it said.
+
+        NOTHING ON DISK IS TOUCHED. The previous run's crate, graph and ledger
+        stay where they are, and the graph panel can still be pointed at them.
+        Starting again is not the same as undoing, and a button that quietly
+        deleted a finished run would be the one mistake this whole system is
+        built to make impossible.
+        """
+        said = []
+        base = self.run_id.rsplit("-run", 1)[0]
+        self.arch = None
+        self.log = []
+        self.crate_growth = []
+        self.last_snapshot = None
+        self.transcript = []
+        self.question = None
+        self.awaiting = False
+        self.finished = False
+        self.thread = None
+        self.focus = ""
+        self.looking_at = ""
+        self._answer = []
+        self._answered.clear()
+
+        self.runs_started += 1
+        self.run_id = f"{base}-run{self.runs_started}"
+        said.append(f"a new run: {self.run_id}")
+
+        # The FORM's run id wins at the start of a cycle, because the
+        # researcher named the run and this interface does not get to
+        # overrule them. So the new name goes into the form, where they can
+        # see it and change it - rather than into a variable the next cycle
+        # silently overwrites. Without this the second run appended to the
+        # first one's crate: 448 entities became 1039, and the growth column
+        # stopped meaning what it said.
+        if self.filled.values.get("run_id"):
+            self.filled.values["run_id"] = self.run_id
+            self.filled.provenance["run_id"] = {
+                "source": "started over", "at": now_iso(), "by": "the interface"}
+            said.append("the form's run id now says so too")
+
+        if not keep_specification:
+            self.filled = Filled(form=FORM)
+            self.workflow = _default_workflow()
+            self.workflow_problems = []
+            self.workflow_source = "the demonstration workflows on disk"
+            said.append("the specification and the workflow are cleared")
+        else:
+            said.append("the specification and the workflow are kept")
+        return "; ".join(said)
 
     # ---- the log the browser reads ----------------------------------------
     def note(self, text: str, kind: str = "note", state: str = "") -> None:
@@ -1164,6 +1227,47 @@ def render_question(session: Session) -> str:
 </section>"""
 
 
+def render_restart(session: Session) -> str:
+    """Start another run. Two buttons, because they are different decisions.
+
+    Keeping the specification is the usual one: run the same project again
+    with another workflow, or after changing a field. Clearing it is the
+    other: a different project entirely, back to the first question.
+
+    Neither touches disk. Starting again is not undoing, and a button that
+    quietly deleted a finished run would be the single mistake this system
+    exists to prevent.
+    """
+    if session.running:
+        return ('<p class="hint">A run is going. Starting over waits for it '
+                'to end — answer its question with <code>stop</code>, or '
+                'press the button below to ask it to stop.</p>'
+                '<form method="post" action="/restart" class="restart">'
+                '<button type="submit">Ask the run to stop</button></form>')
+
+    # Something has RUN, which is not the same as something having happened:
+    # answering the engine question and loading the example both write to the
+    # log, and neither is a run to start over from. The Architect existing is.
+    done = session.arch is not None or session.finished
+    return (
+        f'<form method="post" action="/restart" class="restart">'
+        f'<button type="submit" name="how" value="keep"'
+        f'{"" if done else " disabled"}>Start another run</button>'
+        f'<span class="hint">keeps the engine, the specification and the '
+        f'workflow &middot; a new run id, so this one is not added to the '
+        f'last one&rsquo;s crate</span>'
+        f'<button type="submit" name="how" value="scratch"'
+        f'{"" if done else " disabled"}>Start from scratch</button>'
+        f'<span class="hint">back to the first question, with the form and '
+        f'the workflow cleared</span>'
+        f'</form>'
+        + ('' if done else '<p class="hint">These wake up once something has '
+                           'run.</p>')
+        + '<p class="hint">Neither deletes anything. The crate, the graph and '
+          'the ledger of every earlier run stay on disk, and the knowledge '
+          'graph panel can still be pointed at them.</p>')
+
+
 def _theme_switch(session: Session) -> str:
     """Dark or light, as links rather than a control.
 
@@ -1786,6 +1890,7 @@ def _rest_of_page(session: Session, items: list[dict]) -> str:
   <p class="hint">With JavaScript the log below updates itself. Without it,
     reload the page to see where the run has got to:
     <a href="/">reload</a>.</p>
+  {render_restart(session)}
   <div id="log">{render_log(session)}</div>
 </section>
 
@@ -2183,6 +2288,31 @@ class Handler(BaseHTTPRequestHandler):
                              f"and took the first option instead: "
                              f"{', '.join(guessed[:8])}", kind="note")
             self._redirect("/#form-panel", new_session=cookie)
+        elif path == "/restart":
+            how = (posted.get("how") or ["keep"])[0].strip()
+            if session.running:
+                # A thread cannot be killed from here, and pretending it can
+                # would leave a run writing into a crate the page says is
+                # finished. `stop` is the word the interface already uses and
+                # the run ends itself on it.
+                if session.awaiting:
+                    session.submit_answer("stop")
+                    session.note("asked the run to stop. Press it again once "
+                                 "it has ended.", kind="stop", state="stop")
+                else:
+                    session.note("a run is going and it is not waiting for an "
+                                 "answer. Let it finish, or answer its next "
+                                 "question with `stop`.", kind="note")
+            else:
+                said = session.restart(keep_specification=(how != "scratch"))
+                session.note(f"started over: {said}", kind="architect")
+                session.note("nothing on disk was touched. The previous "
+                             "run's crate, graph and ledger are still there, "
+                             "and the graph panel can still be pointed at "
+                             "them.", kind="crate")
+                if how == "scratch":
+                    session.setup = setup_mod.Setup()
+            self._redirect("/", new_session=cookie)
         elif path == "/redo":
             phase = (posted.get("phase") or [""])[0].strip().lower()
             why = (posted.get("reason") or [""])[0].strip()

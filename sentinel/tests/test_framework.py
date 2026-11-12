@@ -362,6 +362,69 @@ class TestASentinelIsAFile(unittest.TestCase):
         self.assertIn("malformed_check", [e.code for e in report.errors])
 
 
+class TestStartingOver(unittest.TestCase):
+    """Starting another run must not land in the last one's crate.
+
+    The crate is append-only and `CrateStore` opens whatever is already at a
+    path, so running again under the same id ADDS to the previous crate. That
+    is right, and it is the wrong thing to get by pressing a button: a second
+    run went from 448 entities to 1039 and the growth column stopped meaning
+    what it said.
+    """
+
+    def session(self):
+        import importlib.util                                   # noqa: PLC0415
+        spec = importlib.util.spec_from_file_location(
+            "dbtl_web_server", ROOT / "architect" / "web" / "server.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module, module.Session("abcdef123456")
+
+    def test_a_restart_gives_the_run_a_new_name(self):
+        _, session = self.session()
+        first = session.run_id
+        session.restart()
+        self.assertNotEqual(session.run_id, first)
+        self.assertTrue(session.run_id.endswith("-run2"))
+        session.restart()
+        self.assertTrue(session.run_id.endswith("-run3"),
+                        "the number has to keep climbing, not reset")
+
+    def test_the_form_is_told_the_new_name(self):
+        """The form's run id wins at the start of a cycle, so if it is not
+        updated the next run silently uses the old one."""
+        _, session = self.session()
+        session.filled.values["run_id"] = "BP-round-1"
+        session.restart()
+        self.assertEqual(session.filled.values["run_id"], session.run_id)
+        self.assertNotEqual(session.filled.values["run_id"], "BP-round-1")
+
+    def test_keeping_the_specification_keeps_it(self):
+        _, session = self.session()
+        session.filled.values = {"researcher": "Marco", "run_id": "r"}
+        session.restart(keep_specification=True)
+        self.assertEqual(session.filled.values["researcher"], "Marco")
+
+    def test_from_scratch_clears_it(self):
+        _, session = self.session()
+        session.filled.values = {"researcher": "Marco", "run_id": "r"}
+        session.restart(keep_specification=False)
+        self.assertEqual(session.filled.values, {})
+
+    def test_a_restart_clears_the_run_and_not_the_disk(self):
+        _, session = self.session()
+        session.log = [{"at": "now", "kind": "note", "state": "", "text": "x"}]
+        session.crate_growth = [{"phase": "design", "entities": 9, "added": 9}]
+        session.finished = True
+        session.focus = "#something"
+        session.restart()
+        self.assertEqual(session.log, [])
+        self.assertEqual(session.crate_growth, [])
+        self.assertIsNone(session.arch)
+        self.assertFalse(session.finished)
+        self.assertEqual(session.focus, "")
+
+
 class TestWorkflows(unittest.TestCase):
     """The workflows that ship, and the rules a researcher's own is held to.
 

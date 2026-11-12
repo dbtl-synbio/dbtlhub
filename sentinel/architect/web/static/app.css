@@ -409,3 +409,14 @@ svg.kg a circle { transition: stroke 0.12s ease; }
 svg.kg a:hover circle { stroke: var(--fg_bright); stroke-width: 2.6; }
 svg.kg a:hover text { fill: var(--fg_bright); }
 svg.kg a:focus circle { stroke: var(--fg_bright); }
+
+/* ---- starting over ------------------------------------------------------ */
+form.restart {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px dotted var(--grid);
+}
+
+form.restart button { margin: 0 0.5rem 0.4rem 0; }
+form.restart .hint { display: block; margin: 0 0 0.7rem; }
+form.restart button[disabled] { opacity: 0.45; cursor: not-allowed; }
