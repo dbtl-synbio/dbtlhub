@@ -301,9 +301,19 @@ class TestASentinelIsAFile(unittest.TestCase):
     def setUp(self):
         from framework.agents import sentinel as mod                # noqa: PLC0415
         self.mod = mod
-        source = ROOT / "template" / "example" / f"{self.HANDOVER}.yaml"
-        self.assertTrue(source.is_file(), f"{source} is the worked example")
-        self.placed = mod.CONTRACTS / f"{self.HANDOVER}.yaml"
+        # Whichever dialect this machine can read. A sentinel is a file in
+        # both, and on a clone without PyYAML the JSON twin is the only one
+        # anything can open - so that is the one the claim has to hold for.
+        try:
+            import yaml                                    # noqa: F401,PLC0415
+            name = f"{self.HANDOVER}.yaml"
+        except ImportError:                                # pragma: no cover
+            name = f"{self.HANDOVER}.schema.json"
+        source = ROOT / "template" / "example" / name
+        self.assertTrue(source.is_file(),
+                        f"{source} is the worked example; if the twin is "
+                        f"missing, run `python3 scripts/make_twins.py`")
+        self.placed = mod.CONTRACTS / name
         self.placed.write_text(source.read_text())
 
     def tearDown(self):
@@ -517,12 +527,10 @@ class TestWorkflows(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        try:
-            import yaml                                    # noqa: F401,PLC0415
-        except ImportError:                                # pragma: no cover
-            raise unittest.SkipTest(
-                "the workflows are YAML and PyYAML is not installed; the "
-                "framework itself still runs without it")
+        # No skip without PyYAML any more: every workflow has a JSON twin and
+        # the loader reads it, so these run on a plain clone. The skip that
+        # used to be here hid the one thing worth knowing - whether a machine
+        # with no PyYAML can still run the cycle.
         from architect.workflows import loader             # noqa: PLC0415
         cls.loader = loader
 
@@ -740,6 +748,75 @@ class TestWorkflows(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
+
+
+class TestItRunsWithoutPyYAML(unittest.TestCase):
+    """The claim that a clone needs no install step.
+
+    YAML is not in the standard library, so every YAML file this code reads
+    has a JSON twin that is read instead when PyYAML is absent. A twin that
+    drifts is worse than no twin: the person gets an old rule and no warning.
+    The forms had no twin at all, and the Architect silently fell back to the
+    generic form on any machine without PyYAML - so the use case someone chose
+    was not actually available to them.
+    """
+
+    @staticmethod
+    def _twins():
+        """`scripts/make_twins.py`, loaded by path: scripts/ is not a package."""
+        import importlib.util                                       # noqa: PLC0415
+        spec = importlib.util.spec_from_file_location(
+            "make_twins", ROOT / "scripts" / "make_twins.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_every_yaml_file_has_a_twin(self):
+        """Not one YAML file without the JSON a stdlib-only reader needs."""
+        make_twins = self._twins()
+        missing = [make_twins.twin_of(source, suffix).relative_to(ROOT)
+                   for folder, suffix in make_twins.PLACES
+                   for source in sorted(folder.glob("*.yaml"))
+                   if not make_twins.twin_of(source, suffix).is_file()]
+        self.assertEqual([], missing,
+                         f"no JSON twin for {missing}: without PyYAML these "
+                         f"files cannot be read at all")
+
+    def test_no_twin_has_drifted(self):
+        """The twin says what the YAML says, or it is a second, older rule."""
+        try:
+            import yaml                                    # noqa: PLC0415
+        except ImportError:                                # pragma: no cover
+            raise unittest.SkipTest("checking a twin against its YAML needs "
+                                    "PyYAML; reading the twin does not")
+        make_twins = self._twins()
+        for folder, suffix in make_twins.PLACES:
+            for source in sorted(folder.glob("*.yaml")):
+                twin = make_twins.twin_of(source, suffix)
+                with self.subTest(twin=str(twin.relative_to(ROOT))):
+                    self.assertEqual(
+                        yaml.safe_load(source.read_text(encoding="utf-8")),
+                        json.loads(twin.read_text(encoding="utf-8")),
+                        f"{twin.name} no longer matches {source.name}. "
+                        f"Run `python3 scripts/make_twins.py`.")
+
+    def test_the_chosen_use_case_survives_a_missing_pyyaml(self):
+        """With PyYAML taken away, the bioprospecting form still loads.
+
+        Not the generic fallback: the form the person asked for, read from
+        its twin, with its own questions in it.
+        """
+        from architect.forms import loader as forms                 # noqa: PLC0415
+        had = forms.yaml
+        forms.yaml = None                       # exactly what a clone without it sees
+        try:
+            form, source = forms.load_form(
+                ROOT / "architect" / "forms" / "bioprospecting.yaml")
+        finally:
+            forms.yaml = had
+        self.assertTrue(form.sections, "the twin produced an empty form")
+        self.assertIn("profile", [f.key for f in form.all_fields()],
+                      "this is not the bioprospecting form")
 
 
 if __name__ == "__main__":

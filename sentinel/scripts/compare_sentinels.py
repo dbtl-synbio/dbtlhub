@@ -29,14 +29,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OO = Path.home() / "Research" / "dbtlhub" / "sentinel-oo"
-CRATES = (Path.home() / "Research" / "dbtlhub" / "bioprospecting"
-          / "exampleROcrates" / "design-to-build")
-
 sys.path.insert(0, str(ROOT))
+
+from framework.oo_contract import dbtlhub, where_to_look          # noqa: E402
+
+# Both live in the dbtlhub checkout this framework is pushed inside, so a
+# plain clone finds them; `DBTLHUB=/path/to/dbtlhub` says where otherwise.
+HUB = dbtlhub()
+OO = HUB / "sentinel-oo" if HUB else None
+CRATES = (HUB / "bioprospecting" / "exampleROcrates" / "design-to-build"
+          if HUB else None)
 
 
 def folders() -> list[Path]:
+    if CRATES is None:
+        return []
     out = [CRATES / "valid"] + sorted((CRATES / "invalid").glob("*/"))
     return [f for f in out if (f / "ro-crate-metadata.json").is_file()]
 
@@ -52,9 +59,11 @@ def ours(folder: Path) -> tuple[str, list[str]]:
 
 
 def main() -> int:
-    if not (OO / "src").is_dir():
-        print(f"\n  {OO} is not here. This compares against a sibling "
-              f"checkout of dbtlhub; clone it beside this one.\n")
+    if OO is None or not (OO / "src").is_dir():
+        print(f"\n{where_to_look('sentinel-oo')}")
+        return 2
+    if not folders():
+        print(f"\n  no example crates under {CRATES}\n")
         return 2
     sys.path.insert(0, str(OO / "src"))
     from sentinel_oo import __version__ as his_version        # noqa: PLC0415

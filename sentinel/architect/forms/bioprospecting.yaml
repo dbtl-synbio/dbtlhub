@@ -69,6 +69,26 @@ sections:
           - package:design_to_build#profile
           - profile:patterns
 
+      # The worked cycle this form was drafted from ran at Newcastle, so that
+      # is the first option and the one the example fills. Both sites have a
+      # reviewed vocabulary file; a third needs one before it can appear here.
+      - key: lab
+        label: Whose words is the crate written in?
+        kind: choice
+        required: true
+        options:
+          - newcastle
+          - lifeglimmer
+        why_it_is_asked: >-
+          The profile requires `dbtl:storageContainer` and
+          `dbtl:storagePosition` on a sample; a laboratory records them under
+          its own names. The one reviewed line that joins the two is read from
+          framework/vocabulary/labs, and only once this answer says which
+          site. Unanswered, Design -> Build refuses a crate that holds every
+          fact it asked for, under another name.
+        feeds:
+          - agreed:lab
+
       - key: objective
         label: What is this round for, in your own words?
         kind: longtext

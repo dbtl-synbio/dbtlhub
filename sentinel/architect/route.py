@@ -321,7 +321,10 @@ class Situation:
                 if reruns_of(self.history, self.phase, f.code) >= MAX_RERUNS_PER_FINDING]
 
 
-Rule = Callable[[Situation], Decision | None]
+# Quoted: a type alias is evaluated when the module loads, and `X | None`
+# outside an annotation is only a type there from Python 3.10. Quoting it
+# keeps this readable and keeps the module importable on older Pythons.
+Rule = Callable[[Situation], "Decision | None"]
 
 
 def _codes(findings: list[Finding]) -> str:

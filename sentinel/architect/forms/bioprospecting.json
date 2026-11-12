@@ -1,0 +1,657 @@
+{
+ "name": "bioprospecting",
+ "based_on": "dbtl_project",
+ "title": "Bioprospecting (metagenomic enzyme characterisation, Newcastle)",
+ "description": "Search a metagenome for enzyme candidates, synthesise a panel, screen it on a plate reader, and annotate the candidates with what came back. Fourteen practical steps, four handovers, two build routes and attrition at every step.",
+ "sections": [
+  {
+   "key": "use_case",
+   "title": "Which use case, and who is answerable",
+   "intent": "Settles which profile's requirements apply and who the agreed values are attributed to. Every other section is read through this one.",
+   "fields": [
+    {
+     "key": "profile",
+     "label": "Which use case does this run belong to?",
+     "kind": "choice",
+     "required": true,
+     "options": [
+      "bioprospecting"
+     ],
+     "answer": "bioprospecting",
+     "why_it_is_asked": "All four contracts list `profile` in `required` and bind it to an enum, and `x-pattern` identifier formats are resolved from the named profile at load time. Until it is answered `requirements_for` returns nothing but \"no profile agreed yet\", so no handover can be checked at all.",
+     "feeds": [
+      "agreed:profile",
+      "package:design_to_build#profile",
+      "profile:patterns"
+     ]
+    },
+    {
+     "key": "lab",
+     "label": "Whose words is the crate written in?",
+     "kind": "choice",
+     "required": true,
+     "options": [
+      "newcastle",
+      "lifeglimmer"
+     ],
+     "why_it_is_asked": "The profile requires `dbtl:storageContainer` and `dbtl:storagePosition` on a sample; a laboratory records them under its own names. The one reviewed line that joins the two is read from framework/vocabulary/labs, and only once this answer says which site. Unanswered, Design -> Build refuses a crate that holds every fact it asked for, under another name.",
+     "feeds": [
+      "agreed:lab"
+     ]
+    },
+    {
+     "key": "objective",
+     "label": "What is this round for, in your own words?",
+     "kind": "longtext",
+     "required": true,
+     "placeholder": "find a thermostable esterase in the hot-spring metagenome",
+     "why_it_is_asked": "One of the five `NEEDED_AGREEMENTS` in architect/specification.py, so `unresolved()` reports \"not agreed: objective\" until it is answered and the run may not finish. It is also the only description of the science that exists anywhere in the package.",
+     "feeds": [
+      "agreed:objective"
+     ]
+    },
+    {
+     "key": "target",
+     "label": "Which enzyme activity, on which substrate?",
+     "kind": "text",
+     "required": true,
+     "placeholder": "esterase activity on p-nitrophenyl butyrate",
+     "why_it_is_asked": "A `NEEDED_AGREEMENTS` key, and the name that goes in `target_list`, whose items require `name` in three of the four contracts. A run whose target is only in somebody's head cannot have its measurements interpreted.",
+     "feeds": [
+      "agreed:target",
+      "package:design_to_build#target_list[].name"
+     ]
+    },
+    {
+     "key": "target_inchikey",
+     "label": "InChIKey of the substrate, if it has one",
+     "kind": "text",
+     "required": false,
+     "placeholder": "IQFYYKKMVGJFEH-XLPZGREQSA-N",
+     "why_it_is_asked": "`target_list[].inchikey` is required on every item of a carried target list and is pattern-bound to 14-10-1 characters. A substrate named only in prose cannot be joined between two rounds or two laboratories, and a mis-shaped identifier fails the handover rather than the experiment.",
+     "feeds": [
+      "package:design_to_build#target_list[].inchikey",
+      "package:build_to_test#target_list[].inchikey"
+     ]
+    },
+    {
+     "key": "run_id",
+     "label": "Identifier for this round",
+     "kind": "text",
+     "required": true,
+     "placeholder": "BP-round-1",
+     "why_it_is_asked": "`run_id` is in `required` in all four contracts and pattern-bound to '^[A-Za-z0-9._-]+$'. It is the only thing that ties four handover packages together as one cycle, so a round without one cannot be reassembled afterwards.",
+     "feeds": [
+      "package:design_to_build#run_id"
+     ]
+    },
+    {
+     "key": "recorded_by",
+     "label": "Who is answerable for the decisions on this form?",
+     "kind": "text",
+     "required": true,
+     "placeholder": "Anil Wipat",
+     "why_it_is_asked": "Every agreed value is stored with who set it, and `limits[].stated_by` carries the same claim into the package. The profile also requires `dwc:recordedBy` on the sample the whole provenance chain ends at. Six weeks later the only way to settle \"who said 96 wells?\" is to have written it down at the time.",
+     "feeds": [
+      "agreed:recorded_by",
+      "package:design_to_build#limits[].stated_by",
+      "profile:required_provenance.design_to_build.entities[].requires"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "material",
+   "title": "Where the material comes from",
+   "intent": "Decides whether the Design handover's provenance walk can finish at all, and whether what it finds may be published.",
+   "fields": [
+    {
+     "key": "material_origin",
+     "label": "Where does the starting material come from?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "held_collection",
+      "to_be_collected"
+     ],
+     "answer": "held_collection",
+     "why_it_is_asked": "The `broken_provenance_chain` check walks every ordered sequence back, link by link, to the profile's `root_type` - a physical sample. If no sample is held or planned, that walk cannot finish and the handover is refused with a `fix_hint` that says so: inventing the missing step would fabricate the origin of a sequence. Worth knowing now rather than after the panel is designed.",
+     "feeds": [
+      "agreed:material_origin",
+      "profile:required_provenance.design_to_build.root_type"
+     ]
+    },
+    {
+     "key": "provenance_dialect",
+     "label": "How is derivation written in the crate - PROV properties, or a Process Run Crate walked through result/object?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "prov_properties",
+      "process_run_crate"
+     ],
+     "why_it_is_asked": "The profile's `dialects` note records that two are recognised and that choosing one is a group decision; `unresolved()` reports \"dialect not settled\" while the profile still offers `one_of`. Both dialects pass `broken_provenance_chain`, but two crates written in two dialects cannot be merged, which is discovered at round three.",
+     "feeds": [
+      "agreed:provenance_dialect",
+      "profile:required_provenance.design_to_build.dialects"
+     ]
+    },
+    {
+     "key": "access_permit",
+     "label": "How is the collection's access permit recorded?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "permit_recorded",
+      "no_permit_applies_reason_recorded",
+      "pending_not_for_publication"
+     ],
+     "why_it_is_asked": "The profile's reason for requiring `dwc:decimalLatitude` and `mixs:env_medium` on a site is the Nagoya Protocol: a sequence from a located site has to be shown to have been collected legally. NOT YET CHECKED - `missing_provenance` tests the coordinates, and no check looks for a permit identifier, so a located sample with no permit passes every contract we have and still cannot be published.",
+     "feeds": [
+      "agreed:access_permit",
+      "profile:required_provenance.design_to_build.entities[].requires"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "round_limits",
+   "title": "What this round may spend and may not exceed",
+   "intent": "Fills the contracts' `limits` envelope and the `reads` it has to be lifted out of, so a check can compare the work against a number that was stated before the work existed.",
+   "fields": [
+    {
+     "key": "library_size",
+     "label": "How many constructs may this round order?",
+     "kind": "quantity",
+     "unit": "dimensionless",
+     "phase": "design",
+     "required": true,
+     "placeholder": "96",
+     "why_it_is_asked": "`exceeds_stated_limit` is a `within_limits` check that counts `order.items` against a stated `library_size`. With no limit stated the check cannot run, so a panel too big for Build passes - and `unresolved()` says exactly that: \"no limit stated for library_size, which the design_to_build contract checks against one\". A limit agreed before the design exists is a constraint; the same number after it exists is an argument.",
+     "feeds": [
+      "limit:library_size",
+      "package:design_to_build#limits[].value"
+     ]
+    },
+    {
+     "key": "budget",
+     "label": "What may this round cost?",
+     "kind": "quantity",
+     "unit": "EUR",
+     "required": true,
+     "placeholder": "4000",
+     "why_it_is_asked": "A `NEEDED_AGREEMENTS` key, so `unresolved()` reports it until it is answered. No contract checks it, which means it is returned by `limits_for` for every phase - a budget constrains everyone, and a panel cannot be sized without it.",
+     "feeds": [
+      "agreed:budget",
+      "limit:budget"
+     ]
+    },
+    {
+     "key": "reads_crates",
+     "label": "Which crates does this round build on?",
+     "kind": "list",
+     "required": true,
+     "placeholder": "crate://bp/field-collection-2026",
+     "why_it_is_asked": "`unresolved()` reports \"no crate declared in reads\" for a round with none: either an existing crate is adopted or the researcher seeds one, and a first round with neither has nothing to respect. `reads[]` requires `crate` and `role` on each entry.",
+     "feeds": [
+      "reads:role=constraints",
+      "package:design_to_build#reads[].crate"
+     ]
+    },
+    {
+     "key": "limits_from_crate",
+     "label": "Which of those crates do the limits above come out of?",
+     "kind": "text",
+     "required": true,
+     "placeholder": "crate://bp/seed-round-1",
+     "why_it_is_asked": "`limits[]` requires `from`, because the contracts state that limits are lifted out of the crates named in `reads`. `unresolved()` reports a limit whose `from` is not among the crates read: a limit with no origin is a number nobody can go and look up, and nobody can argue with.",
+     "feeds": [
+      "package:design_to_build#limits[].from"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "design",
+   "title": "What Design produces, and in whose names",
+   "intent": "Binds the identifiers and formats the first handover is pattern-checked against, and settles what Build is told about an imperfect candidate.",
+   "fields": [
+    {
+     "key": "identifier_style",
+     "label": "Which spelling of the design item identifier does this group use?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "CAND",
+      "CON",
+      "ENR"
+     ],
+     "why_it_is_asked": "`design_item_id` is `x-pattern`-bound from the profile's `patterns`, and the profile's own `_note_design_item_id` records that three spellings are in use and that settling one is a group decision. `unresolved()` surfaces that note until it is settled. It changes a label and nothing else - but two groups using two spellings cannot join their crates.",
+     "feeds": [
+      "agreed:identifier_style",
+      "profile:patterns.design_item_id",
+      "package:design_to_build#order.items[].design_item_id"
+     ]
+    },
+    {
+     "key": "partial_policy",
+     "label": "What happens to candidates whose coding sequence is not complete?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "complete_only"
+     ],
+     "answer": "complete_only",
+     "why_it_is_asked": "The profile's `accepted_values` accepts only `complete` for 'coding sequence completeness', at severity flag, and the `flagged_entity` check raises it per entity. Its `fix_hint` says the crate is telling the truth: either the candidate is dropped, or Build is told and accepts it knowingly. A negative result on a protein that was never whole cannot be told from a protein that does not work.",
+     "feeds": [
+      "agreed:partial_policy",
+      "profile:accepted_values.design_to_build[].property"
+     ]
+    },
+    {
+     "key": "order_format",
+     "label": "In which format does the order go out?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "fasta",
+      "genbank",
+      "sbol"
+     ],
+     "answer": "genbank",
+     "why_it_is_asked": "`order.format` is an enum of exactly these three and `order` is in `required`. A fourth format is a refused handover, not a preference.",
+     "feeds": [
+      "agreed:order_format",
+      "package:design_to_build#order.format"
+     ]
+    },
+    {
+     "key": "synthesis_provider",
+     "label": "Which synthesis provider receives the order?",
+     "kind": "text",
+     "phase": "design",
+     "required": true,
+     "placeholder": "Twist Bioscience",
+     "why_it_is_asked": "`order.provider` is required inside the required `order` block. The order is a deliberately poor projection of the crate: anything in it is something that has been decided to send to a third party, so the third party is named on the record.",
+     "feeds": [
+      "agreed:synthesis_provider",
+      "package:design_to_build#order.provider"
+     ]
+    },
+    {
+     "key": "container_id",
+     "label": "Which plate identifier does the order plate get? (profile pattern '^PLATE-[0-9]+$')",
+     "kind": "text",
+     "phase": "design",
+     "required": true,
+     "placeholder": "PLATE-1",
+     "why_it_is_asked": "`order.container_id` is required and `container_id` is `x-pattern`-bound from the profile's `patterns`. The simulated pipeline's default does not match that pattern, so this is better settled here than in a refusal; `double_booked_position` and `double_booked_location` both key on it.",
+     "feeds": [
+      "agreed:container_id",
+      "profile:patterns.container_id",
+      "package:design_to_build#order.container_id"
+     ]
+    },
+    {
+     "key": "vocabulary_scope",
+     "label": "Whose vocabulary resolves the local key names?",
+     "kind": "choice",
+     "required": true,
+     "options": [
+      "core_only",
+      "site_and_core"
+     ],
+     "answer": "site_and_core",
+     "why_it_is_asked": "`unaligned_key` is an `empty` check on `alignment.unaligned`: a key nobody has mapped to a term is a key nobody can query, so it fails the handover rather than warning. Local spellings have to resolve before the crate is written, and the phase that owns the words is the only one that knows what the technician meant.",
+     "feeds": [
+      "agreed:vocabulary_scope",
+      "package:design_to_build#alignment.unaligned"
+     ]
+    },
+    {
+     "key": "gene_calling_mode",
+     "label": "With which gene-calling mode were the candidates predicted?",
+     "kind": "choice",
+     "phase": "design",
+     "required": true,
+     "options": [
+      "closed_ends",
+      "open_ends"
+     ],
+     "why_it_is_asked": "The profile requires 'gene calling mode' on the `CreateAction` that ran the gene caller, and `missing_provenance` refuses the crate without it. Open ends permits a prediction running off the end of a contig, so a sequence may be a truncated fragment: the profile's own words are that a crate without the mode passes every automated validator there is and Build still cannot judge what it has been sent.",
+     "feeds": [
+      "agreed:gene_calling_mode",
+      "profile:required_provenance.design_to_build.entities[].requires"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "build",
+   "title": "How the material is actually made",
+   "intent": "Records what makes each physical item, by which route, by hand or not, and what happened to everything that did not survive.",
+   "fields": [
+    {
+     "key": "equipment",
+     "label": "Which of this laboratory's instruments are on hand this round?",
+     "kind": "multi",
+     "phase": "build",
+     "required": true,
+     "options": [
+      "Opentrons OT-2",
+      "Agilent TapeStation 4200",
+      "BMG CLARIOstar Plus"
+     ],
+     "why_it_is_asked": "A `NEEDED_AGREEMENTS` key, and the source of `method` on every measurement: two instruments disagree, and a value whose instrument is unknown cannot be pooled with one whose is. The profile lists the instruments the use case uses; what is on hand THIS round is the only part a file cannot know, which is why it is asked and the options are taken from the profile.",
+     "feeds": [
+      "agreed:equipment",
+      "profile:instruments[].name",
+      "package:build_to_test#samples[].qc.measurements[].method"
+     ]
+    },
+    {
+     "key": "build_route",
+     "label": "Who makes the DNA?",
+     "kind": "choice",
+     "phase": "build",
+     "required": true,
+     "options": [
+      "external_provider",
+      "mixed"
+     ],
+     "answer": "external_provider",
+     "why_it_is_asked": "This decides what leaves the building: with an external provider the `order` block is populated and goes out, and `order.items` is then the complete list of what a third party receives. In-house synthesis with a populated order is a disclosure nobody agreed to.",
+     "feeds": [
+      "agreed:build_route",
+      "package:design_to_build#order.items[].order_item_id"
+     ]
+    },
+    {
+     "key": "build_routes_in_use",
+     "label": "By which routes is protein made, and must the route travel with each sample?",
+     "kind": "multi",
+     "phase": "build",
+     "required": true,
+     "options": [
+      "cell_free",
+      "fermentation"
+     ],
+     "answer": [
+      "cell_free",
+      "fermentation"
+     ],
+     "why_it_is_asked": "NOT YET CHECKED BY ANY CONTRACT. In the bioprospecting use case the protein-production step is a fork, not a step: cell-free in under a day, or fermentation in about four months. The two routes fail on different enzymes and give different test results. `samples[]` requires `sample_id`, `design_item_id`, `location` and `qc` and has no field for the route; `provenance[]` requires `step` and `tool` but is one list for the whole package, not per sample. So Learn pools two populations as one and nothing refuses it. Answering here at least puts the routes on the agreed record.",
+     "feeds": [
+      "agreed:build_routes_in_use",
+      "gap:build_to_test#samples[].route"
+     ]
+    },
+    {
+     "key": "manual_steps",
+     "label": "Which steps are done by hand, even with the liquid handler running?",
+     "kind": "list",
+     "phase": "build",
+     "required": true,
+     "placeholder": "plate sealing",
+     "answer": [
+      "plate sealing",
+      "centrifugation",
+      "moving plates between instruments"
+     ],
+     "why_it_is_asked": "NOT YET CHECKED BY ANY CONTRACT, and actively awkward in one: `provenance[]` requires both `step` and `tool`, so a hand step has to invent a tool or be left out of the record, and there is no field for who did it. Plate sealing, centrifugation and carrying a plate between instruments are where a run is actually lost, and a contract that can only describe automation describes a laboratory nobody works in.",
+     "feeds": [
+      "agreed:manual_steps",
+      "package:build_to_test#provenance[].step",
+      "gap:build_to_test#provenance[].operator"
+     ]
+    },
+    {
+     "key": "attrition_ledger",
+     "label": "At which steps are counts recorded, and with what reason per loss?",
+     "kind": "list",
+     "required": true,
+     "placeholder": "step 7 -> 75 passed PCR; 11 lost: no product at expected size",
+     "why_it_is_asked": "Numbers fall at every step - 96 selected, 86 synthesised, 75 past the PCR check in the cycle this form was drawn from. One contract carries part of it: the `accounted_for` check `unaccounted_item` requires every item Design committed to to be either in `samples` or in `not_delivered` with a `reason`, because otherwise nobody can tell a failure from an omission. PARTLY UNCHECKED: the same loss between selection and order, and between a sample and a usable reading, has no field in `design_to_build` or `test_to_learn` at all, so most of the attrition in a real cycle is still invisible.",
+     "feeds": [
+      "agreed:attrition_ledger",
+      "package:build_to_test#not_delivered[].reason",
+      "gap:design_to_build#not_ordered[].reason",
+      "gap:test_to_learn#not_measured[].reason"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "test",
+   "title": "What makes a reading usable",
+   "intent": "Settles the three things a table of numbers cannot say about itself, plus the rule that turns numbers into hits.",
+   "fields": [
+    {
+     "key": "replicates",
+     "label": "How many replicates per candidate on the screening plate?",
+     "kind": "quantity",
+     "unit": "dimensionless",
+     "phase": "test",
+     "required": true,
+     "placeholder": "3",
+     "why_it_is_asked": "The profile requires `dbtl:replicates` on every `dbtl:Reading` and the `unusable_reading` check enforces it: one replicate cannot separate an effect from a pipetting error. Its `fix_hint` says an agent supplying the number would be inventing the conditions of an experiment. One replicate is a legitimate choice under a budget; one replicate recorded as if it were three is not.",
+     "feeds": [
+      "agreed:replicates",
+      "profile:required_provenance.test_to_learn.entities[].requires"
+     ]
+    },
+    {
+     "key": "blank_strategy",
+     "label": "How is the blank measured and subtracted?",
+     "kind": "text",
+     "phase": "test",
+     "required": true,
+     "placeholder": "no-enzyme wells in column 12, subtracted per plate",
+     "answer": "no-enzyme control wells on every plate, subtracted per plate before any hit is called",
+     "why_it_is_asked": "The profile requires `dbtl:blankCorrected` on every `dbtl:Reading` and the required quantity is `blank_corrected_absorbance`: a reading with no blank is a signal plus an unknown offset. The flag is a boolean, so the procedure behind it has to be stated somewhere, and `missing_quantity` fires if the corrected quantity never arrives.",
+     "feeds": [
+      "agreed:blank_strategy",
+      "profile:required_quantities.test_to_learn[].quantity"
+     ]
+    },
+    {
+     "key": "reader_upper_limit",
+     "label": "Above which absorbance is the plate reader out of range?",
+     "kind": "quantity",
+     "unit": "AU",
+     "phase": "test",
+     "required": true,
+     "placeholder": "3.5",
+     "why_it_is_asked": "The profile requires `dbtl:withinRange` on every `dbtl:Reading`, and `unusable_reading` refuses the package without it. A value above the instrument's range is a lower bound reported as a number, which a model will fit as if it were measured - and nothing can decide `dbtl:withinRange` without the number this field holds.",
+     "feeds": [
+      "limit:reader_upper_limit",
+      "package:test_to_learn#results[].measurements[].value"
+     ]
+    },
+    {
+     "key": "hit_calling_rule",
+     "label": "What rule calls a hit? (step 11)",
+     "kind": "longtext",
+     "phase": "test",
+     "required": true,
+     "placeholder": "above 3 standard deviations of the no-enzyme control, on 3 of 3 replicates",
+     "why_it_is_asked": "NOT YET CHECKED. The use case's third handover is supposed to carry the hit-calling rule and the result class alongside the readings; `test_to_learn` carries `results` with `measurements` and nothing that records the rule. A hit list whose threshold is unrecorded cannot be recomputed, so Learn cannot tell a change in the enzymes from a change in the cut-off between two rounds.",
+     "feeds": [
+      "agreed:hit_calling_rule",
+      "gap:test_to_learn#results[].hit_calling_rule"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "learn",
+   "title": "What a prediction has to say before Design can use it",
+   "intent": "Fixes the form of the uncertainty that the fourth handover requires, and states back the quantity the profile already names.",
+   "fields": [
+    {
+     "key": "uncertainty_kind",
+     "label": "In what form does the model report a prediction's uncertainty?",
+     "kind": "choice",
+     "phase": "learn",
+     "required": true,
+     "options": [
+      "stdev",
+      "sem"
+     ],
+     "answer": "stdev",
+     "why_it_is_asked": "Every entry of `predictions` requires an `uncertainty` of `value`, `unit` and `kind`, and `kind` is an enum of exactly these four. A ranked list of point estimates tells Design nothing about where to spend a plate - and a standard error read as a standard deviation makes a model look four times more certain than it is.",
+     "feeds": [
+      "agreed:uncertainty_kind",
+      "package:learn_to_design#recommendations[].predictions[].uncertainty.kind"
+     ]
+    },
+    {
+     "key": "predicted_quantity",
+     "label": "What the model must predict (from the profile, not asked)",
+     "kind": "text",
+     "phase": "learn",
+     "required": false,
+     "default": "predicted_activity in U/mg, with uncertainty",
+     "answer": "predicted_activity in U/mg, with uncertainty",
+     "why_it_is_asked": "`required_quantities` names the quantity and unit the `learn_to_design` handover is incomplete without, and `missing_quantity` refuses it otherwise. Shown rather than asked: the profile is the source of truth and retyping it would create a second one.",
+     "feeds": [
+      "profile:required_quantities.learn_to_design[].unit",
+      "package:learn_to_design#recommendations[].predictions[].unit"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "workflow",
+   "title": "The project's own numbered steps",
+   "intent": "Lets the Architect say where a run has got to in the researcher's vocabulary rather than in phase names, and attaches each handover to the step it follows.",
+   "fields": [
+    {
+     "key": "workflow_steps",
+     "label": "The fourteen steps of a bioprospecting cycle, and which handover follows which",
+     "kind": "steps",
+     "required": true,
+     "why_it_is_asked": "Each contract carries its own `x-handover` number precisely so that two teams arguing about \"the Design handover\" are provably arguing about the same one. Without the steps the Architect can only report \"build refused\", which is not where the researcher is standing, and a handover cannot be attached to the step it follows.",
+     "feeds": [
+      "steps:Form.steps",
+      "package:design_to_build#run_id"
+     ]
+    }
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "number": 1,
+   "name": "Search metagenome for enzyme candidates",
+   "phase": "design",
+   "note": "The far end of the provenance chain: the metagenome came from a located field collection, and `broken_provenance_chain` walks back to it."
+  },
+  {
+   "number": 2,
+   "name": "Filter on predicted structure and solubility",
+   "phase": "design"
+  },
+  {
+   "number": 3,
+   "name": "Select a diverse panel",
+   "phase": "design",
+   "count_observed": 96,
+   "note": "Where `library_size` bites. 96 is one plate; the limit has to be stated before the panel exists or it is an argument rather than a constraint."
+  },
+  {
+   "number": 4,
+   "name": "Prepare DNA designs for synthesis",
+   "phase": "design",
+   "handover_after": "design_to_build",
+   "handover_number": 1,
+   "note": "Carries the construct specification: identifier, amino acid sequence, codon-optimised DNA, flanking promoter and terminator parts, forbidden restriction sites, plate and well. The vendor replies with a difficulty flag and a yield per sequence."
+  },
+  {
+   "number": 5,
+   "name": "Synthesise DNA (vendor)",
+   "phase": "build",
+   "count_observed": 86,
+   "note": "Ten of 96 never arrived. Each loss needs its reason: this is the one attrition point a contract already covers, through `not_delivered`."
+  },
+  {
+   "number": 6,
+   "name": "Rehydrate and amplify DNA (PCR)",
+   "phase": "build",
+   "manual_parts": [
+    "plate sealing",
+    "centrifugation"
+   ]
+  },
+  {
+   "number": 7,
+   "name": "Check PCR products",
+   "phase": "build",
+   "count_observed": 75,
+   "note": "The TapeStation gives `fragment_size` in bp and `dna_concentration` in ng/uL, which the profile requires at this handover, and a pass/fail that becomes `samples[].qc.verdict`."
+  },
+  {
+   "number": 8,
+   "name": "Make protein (cell-free or fermentation)",
+   "phase": "build",
+   "routes": [
+    "cell_free",
+    "fermentation"
+   ],
+   "manual_parts": [
+    "moving plates between instruments"
+   ],
+   "handover_after": "build_to_test",
+   "handover_number": 2,
+   "note": "A fork, not a step. Cell-free is under a day, fermentation in E. coli is about four months, and the two fail on different enzymes - so the route has to travel with the sample. No contract field carries it yet."
+  },
+  {
+   "number": 9,
+   "name": "Run enzyme reactions with substrates",
+   "phase": "test",
+   "manual_parts": [
+    "plate sealing",
+    "moving plates between instruments"
+   ]
+  },
+  {
+   "number": 10,
+   "name": "Measure on plate reader",
+   "phase": "test",
+   "note": "CLARIOstar at 510 nm. The reading needs `dbtl:blankCorrected`, `dbtl:replicates` and `dbtl:withinRange` or `unusable_reading` refuses the package."
+  },
+  {
+   "number": 11,
+   "name": "Call hits (statistics)",
+   "phase": "test",
+   "handover_after": "test_to_learn",
+   "handover_number": 3,
+   "note": "The rule that calls a hit is the thing this handover is missing a field for; see `hit_calling_rule`."
+  },
+  {
+   "number": 12,
+   "name": "Record results against each candidate",
+   "phase": "learn"
+  },
+  {
+   "number": 13,
+   "name": "Compare hits with sequence and structure",
+   "phase": "learn"
+  },
+  {
+   "number": 14,
+   "name": "Recommend what to test next",
+   "phase": "learn",
+   "handover_after": "learn_to_design",
+   "handover_number": 4,
+   "carried_out": false,
+   "note": "Never carried out in the cycle this form was drawn from. Annotations were written back onto each candidate sequence, but no second design round was ever run - which is exactly why `recommendations` and their uncertainty are the least tested part of the four contracts."
+  }
+ ]
+}

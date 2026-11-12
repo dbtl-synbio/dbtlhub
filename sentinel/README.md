@@ -18,11 +18,27 @@ was agreed and the crate that grows, and it decides what happens after every
 verdict. Eight agents stand around it — four that do the work and may be
 people rather than programs, four that check and may refuse.
 
+It runs on your own machine, in a browser, out of a clone of this repository.
+There is no install step: no pip, no virtualenv, no key, no network.
+
+```bash
+git clone https://github.com/dbtl-synbio/dbtlhub.git
+cd dbtlhub/sentinel
+python3 architect/web/server.py        # then open http://127.0.0.1:8765/
+```
+
+Pick **no model**, load the worked example, press Run: four accepted
+handovers, with nothing sent anywhere.
+**[`INSTALL.md`](INSTALL.md)** is the page to send a colleague — the three
+clicks, where a run lands on disk, how to check it rather than trust it, and
+what each failure message actually means.
+
+The five parts also run on their own, without the browser:
+
 ```bash
 python3 architect/architect.py
 ```
 
-Five parts, each runnable on its own, and
 [`architect/README.md`](architect/README.md) says what each is for and what is
 not done yet.
 
@@ -30,6 +46,7 @@ not done yet.
 
 | | |
 |---|---|
+| **Running it yourself** | [`INSTALL.md`](INSTALL.md) — clone, one command, a browser. Tested from an empty directory on Python 3.9 and 3.12 |
 | **Taking a handover** | [`template/TAKE_A_HANDOVER.md`](template/TAKE_A_HANDOVER.md) — one page, and the thing to read first |
 | Why the template exists | [`template/README.md`](template/README.md) |
 | Handover 1 in detail | [`framework/DESIGN_TO_BUILD.md`](framework/DESIGN_TO_BUILD.md) |

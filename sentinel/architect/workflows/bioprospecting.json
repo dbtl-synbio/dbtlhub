@@ -4,7 +4,7 @@
  "use_case": "bioprospecting",
  "based_on": "bioprospecting",
  "source": "dbtlhub/bioprospecting/USE_CASE_STEPS.md, drafted 8 November 2026 from a worked cycle in Anil Wipat's laboratory (Newcastle University) and confirmed 9 November 2026.",
- "description": "One turn of the cycle: search a metagenome for enzyme candidates, synthesise\nand express the ones worth making, assay them, and decide what to test next.\nThe three counts are real - 96 candidates selected, 86 sequences returned by\nthe vendor, 75 constructs passing PCR - and the gap between them is what a\nBuild handover has to be able to explain.",
+ "description": "One turn of the cycle: search a metagenome for enzyme candidates, synthesise\nand express the ones worth making, assay them, and decide what to test next.\nThe three counts are real - 96 candidates selected, 86 sequences returned by\nthe vendor, 75 constructs passing PCR - and the gap between them is what a\nBuild handover has to be able to explain.\n",
  "steps": [
   {
    "number": 1,
@@ -21,23 +21,23 @@
    "number": 3,
    "name": "Select a diverse panel",
    "phase": "design",
-   "note": "96 candidates, chosen for maximum diversity. The reason each of the others was dropped is not currently recorded anywhere, which is a known gap in the Design handover.",
-   "count_observed": 96
+   "count_observed": 96,
+   "note": "96 candidates, chosen for maximum diversity. The reason each of the others was dropped is not currently recorded anywhere, which is a known gap in the Design handover."
   },
   {
    "number": 4,
    "name": "Prepare DNA designs for synthesis",
    "phase": "design",
-   "note": "Where Handover 1 is checked. Thirteen checks, including that every order line binds to a crate entity and that the root declares its profile.",
    "handover_after": "design_to_build",
-   "handover_number": 1
+   "handover_number": 1,
+   "note": "Where Handover 1 is checked. Thirteen checks, including that every order line binds to a crate entity and that the root declares its profile."
   },
   {
    "number": 5,
    "name": "Synthesise DNA (vendor)",
    "phase": "build",
-   "note": "96 went out, 86 came back. The vendor's reply - which sequences were refused, which were codon-changed - does not travel with the handover today. Known gap.",
-   "count_observed": 86
+   "count_observed": 86,
+   "note": "96 went out, 86 came back. The vendor's reply - which sequences were refused, which were codon-changed - does not travel with the handover today. Known gap."
   },
   {
    "number": 6,
@@ -52,23 +52,23 @@
    "number": 7,
    "name": "Check PCR products",
    "phase": "build",
-   "note": "75 of 86 pass. The second unexplained drop.",
-   "count_observed": 75
+   "count_observed": 75,
+   "note": "75 of 86 pass. The second unexplained drop."
   },
   {
    "number": 8,
    "name": "Make protein (cell-free or fermentation)",
    "phase": "build",
-   "note": "The two routes differ by roughly a factor of 120 in time - under one day against about four months - and which one produced a given sample does not currently travel with it. The most consequential known gap.",
-   "manual_parts": [
-    "moving plates between instruments"
-   ],
    "routes": [
     "cell_free",
     "fermentation"
    ],
+   "manual_parts": [
+    "moving plates between instruments"
+   ],
    "handover_after": "build_to_test",
-   "handover_number": 2
+   "handover_number": 2,
+   "note": "The two routes differ by roughly a factor of 120 in time - under one day against about four months - and which one produced a given sample does not currently travel with it. The most consequential known gap."
   },
   {
    "number": 9,
@@ -88,9 +88,9 @@
    "number": 11,
    "name": "Call hits (statistics)",
    "phase": "test",
-   "note": "The rule that separates a hit from a miss is not in the contract, so two labs can call different hits from identical readings and both pass.",
    "handover_after": "test_to_learn",
-   "handover_number": 3
+   "handover_number": 3,
+   "note": "The rule that separates a hit from a miss is not in the contract, so two labs can call different hits from identical readings and both pass."
   },
   {
    "number": 12,
@@ -106,10 +106,10 @@
    "number": 14,
    "name": "Recommend what to test next",
    "phase": "learn",
-   "note": "Not carried out in the worked cycle. The round was not closed, so this step is written from the contract rather than from the bench.",
+   "carried_out": false,
    "handover_after": "learn_to_design",
    "handover_number": 4,
-   "carried_out": false
+   "note": "Not carried out in the worked cycle. The round was not closed, so this step is written from the contract rather than from the bench."
   }
  ]
 }

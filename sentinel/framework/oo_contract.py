@@ -68,6 +68,46 @@ SEVERITIES = {"refuse", "flag"}
 # His severities, in our words. `refuse` blocks a handover, `flag` does not.
 AS_OURS = {"refuse": "error", "flag": "flag"}
 
+# --------------------------------------------------------------------------- #
+# Where the rest of dbtlhub is.
+#
+# This framework is pushed as `dbtlhub/sentinel/`, so for anyone who clones the
+# repository `sentinel-oo` and the use-case folders are its siblings. Code here
+# used to name one absolute path under `~/Research`, which is where the clone
+# happens to sit on the laptop this was written on - so the comparison against
+# his engine could only run for one person, and said "not here" to everyone
+# else who had the files all along.
+DBTLHUB_ENV = "DBTLHUB"
+
+
+def dbtlhub() -> Path | None:
+    """The dbtlhub checkout on this machine, or None if it is not findable.
+
+    Asked in order: `$DBTLHUB`, the folder above this framework, and the
+    author's own path. A folder counts as the checkout when it holds either
+    `sentinel-oo` or `bioprospecting`.
+    """
+    import os                                              # noqa: PLC0415
+
+    here = Path(__file__).resolve().parent.parent
+    guesses = [Path(os.environ[DBTLHUB_ENV]).expanduser()] \
+        if os.environ.get(DBTLHUB_ENV) else []
+    guesses += [here.parent, Path.home() / "Research" / "dbtlhub"]
+    for guess in guesses:
+        if (guess / "sentinel-oo").is_dir() or (guess / "bioprospecting").is_dir():
+            return guess
+    return None
+
+
+def where_to_look(what: str) -> str:
+    """What to print when `dbtlhub()` found nothing. `what` names the folder."""
+    return (f"  {what} is not on this machine.\n\n"
+            f"  This reads the rest of dbtlhub. If you cloned the repository, "
+            f"run this\n  from the `sentinel/` folder inside it and it is "
+            f"found automatically.\n  Otherwise say where the clone is:\n\n"
+            f"      {DBTLHUB_ENV}=/path/to/dbtlhub python3 "
+            f"scripts/compare_sentinels.py\n")
+
 
 class ForeignContractError(Exception):
     """The file does not make sense as a sentinel-oo contract."""
@@ -442,9 +482,12 @@ def available(folder: Path | str) -> dict[str, Path]:
 
 # --------------------------------------------------------------------------- #
 def main() -> None:
-    his = (Path.home() / "Research" / "dbtlhub" / "sentinel-oo"
-           / "examples" / "contracts")
+    hub = dbtlhub()
     print(f"\n{'=' * 78}\nA SENTINEL-OO CONTRACT, READ AND RUN HERE\n{'=' * 78}\n")
+    if hub is None:
+        print(where_to_look("The dbtlhub checkout"))
+        return
+    his = hub / "sentinel-oo" / "examples" / "contracts"
     found = available(his)
     if not found:
         print(f"  no contracts under {his}\n")
@@ -465,8 +508,7 @@ def main() -> None:
         print(f"    {count:>3}  {must}")
 
     # Against one of his own example crates, and then one of ours.
-    crates = (Path.home() / "Research" / "dbtlhub" / "bioprospecting"
-              / "exampleROcrates" / "design-to-build")
+    crates = hub / "bioprospecting" / "exampleROcrates" / "design-to-build"
     print(f"\n{'=' * 78}\nAGAINST CRATES ON THIS MACHINE\n{'=' * 78}\n")
     for folder in sorted(crates.glob("*/")) + sorted(crates.glob("invalid/*/")):
         metadata = folder / "ro-crate-metadata.json"

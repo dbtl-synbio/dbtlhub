@@ -4,7 +4,7 @@
  "use_case": "biomanufacturing",
  "based_on": "bioprospecting",
  "source": "\"Workflow 1: Biomanufacturing of Styrene\" (PDF, dbtlhub/biomanufacturing/examples), 15 listed activities (10 design, 3 build, 2 test, 2 learn, the PDF's own headings), with tool names from that document; stage structure cross-checked against the BioHackathon26 deck \"BH DBTLHub Biomanfacturing case Workflows\". Instruments, units and id patterns come from our profile framework/contracts/profiles/biomanufacturing.json, which describes a different case (pinocembrin).",
- "description": "One turn of the cycle for microbial production of styrene, from chassis and\npathway choice to a model that proposes the next strains. The steps follow\nthe styrene workflow document, which is a list of activities and tools, not\na record of a measured run: it gives no counts, timings or manual work.\nWhere a step is a person's work it is marked as inferred, to be confirmed\nwith the lab. The styrene workflow and our profile describe different\ncases: the profile is the SYNBIOCHEM pinocembrin pipeline (Carbonell et al.,\nCommun Biol 2018; mg/L, UPLC-MS/MS MRM, Sanger, Hamilton STAR). Its units\ncarry over as contract quantities; its instruments are not asserted for\nstyrene.",
+ "description": "One turn of the cycle for microbial production of styrene, from chassis and\npathway choice to a model that proposes the next strains. The steps follow\nthe styrene workflow document, which is a list of activities and tools, not\na record of a measured run: it gives no counts, timings or manual work.\nWhere a step is a person's work it is marked as inferred, to be confirmed\nwith the lab. The styrene workflow and our profile describe different\ncases: the profile is the SYNBIOCHEM pinocembrin pipeline (Carbonell et al.,\nCommun Biol 2018; mg/L, UPLC-MS/MS MRM, Sanger, Hamilton STAR). Its units\ncarry over as contract quantities; its instruments are not asserted for\nstyrene.\n",
  "steps": [
   {
    "number": 1,
@@ -55,9 +55,9 @@
    "number": 8,
    "name": "Design the cultivation experiment",
    "phase": "design",
-   "note": "Conditions, factors and biological replicates (OptDoE). Without the replicate count in the package the Test side cannot say whether a titre is a measurement or a single colony.",
    "handover_after": "design_to_build",
-   "handover_number": 1
+   "handover_number": 1,
+   "note": "Conditions, factors and biological replicates (OptDoE). Without the replicate count in the package the Test side cannot say whether a titre is a measurement or a single colony."
   },
   {
    "number": 9,
@@ -69,11 +69,11 @@
    "number": 10,
    "name": "Assemble the constructs",
    "phase": "build",
-   "note": "Not a separate item in the source, which lists protocol generation and then verification; the assembly run sits between them. Losses here are where attrition happens in practice, and nothing in the source counts them.",
    "manual_parts": [
     "loading reagents and plates onto the deck (inferred, not stated in source)",
     "transformation into the chassis (inferred, not stated in source)"
-   ]
+   ],
+   "note": "Not a separate item in the source, which lists protocol generation and then verification; the assembly run sits between them. Losses here are where attrition happens in practice, and nothing in the source counts them."
   },
   {
    "number": 11,
@@ -85,18 +85,18 @@
    "number": 12,
    "name": "Register strains and samples",
    "phase": "build",
-   "note": "eLabFTW in the source. Ties each strain to its genetic modifications and to the samples made from it, so a later titre can be traced back to a construct. The profile also asks for biomass (OD600) at this handover.",
    "handover_after": "build_to_test",
-   "handover_number": 2
+   "handover_number": 2,
+   "note": "eLabFTW in the source. Ties each strain to its genetic modifications and to the samples made from it, so a later titre can be traced back to a construct. The profile also asks for biomass (OD600) at this handover."
   },
   {
    "number": 13,
    "name": "Culture strains and measure growth",
    "phase": "test",
-   "note": "Growth curves give rates and show whether styrene is toxic to the host (omniplate in the source). Biomass is the basis a titre is normalised against.",
    "manual_parts": [
     "inoculation and sampling (inferred, not stated in source)"
-   ]
+   ],
+   "note": "Growth curves give rates and show whether styrene is toxic to the host (omniplate in the source). Biomass is the basis a titre is normalised against."
   },
   {
    "number": 14,
@@ -108,9 +108,9 @@
    "number": 15,
    "name": "Calculate titre, yield and productivity",
    "phase": "test",
-   "note": "R or Python for derived metrics in the source. A reading below the limit of quantification must say so rather than appear as a small titre.",
    "handover_after": "test_to_learn",
-   "handover_number": 3
+   "handover_number": 3,
+   "note": "R or Python for derived metrics in the source. A reading below the limit of quantification must say so rather than appear as a small titre."
   },
   {
    "number": 16,
@@ -122,9 +122,9 @@
    "number": 17,
    "name": "Train models and propose the next strains",
    "phase": "learn",
-   "note": "Regression on designs, conditions and production data, then prediction for untested strains (scikit-learn, OptDoE). The profile requires the predicted titre in mg/L with uncertainty, so the next round can be scored against it. The source describes this step but records no run of it.",
    "handover_after": "learn_to_design",
-   "handover_number": 4
+   "handover_number": 4,
+   "note": "Regression on designs, conditions and production data, then prediction for untested strains (scikit-learn, OptDoE). The profile requires the predicted titre in mg/L with uncertainty, so the next round can be scored against it. The source describes this step but records no run of it."
   }
  ]
 }

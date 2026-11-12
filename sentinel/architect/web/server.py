@@ -2044,6 +2044,12 @@ VIEWS = (("cycle", "the cycle"), ("spec", "specification"),
          ("workflow", "workflow"), ("crate", "the crate"),
          ("graph", "knowledge graph"), ("redo", "send it back"))
 
+# Written out rather than spelled inline, because an escaped quote inside an
+# f-string expression is a syntax error before Python 3.12 - and this whole
+# file then fails to parse for anyone who clones the repository with the
+# Python their system shipped. Nothing here needs 3.12.
+HERE = ' class="here"'
+
 
 def render_overview(session: Session, items: list[dict]) -> str:
     """The band that never goes away: the shape, the state, the next move.
@@ -2175,7 +2181,7 @@ def render_page(session: Session) -> str:
         here = (session.sentinel or session.phase or session.view)
         nav = '<nav class="views">' + "".join(
             f'<a href="/?view={name}#view"'
-            f'{" class=\"here\"" if here == name else ""}>{esc(label)}</a>'
+            f'{HERE if here == name else ""}>{esc(label)}</a>'
             for name, label in VIEWS) + '</nav>'
         body = (
             f'{render_question(session)}'
