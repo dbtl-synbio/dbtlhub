@@ -37,7 +37,7 @@ def code(text):
 # ---------------------------------------------------------------- the opening
 
 md("""
-# sentinel-oo, part two: run your own, on your own crates
+# sentinel-oo, part two: check a handover yourself
 
 **ELIXIR BioHackathon Europe 2026, Project 25.**
 
@@ -52,22 +52,35 @@ for anybody else, and nothing is installed on your own computer.
 You need no Google Cloud account and no billing account. Everything here
 runs on the temporary machine behind this notebook, and it costs nothing.
 
+## The story this notebook tells
+
+**One question runs through all ten steps: can the Build phase accept what
+the Design phase has just handed over?**
+
+You take the side that receives the work. Step 2 is what your side
+requires, written in a file and nowhere else. Steps 4 to 7 are a handover
+arriving and being checked against that file. Step 8 is the handovers that
+cannot be accepted, including two where what you need is in the crate and no
+rule can read it. Step 9 is what the check left behind. Step 10 is you
+changing what your side requires, and the answer to the same question
+changing with it.
+
 ## What you will do
 
-| Part | What happens |
+| Step | What happens |
 |---|---|
 | 1 | Install sentinel-oo and an LLM on this machine |
-| 2 | Read the contract in plain words, which is the file that decides everything |
+| 2 | Read what the Build phase requires, in plain words. This is the contract, and it decides everything that follows |
 | 3 | Start your own sentinel-oo and confirm it is answering |
-| 4 | Look inside a crate before sending it, to see what a contract has to match |
-| 5 | Download a copy of that crate, so that you have one to edit and send back |
-| 6 | Send a crate, by one of three routes: the example from the repository, text you paste in, or a file you upload |
-| 7 | Read the record sentinel-oo wrote inside the crate that came back |
-| 8 | Send crates that are broken, including two where the LLM is asked for help |
-| 9 | Draw the graph of one of your own checks |
-| 10 | Edit the contract, or write one of your own, and watch the verdict change |
+| 4 | Look at what the crate from the Design phase actually records |
+| 5 | Get a copy of that crate onto your own computer, to edit and send back |
+| 6 | Send a crate to be checked, by one of three routes: the example crate, text you paste in, or a file you upload |
+| 7 | Read the verdict, and the record sentinel-oo wrote inside the crate it returned |
+| 8 | Send handovers that cannot be accepted, including two where an LLM is asked for help |
+| 9 | Draw the check itself as a graph |
+| 10 | Change what the Build phase requires, then write a contract of your own |
 
-## Terms used here
+## Terms used throughout
 
 **Handover**: the point where one phase of a Design, Build, Test, Learn
 cycle passes its output to the next phase. This notebook works on one
@@ -90,7 +103,7 @@ answers one narrow question, described in part 8.
 md("""
 ---
 
-# Before you start: give this notebook a graphics card
+# Before you start: ask Colab for a graphics card
 
 Colab will give you one free of charge. With a card, part 8 uses the LLM
 that has been measured doing the job and answers in about 1 second. Without
@@ -111,9 +124,10 @@ behaves identically.
 md("""
 ---
 
-# 1. Install sentinel-oo and the LLM
+# 1. Install sentinel-oo and an LLM on this machine
 
-Four things happen in the cell below.
+This step is plumbing. Nothing about handovers happens in it, and the
+story starts in step 2. Four things happen in the cell below.
 
 **The repository is cloned**, which brings the service, the contract files
 and the example crates onto this machine.
@@ -201,6 +215,18 @@ if installed.returncode != 0:
 print("sentinel-oo installed")
 
 print("installing Ollama ...")
+
+# Ollama's installer unpacks its download with zstd, and a Colab machine
+# does not have zstd. Installing it first is quicker than working round it.
+# Measured on 12 November 2026: without this the installer stops with
+# "This version requires zstd for extraction".
+!apt-get -qq install -y zstd > apt-zstd.log 2>&1 || (apt-get -qq update >> apt-zstd.log 2>&1 && apt-get -qq install -y zstd >> apt-zstd.log 2>&1)
+
+if shutil.which("zstd") is None:
+    print(open("apt-zstd.log").read()[-600:])
+    print("zstd did not install, and Ollama's installer needs it. Trying "
+          "anyway, in case this version of the installer does not.")
+
 !curl -fsSL https://ollama.com/install.sh | sh > ollama-install.log 2>&1
 
 if shutil.which("ollama") is None:
@@ -253,7 +279,7 @@ print(f"\\n{MODEL} is on this machine and ready")
 md("""
 ---
 
-# 2. The contract
+# 2. What the Build phase requires: the contract
 
 **This is the centre of the demonstration.** The contract is the whole of
 what sentinel-oo knows. Every verdict in the rest of this notebook comes out
@@ -285,14 +311,18 @@ print("my-contracts holds:", ", ".join(sorted(
 
 
 def sentinel_oo(*arguments):
-    # Runs the sentinel-oo command line program and returns what it printed.
+    # Runs the sentinel-oo command line program and prints what it printed.
     # Every call in this notebook that is not an HTTP request goes through
     # this, so the arguments used are visible in the output.
+    #
+    # It returns nothing on purpose. A notebook prints the value of a cell's
+    # last line, so returning the finished process here would print the
+    # whole of its output a second time, as one long line with the line
+    # breaks written out as \\n.
     print(f"\\n$ sentinel-oo {' '.join(arguments)}\\n")
     done = subprocess.run([sys.executable, "-m", "sentinel_oo", *arguments],
                           capture_output=True, text=True)
     print(done.stdout or done.stderr)
-    return done
 
 
 sentinel_oo("--contracts", "my-contracts", "--list-contracts")
@@ -300,7 +330,7 @@ sentinel_oo("--contracts", "my-contracts", "--show-contract", "design_to_build")
 """)
 
 md("""
-**What to notice in what was just printed.**
+**Five things to notice in what was just printed.**
 
 **The handover's name is `design_to_build`.** That name, not the file name,
 is how anything asks for this check.
@@ -334,6 +364,9 @@ md("""
 ---
 
 # 3. Start your own sentinel-oo
+
+You have read what the Build phase requires. This step puts a service
+in front of it, so that crates can be sent to it and answered.
 
 The cell below starts the service on this machine, listening on port 8099 of
 the machine's own loopback address, which nothing outside this notebook can
@@ -468,7 +501,10 @@ print(json.dumps(ask("/contracts"), indent=2))
 md("""
 ---
 
-# 4. Look inside a crate before sending it
+# 4. What the crate from the Design phase records
+
+A handover has arrived. Before sending it to be checked, look at what it
+actually records, because a contract can only require what is there.
 
 A contract can only require things that are actually recorded in a crate, so
 the first thing to do with a crate is to find out what it records.
@@ -501,7 +537,7 @@ sentinel_oo("--describe", str(EXAMPLE))
 md("""
 ---
 
-# 5. Take a copy of the crate, so you have one of your own
+# 5. Get a copy of the crate onto your own computer
 
 Routes B and C below send a crate that you supply, which means you need the
 crate as a file on your own computer. The cell below gives it to you: it
@@ -539,7 +575,7 @@ files.download(archive)
 md("""
 ---
 
-# 6. Send a crate
+# 6. Send the crate to be checked
 
 **You choose which crate to send.** Three routes are offered, and the cells
 below define all three. Run whichever you want; each one sets `CRATE` to the
@@ -617,7 +653,7 @@ def send(folder=None, contract="design_to_build", by="a workshop participant"):
 
 def announce(answer, what):
     # The verdict, printed as a banner, because it is the thing being
-    # looked for.
+    # looked for. It returns nothing, for the reason given above.
     verdict = answer.headers.get("X-Sentinel-Verdict", "no verdict")
     rule = "=" * 66
     print(rule)
@@ -626,23 +662,27 @@ def announce(answer, what):
     print(rule)
     print(f"  run       {answer.headers.get('X-Sentinel-Run')}")
     print(f"  findings  {answer.headers.get('X-Sentinel-Findings')}")
-    return verdict
+
+
+def crate_in(answer):
+    # The metadata file out of the crate that came back, as data. This is
+    # the one helper that returns something, so a cell ending with it
+    # should assign it to a name rather than leave it as its last line.
+    return json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
+                      .read("ro-crate-metadata.json"))
 
 
 def findings_in(answer):
-    # Reads the findings out of the crate that came back. sentinel-oo adds
+    # Prints the findings out of the crate that came back. sentinel-oo adds
     # entities whose identifiers say what they are: `/found/` for what was
     # found, `/about/` for what was checked.
-    crate = json.loads(zipfile.ZipFile(io.BytesIO(answer.content))
-                       .read("ro-crate-metadata.json"))
-    for thing in crate["@graph"]:
+    for thing in crate_in(answer)["@graph"]:
         identifier = str(thing.get("@id", ""))
         if "/found/" in identifier and "verdict" not in identifier:
             print(f"\\n  {thing.get('name')}")
             print(textwrap.fill(str(thing.get("value")), 64,
                                 initial_indent="      ",
                                 subsequent_indent="      "))
-    return crate
 
 
 # Nothing has been chosen yet. The three routes below each set this, and
@@ -653,7 +693,7 @@ print("three routes are now available: route A, route B and route C below")
 """)
 
 md("""
-### Route A: the example crate from the repository
+### Route A: use the example crate
 """)
 
 code("""
@@ -661,7 +701,7 @@ CRATE = as_the_crate_to_send(EXAMPLE)
 """)
 
 md("""
-### Route B: paste the text of `ro-crate-metadata.json`
+### Route B: paste a crate in as text
 
 Replace the text between the three quotation marks with the contents of your
 own `ro-crate-metadata.json`, then run the cell. Leaving it as it is skips
@@ -700,7 +740,7 @@ else:
 """)
 
 md("""
-### Route C: upload files from your own computer
+### Route C: upload a crate from your computer
 
 Running this cell opens a file picker. Choose either a zip archive of your
 crate folder, or all the files inside the folder at once. Choosing nothing
@@ -741,7 +781,7 @@ else:
 """)
 
 md("""
-### Send whichever crate you chose
+### Send the crate you chose
 """)
 
 code("""
@@ -759,7 +799,10 @@ announce(answer, f"{CRATE}, checked against design_to_build")
 md("""
 ---
 
-# 7. Read the record inside the crate that came back
+# 7. What came back, and the record inside it
+
+The handover was accepted. What matters now is what that acceptance
+leaves behind for whoever receives the crate next.
 
 sentinel-oo wrote a record into the crate itself. That record is the part
 that lasts: it travels with the crate, so whoever receives the crate in a
@@ -793,7 +836,10 @@ findings_in(answer)
 md("""
 ---
 
-# 8. Send crates that are broken
+# 8. Handovers that cannot be accepted
+
+Everything so far has gone well. This step is the handovers that have
+not, which is the case sentinel-oo exists for.
 
 Five crates from the repository, each broken in one way, plus one deliberate
 mistake of a different kind. Every one of them passes a standard RO-Crate
@@ -822,7 +868,7 @@ for folder in ["missing-conformsto", "dangling-reference",
 """)
 
 md("""
-## The value that is there, in a sentence
+## When the value is there, but written in a sentence
 
 **The setting is called `edge handling`.** A metagenome is assembled into
 contigs, which are stretches of reconstructed sequence with two ends. A gene
@@ -870,8 +916,9 @@ announce(answer, "edge-handling-in-prose: the value is in a sentence")
 print(f"\\n  the check took about {waited} "
       f"{'second' if waited == 1 else 'seconds'}, nearly all of it the LLM")
 
-crate = findings_in(answer)
-for thing in crate["@graph"]:
+findings_in(answer)
+
+for thing in crate_in(answer)["@graph"]:
     identifier = str(thing.get("@id", ""))
     if "/changed/" in identifier or "/recovered/" in identifier:
         print(f"\\n  written into the crate: {thing.get('name')} = "
@@ -881,7 +928,7 @@ FLAGGED_RUN = answer.headers.get("X-Sentinel-Run")
 """)
 
 md("""
-## The value that is there, but only as a flag
+## When the value is there, but only as a command line flag
 
 In `mode-in-prose` the same value is absent and the only trace of it is `-c`
 inside a command line recorded in the description: "Ran as: prodigal -i
@@ -918,7 +965,7 @@ print("\\n  Nothing was written into the crate, and the handover is refused.")
 """)
 
 md("""
-## The quietest way a check like this can fail
+## A crate sent to a contract written for a different handover
 
 The crate you have been sending is a Design to Build handover. The cell
 below sends it to a different contract, `build_to_test`, which governs the
@@ -946,7 +993,10 @@ findings_in(answer)
 md("""
 ---
 
-# 9. The graph of one of your checks
+# 9. The check itself, drawn as a graph
+
+The check in step 8 left a record inside the crate. This step draws that
+record, together with the handover it is about.
 
 A crate is a set of things that refer to each other. A plate well refers to
 the gene it holds; that gene refers to the protein it was designed from; a
@@ -1054,7 +1104,7 @@ draw(graph)
 """)
 
 md("""
-**Reading the picture.**
+**What the picture shows.**
 
 The orange node is the check itself. The red nodes attached to it are its
 findings. The purple node is the value the LLM recovered, which is the only
@@ -1080,7 +1130,10 @@ To draw a different check, put another run identifier in place of
 md("""
 ---
 
-# 10. Edit the contract, or write your own
+# 10. Change what the Build phase requires
+
+Every verdict so far came from a contract somebody else wrote. This step
+is you changing it, and then writing one of your own.
 
 This is the argument of the whole demonstration: tailoring sentinel-oo to a
 different laboratory, a different handover or a different cycle means writing
@@ -1097,7 +1150,7 @@ should be drawn before you work through this part.
 """)
 
 md("""
-### Change one requirement in the contract you have been using
+### Change one requirement, and send the same crate again
 
 In the contract, `construct_length_is_plausible` requires that a construct's
 coding sequence length, measured in base pairs, lies between 300 and 3000
@@ -1252,7 +1305,7 @@ findings_in(answer)
 md("""
 ---
 
-# Afterwards
+# Afterwards: nothing is left running
 
 **Nothing is left running and nothing is charged.** This machine belongs to
 Colab, not to you, and it is taken away when you close the notebook or leave
