@@ -188,12 +188,23 @@ def load(path: Path | str) -> ForeignContract:
 #  Reading a crate his way
 # --------------------------------------------------------------------------- #
 def types_of(entity: dict) -> tuple[str, ...]:
+    """Every kind this entity says it is, INCLUDING `additionalType`.
+
+    Schema.org has no word for an expression construct or a gene-calling
+    step, so a Process Run Crate says `@type: CreateAction` and hangs the
+    domain kind off `additionalType`. A reader that knew only `@type` would
+    see a crate full of CreateActions and CreativeWorks and no biology at
+    all - which is exactly what happened: this function read `@type` alone,
+    so every `expects` in his contract matched nothing, every one of his
+    example crates was refused, and the refusal was reported as his contract
+    having moved ahead of his own examples. It had not. The fault was here.
+    """
     raw = entity.get("@type")
     if raw is None:
-        return ()
-    if isinstance(raw, (list, tuple)):
-        return tuple(str(t) for t in raw)
-    return (str(raw),)
+        raw = []
+    if not isinstance(raw, (list, tuple)):
+        raw = [raw]
+    return tuple(str(t) for t in raw) + values_of(entity, "additionalType")
 
 
 def values_of(entity: dict | None, prop: str) -> tuple[str, ...]:
@@ -354,11 +365,30 @@ def check(contract: ForeignContract, crate: dict,
                                              reads, value))
             elif requirement.must == "hold data":
                 for value in got:
+                    # A file identified by a web address is not looked at.
+                    # The crate does not carry it, fetching it is a different
+                    # act with different consequences, and this says so
+                    # rather than guessing. Without this skip, every crate
+                    # here was refused once for each file that lives
+                    # elsewhere and was never going to be carried - which is
+                    # what made our reading of his contract disagree with
+                    # his own engine on all six example crates.
+                    if value.startswith(("http://", "https://")):
+                        continue
                     spot = (base / value) if base else None
-                    if spot is None or not spot.is_file() or \
-                            spot.stat().st_size == 0:
+                    if spot is None:
+                        errors.append(_fault(
+                            requirement, where, severity, reads,
+                            f"{value}: the data did not arrive with this "
+                            f"crate, so whether it holds anything could not "
+                            f"be checked"))
+                    elif not spot.is_file():
                         errors.append(_fault(requirement, where, severity,
-                                             reads, value))
+                                             reads, f"{value}: no such file"))
+                    elif spot.stat().st_size == 0:
+                        errors.append(_fault(requirement, where, severity,
+                                             reads, f"{value}: the file is "
+                                                    f"empty"))
 
         if requirement.must == "be unique":
             # Across all targets at once, and every holder of a shared value is
