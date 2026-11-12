@@ -380,3 +380,14 @@ table.crate tr.kinds td { color: var(--fg_dim); font-size: 0.85rem; padding-top:
   padding: 0.4rem 0.5rem; font-family: var(--font);
   color: var(--fg); background: var(--bg); border: 1px solid var(--fg_dim);
 }
+
+/* ---- the light theme --------------------------------------------------- */
+/* Every colour already comes from a variable, so the palette swap needs no
+   rules here. These two exist because one thing does not translate: the rain
+   is a glow on black and would be grey hatching on white, which reads as a
+   printing fault rather than as a background. */
+body[data-theme="paper"] .rain { opacity: 0.25; animation: none; }
+
+body[data-theme="paper"] button {
+  background: var(--bg_panel);
+}

@@ -511,6 +511,9 @@ class Session:
         self.focus: str = ""
         # And which run's crate it is showing. Empty means this session's.
         self.looking_at: str = ""
+        # Which palette. Both carry the same key names, so nothing below
+        # knows which is in force.
+        self.theme: str = theme.DEFAULT_THEME
         self.arch: Architect | None = None
         self.run_id = f"web-{session_id[:6]}"
         self.thread: threading.Thread | None = None
@@ -1161,13 +1164,31 @@ def render_question(session: Session) -> str:
 </section>"""
 
 
+def _theme_switch(session: Session) -> str:
+    """Dark or light, as links rather than a control.
+
+    A link because it works with JavaScript off, can be bookmarked, and can
+    be sent to somebody who wants the light one - which is the usual reason
+    anybody asks: a screenshot bound for a paper cannot be black.
+    """
+    out = []
+    for name, label in (("matrix", "dark"), ("paper", "light")):
+        if name == session.theme:
+            out.append(f'<strong>{label}</strong>')
+        else:
+            keep = (f"&run={esc(session.looking_at)}"
+                    if session.looking_at else "")
+            out.append(f'<a href="/?theme={name}{keep}">{label}</a>')
+    return "theme: " + " &middot; ".join(out)
+
+
 def render_log(session: Session) -> str:
     if not session.log:
         return ('<p class="hint">Nothing has run yet. The log appears here, '
                 'one line per thing that happened.</p>')
     rows = []
     for row in session.log:
-        colour = (f' style="color:{theme.colour(row["state"])}"'
+        colour = (f' style="color:{theme.colour(row["state"], session.theme)}"'
                   if row["state"] else "")
         rows.append(f'<li class="{esc(row["kind"])}"{colour}>'
                     f'<span class="at">{esc(row["at"])}</span>'
@@ -1646,7 +1667,7 @@ def render_workflow(session: Session) -> str:
 def render_page(session: Session) -> str:
     items = missing_report(session.filled)
     palette = "".join(f"  --{key}: {value};\n"
-                      for key, value in theme.PALETTE.items())
+                      for key, value in theme.palette(session.theme).items())
     status = ("a run is going" if session.running else
               "the run has ended" if session.finished else "nothing running")
     if session.setup.answered:
@@ -1678,7 +1699,7 @@ def render_page(session: Session) -> str:
 }}
 </style>
 </head>
-<body>
+<body data-theme="{esc(session.theme)}">
 <div class="rain" aria-hidden="true"></div>
 <header>
   <h1>{icon("architect")}{esc(theme.PROJECT)}</h1>
@@ -1687,6 +1708,7 @@ def render_page(session: Session) -> str:
     every verdict. Four phase agents do the work - Design, Build, Test, Learn -
     and any of them may be a person. Four sentinels check each handover and may
     refuse it. One RO-Crate grows.</p>
+  <p class="hint">{_theme_switch(session)}</p>
   <p class="hint">session <code>{esc(session.id)}</code> &middot; run
     <code>{esc(session.run_id)}</code> &middot; {esc(status)} &middot; form
     from <code>{esc(FORM_SOURCE)}</code></p>
@@ -1938,6 +1960,9 @@ class Handler(BaseHTTPRequestHandler):
             asked = query.get("focus")
             if asked is not None:
                 session.focus = asked[0].strip()[:200]
+            wanted = query.get("theme")
+            if wanted is not None and wanted[0] in theme.PALETTES:
+                session.theme = wanted[0]
             run = query.get("run")
             if run is not None:
                 # Through `safe_run_id`, so a name from a query string cannot
@@ -2004,7 +2029,7 @@ class Handler(BaseHTTPRequestHandler):
             # The colour of a state is resolved here, from theme.py, so the
             # browser never holds a second copy of what amber and red mean.
             "log": [dict(row, icon=theme.icon(row["kind"]),
-                         colour=(theme.colour(row["state"])
+                         colour=(theme.colour(row["state"], session.theme)
                                  if row["state"] else ""))
                     for row in session.log],
         }

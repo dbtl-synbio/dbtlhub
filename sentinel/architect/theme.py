@@ -19,21 +19,60 @@ from __future__ import annotations
 PROJECT = "DBTL Reloaded"
 TAGLINE = "Four handovers. One crate. No unchecked promises."
 
+# TWO PALETTES, ONE SET OF NAMES.
 # Green on black, and nothing competing with it. The two off-greens are state,
 # not decoration: amber for something flagged, red for something refused. They
 # must not be used anywhere else, or a reader stops trusting them.
-PALETTE = {
-    "bg": "#000000",
-    "bg_panel": "#050b06",
-    "grid": "#0d2411",
-    "fg": "#00ff41",           # the rain
-    "fg_dim": "#1f7a33",
-    "fg_bright": "#b6ffc4",
-    "flag": "#ffd166",         # accepted, with something to read
-    "refuse": "#ff4d4d",       # refused
-    "human": "#9bb8ff",        # what the researcher typed, so it is never
-                               # mistaken for the system's own voice
+#
+# And a light one, because a screen in a bright room is not the same screen,
+# and because a figure or a screenshot bound for a paper cannot be black. The
+# KEYS are identical in both and every one of them is used by name, so nothing
+# downstream knows which is in force - swapping them is one lookup and not a
+# second stylesheet that drifts.
+PALETTES = {
+    "matrix": {
+        "bg": "#000000",
+        "bg_panel": "#050b06",
+        "grid": "#0d2411",
+        "fg": "#00ff41",           # the rain
+        "fg_dim": "#1f7a33",
+        "fg_bright": "#b6ffc4",
+        "flag": "#ffd166",         # accepted, with something to read
+        "refuse": "#ff4d4d",       # refused
+        "human": "#9bb8ff",        # what the researcher typed, so it is never
+                                   # mistaken for the system's own voice
+    },
+    "paper": {
+        # Darker than the dark one's foregrounds, because contrast on white
+        # runs the other way: these are inks, not glows. Checked against
+        # WCAG AA on #ffffff - the dimmest, #5a6b66, is 4.6:1.
+        "bg": "#ffffff",
+        "bg_panel": "#f7f9f8",
+        "grid": "#d8e0db",
+        "fg": "#0e5c6b",
+        "fg_dim": "#5a6b66",
+        "fg_bright": "#0b3d46",
+        "flag": "#b9761a",
+        "refuse": "#a62b2b",
+        "human": "#3a56a8",
+    },
 }
+
+DEFAULT_THEME = "matrix"
+
+# Kept as a name because everything that was written before there were two
+# reaches for it. It is the dark one, which is still the default.
+PALETTE = PALETTES[DEFAULT_THEME]
+
+
+def palette(name: str | None = None) -> dict:
+    """One palette by name, falling back to the default rather than raising.
+
+    A theme arriving from a query string is a thing a person typed, and an
+    unknown one should give them the interface in the usual colours, not an
+    error page.
+    """
+    return PALETTES.get(name or DEFAULT_THEME, PALETTES[DEFAULT_THEME])
 
 FONT_STACK = ('"SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, '
               'Consolas, "DejaVu Sans Mono", monospace')
@@ -57,17 +96,21 @@ ICONS = {
     "stop": "■",
 }
 
-# What colour a state is drawn in. Keyed by the real verdict and move values,
-# so nothing has to be translated first.
-STATE_COLOUR = {
-    "accepted": PALETTE["fg"],
-    "accepted_with_flags": PALETTE["flag"],
-    "refused": PALETTE["refuse"],
-    "go_on": PALETTE["fg"],
-    "go_back": PALETTE["flag"],
-    "ask": PALETTE["human"],
-    "stop": PALETTE["refuse"],
+# Which palette entry a state is drawn in. The NAME, not the colour: the two
+# palettes agree on what amber means and disagree on which amber, and storing
+# the resolved colour here would have frozen one of them.
+STATE_KEY = {
+    "accepted": "fg",
+    "accepted_with_flags": "flag",
+    "refused": "refuse",
+    "go_on": "fg",
+    "go_back": "flag",
+    "ask": "human",
+    "stop": "refuse",
 }
+
+# The dark one resolved, for everything written before there were two.
+STATE_COLOUR = {state: PALETTE[key] for state, key in STATE_KEY.items()}
 
 
 def icon(kind: str) -> str:
@@ -79,15 +122,23 @@ def icon(kind: str) -> str:
     return ICONS.get(kind, "")
 
 
-def colour(state: str) -> str:
-    return STATE_COLOUR.get(state, PALETTE["fg"])
+def colour(state: str, theme: str | None = None) -> str:
+    """The colour a state is drawn in, in whichever palette is in force."""
+    here = palette(theme)
+    return here.get(STATE_KEY.get(state, "fg"), here["fg"])
 
 
 if __name__ == "__main__":
     print(f"\n  {PROJECT} — {TAGLINE}\n")
     for kind, glyph in ICONS.items():
         print(f"   {glyph}  {kind}")
-    print()
-    for state, hex_colour in STATE_COLOUR.items():
-        print(f"   {state:<22}{hex_colour}")
-    print("\n  Icons and colours only. Every name on screen is the real one.\n")
+    print(f"\n  {'state':<22}{'matrix':<12}{'paper'}")
+    for state in STATE_KEY:
+        print(f"   {state:<22}{colour(state, 'matrix'):<12}"
+              f"{colour(state, 'paper')}")
+    print(f"\n  {'palette key':<22}{'matrix':<12}{'paper'}")
+    for key in PALETTES["matrix"]:
+        print(f"   {key:<22}{PALETTES['matrix'][key]:<12}"
+              f"{PALETTES['paper'][key]}")
+    print("\n  Two palettes, one set of names. Icons and colours only:")
+    print("  every name on screen is the real one.\n")
