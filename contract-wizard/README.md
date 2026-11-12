@@ -1,4 +1,4 @@
-# The Agent Contract Wizard
+# The Sentinel Contract Wizard
 
 Developed by Neil Wipat, Newcastle University, and Claude, with Prozomix
 Ltd. The bioprospecting handover it is built around comes from work with
@@ -17,8 +17,8 @@ of the draft can be trusted, and the person corrects it.
 
 | File | What it is |
 |---|---|
-| `agent_contract_wizard.ipynb` | The notebook, run on Google Colab |
-| `build_agent_contract_wizard.py` | The script that writes that notebook. The notebook is generated, so change this and run it rather than editing the notebook by hand |
+| `sentinel_contract_wizard.ipynb` | The notebook, run on Google Colab |
+| `build_sentinel_contract_wizard.py` | The script that writes that notebook. The notebook is generated, so change this and run it rather than editing the notebook by hand |
 
 ## What it asks for
 

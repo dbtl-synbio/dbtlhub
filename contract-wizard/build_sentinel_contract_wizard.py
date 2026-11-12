@@ -1,6 +1,6 @@
-"""Build the Agent Contract Wizard notebook.
+"""Build the Sentinel Contract Wizard notebook.
 
-The Agent Contract Wizard writes an interoperability contract for a handover
+The Sentinel Contract Wizard writes an interoperability contract for a handover
 between two phases of a Design, Build, Test, Learn cycle. It takes two
 things from the person using it: the handover itself, as an RO-Crate, and a
 description of what their phase needs, written in ordinary English under six
@@ -34,7 +34,7 @@ qwen2.5:14b running on a laptop. The measurements that shaped the design:
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent / "agent_contract_wizard.ipynb"
+OUT = Path(__file__).resolve().parent / "sentinel_contract_wizard.ipynb"
 
 cells = []
 
@@ -67,7 +67,7 @@ def code(text, title=None):
 # ---------------------------------------------------------------- the opening
 
 md("""
-# The Agent Contract Wizard
+# The Sentinel Contract Wizard
 
 **Write an interoperability contract from a crate and a description of what
 you need, without learning the contract language first.**
