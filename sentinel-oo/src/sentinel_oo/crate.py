@@ -304,8 +304,8 @@ def describe(crate) -> str:
     tutorial's first step reads as though it provides this and does not.
 
     It also catches the commonest mistake before it is made. Types are
-    compared as plain text, so a crate saying `CoatingRecipe` against a
-    contract saying `Recipe` means every requirement matches nothing and
+    compared as plain text, so a crate saying `PlateWell` against a
+    contract saying `Well` means every requirement matches nothing and
     passes in silence.
     """
     from collections import Counter
@@ -352,8 +352,8 @@ def describe(crate) -> str:
         "written on it",
         "or one of its named values. The names must match exactly: they are "
         "compared",
-        "as plain text, so a contract saying `Recipe` against a crate saying",
-        "`CoatingRecipe` matches nothing and passes in silence.",
+        "as plain text, so a contract saying `Well` against a crate saying",
+        "`PlateWell` matches nothing and passes in silence.",
     ]
     return "\n".join(lines)
 
