@@ -1445,6 +1445,10 @@ def render_kg(session: Session) -> str:
             out.append(f'<p class="no">{icon("refused")}nothing in this crate '
                        f'has the id <code>{esc(session.focus)}</code></p>')
         else:
+            # The picture first. A table of edges answers the same question
+            # and nobody reads it: a graph that is only ever tabulated is a
+            # graph nobody has seen.
+            out.append(kgview.draw(near))
             out.append(f'<div class="chosen"><p><code>{esc(near["id"])}</code> '
                        f'&middot; {esc(", ".join(near["types"]))}</p>')
             if near["name"]:
@@ -1957,19 +1961,27 @@ class Handler(BaseHTTPRequestHandler):
             # because it is a view, which means it can be linked, bookmarked
             # and sent to somebody else.
             query = parse_qs(urlparse(self.path).query)
-            asked = query.get("focus")
-            if asked is not None:
-                session.focus = asked[0].strip()[:200]
             wanted = query.get("theme")
             if wanted is not None and wanted[0] in theme.PALETTES:
                 session.theme = wanted[0]
+
+            # `run` first, because changing which crate is shown has to clear
+            # a focus that belonged to the previous one - and `focus` second,
+            # so that `?run=x&focus=y` means both. The first version cleared
+            # the focus whenever `run` was present at all, which quietly made
+            # exactly that link do only half of what it said.
             run = query.get("run")
             if run is not None:
                 # Through `safe_run_id`, so a name from a query string cannot
                 # reach outside `runs/`.
-                session.looking_at = (safe_run_id(run[0].strip(), "")
-                                      if run[0].strip() else "")
-                session.focus = ""
+                chosen = (safe_run_id(run[0].strip(), "")
+                          if run[0].strip() else "")
+                if chosen != session.looking_at:
+                    session.focus = ""
+                session.looking_at = chosen
+            asked = query.get("focus")
+            if asked is not None:
+                session.focus = asked[0].strip()[:200]
             self._send(render_page(session).encode(), new_session=cookie)
         elif path.startswith("/static/"):
             self._static(path)

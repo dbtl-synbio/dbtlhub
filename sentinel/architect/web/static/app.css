@@ -391,3 +391,21 @@ body[data-theme="paper"] .rain { opacity: 0.25; animation: none; }
 body[data-theme="paper"] button {
   background: var(--bg_panel);
 }
+
+/* ---- the graph, drawn ---------------------------------------------------- */
+/* One hop at a time. Everything in it is a link, so following provenance is
+   clicking rather than typing an identifier into a box. */
+svg.kg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1rem 0 0.5rem;
+  border: 1px solid var(--grid);
+  background: var(--bg);
+}
+
+svg.kg a { cursor: pointer; }
+svg.kg a circle { transition: stroke 0.12s ease; }
+svg.kg a:hover circle { stroke: var(--fg_bright); stroke-width: 2.6; }
+svg.kg a:hover text { fill: var(--fg_bright); }
+svg.kg a:focus circle { stroke: var(--fg_bright); }

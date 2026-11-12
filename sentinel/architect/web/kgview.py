@@ -31,6 +31,7 @@ computes:
 from __future__ import annotations
 
 import json
+import math
 import sys
 from collections import Counter
 from pathlib import Path
@@ -130,6 +131,116 @@ def neighbourhood(crate: dict, focus: str) -> dict:
             "name": str(entity.get("name", "")),
             "literals": literals,
             "points_at": out_edges, "pointed_at_by": in_edges}
+
+
+def draw(near: dict, width: int = 820, per_side: int = 9) -> str:
+    """One neighbourhood as an SVG, drawn rather than tabulated.
+
+    ONE HOP, AND THAT IS THE WHOLE TRICK. Four hundred nodes at once is a grey
+    cloud: it looks like insight and answers nothing, and no amount of layout
+    work fixes it. One entity, with everything that points AT it on the left
+    and everything it points at on the right, stays readable at any size and
+    answers the question a person actually has.
+
+    THREE COLUMNS, NOT A FAN. The first version spread the neighbours around
+    an arc, which looked like a graph drawing and was unreadable: nine labels
+    of twenty characters each do not fit on an arc, so they sat on top of one
+    another. One row per neighbour cannot collide, and the eye reads a column.
+
+    Every node is a link back into this view, so following provenance is
+    clicking. Colours are CSS variables, so the drawing follows whichever
+    palette is in force rather than being drawn twice.
+    """
+    if not near.get("found"):
+        return ""
+    ins = near["pointed_at_by"][:per_side]
+    outs = near["points_at"][:per_side]
+    rows = max(len(ins), len(outs), 1)
+
+    row_height = 46
+    top = 52
+    height = top + rows * row_height + 34
+    # The columns sit well inside the frame: a label runs OUTWARD from its
+    # node, and the first version put the columns 128px from the edge, which
+    # is narrower than the labels it then drew - every name on the right was
+    # clipped by the panel. 24 characters at this size is about 165px.
+    left_x, right_x = 214, width - 214
+    centre_x, centre_y = width / 2, height / 2
+
+    def column(items: list[dict], x: float, left: bool) -> str:
+        out = []
+        # Centred on the middle row, so a side with two neighbours sits beside
+        # the centre rather than starting at the top of a tall picture.
+        first = centre_y - (len(items) - 1) * row_height / 2
+        for i, edge in enumerate(items):
+            y = first + i * row_height
+            label = edge["name"] or edge["id"]
+            label = label[:24] + "\u2026" if len(label) > 25 else label
+            kind = edge["kind"].split(":")[-1][:18]
+
+            # The line runs between the two circles, never under a label.
+            x1, x2 = (x + 13, centre_x - 38) if left else (centre_x + 38, x - 13)
+            out.append(
+                f'<path d="M{x1:.0f},{y:.0f} C{(x1 + x2) / 2:.0f},{y:.0f} '
+                f'{(x1 + x2) / 2:.0f},{centre_y:.0f} {x2:.0f},{centre_y:.0f}" '
+                f'fill="none" stroke="var(--fg_dim)" stroke-width="1.1" '
+                f'marker-end="url(#tip)"/>')
+            anchor = "end" if left else "start"
+            text_x = x - 20 if left else x + 20
+            out.append(
+                f'<a href="/?focus={_attr(edge["id"])}#kg-panel">'
+                f'<title>{_attr(edge["id"])} \u2014 {_attr(edge["kind"])}</title>'
+                f'<circle cx="{x:.0f}" cy="{y:.0f}" r="11" '
+                f'fill="var(--bg_panel)" stroke="var(--fg_dim)" '
+                f'stroke-width="1.6"/>'
+                f'<text x="{text_x:.0f}" y="{y - 1:.0f}" text-anchor="{anchor}" '
+                f'font-size="11.5" fill="var(--fg_bright)">{_attr(label)}</text>'
+                f'<text x="{text_x:.0f}" y="{y + 12:.0f}" '
+                f'text-anchor="{anchor}" font-size="9" fill="var(--fg_dim)">'
+                f'{_attr(edge["property"][:20])} \u00b7 {_attr(kind)}</text>'
+                f'</a>')
+        return "".join(out)
+
+    more = []
+    for items, total, x, anchor in (
+            (ins, len(near["pointed_at_by"]), 18, "start"),
+            (outs, len(near["points_at"]), width - 18, "end")):
+        if total > len(items):
+            more.append(f'<text x="{x}" y="{height - 12}" font-size="10" '
+                        f'text-anchor="{anchor}" fill="var(--fg_dim)">'
+                        f'and {total - len(items)} more</text>')
+
+    centre_label = near["name"] or near["id"]
+    centre_label = (centre_label[:34] + "\u2026" if len(centre_label) > 35
+                    else centre_label)
+
+    return (
+        f'<svg class="kg" viewBox="0 0 {width} {height}" '
+        f'xmlns="http://www.w3.org/2000/svg" role="img" '
+        f'aria-label="the neighbourhood of {_attr(near["id"])}">'
+        f'<defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" '
+        f'markerWidth="7" markerHeight="7" orient="auto">'
+        f'<path d="M0,0 L10,5 L0,10 z" fill="var(--fg_dim)"/></marker></defs>'
+        f'<text x="18" y="26" font-size="10.5" fill="var(--fg_dim)">'
+        f'{len(near["pointed_at_by"])} point at it</text>'
+        f'<text x="{width - 18}" y="26" font-size="10.5" text-anchor="end" '
+        f'fill="var(--fg_dim)">it points at {len(near["points_at"])}</text>'
+        f'{column(ins, left_x, True)}{column(outs, right_x, False)}'
+        f'<circle cx="{centre_x:.0f}" cy="{centre_y:.0f}" r="34" '
+        f'fill="var(--bg_panel)" stroke="var(--fg)" stroke-width="2.6"/>'
+        f'<text x="{centre_x:.0f}" y="{centre_y + 4:.0f}" text-anchor="middle" '
+        f'font-size="11.5" fill="var(--fg_bright)">'
+        f'{_attr(near["kind"].split(":")[-1][:13])}</text>'
+        f'<text x="{centre_x:.0f}" y="{centre_y + 54:.0f}" text-anchor="middle" '
+        f'font-size="11.5" fill="var(--fg)">{_attr(centre_label)}</text>'
+        f'{"".join(more)}</svg>')
+
+
+def _attr(text: object) -> str:
+    """Escape for an SVG attribute or text node. Its own function because an
+    unescaped `&` in an identifier silently breaks the whole drawing."""
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
 
 
 def what_changed(before: dict | None, after: dict) -> dict:

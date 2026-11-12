@@ -527,6 +527,41 @@ class TestWorkflows(unittest.TestCase):
         for step in flow.steps:
             self.assertIn(flow.step_id(step), ids)
 
+    def test_the_graph_is_drawn_and_every_node_is_a_link(self):
+        """A graph that is only ever tabulated is a graph nobody has seen.
+
+        One hop: the centre, and at most `per_side` on each side. If this
+        ever draws the whole crate it becomes a grey cloud, so the cap is
+        part of the claim and not an implementation detail.
+        """
+        from architect.web import kgview                            # noqa: PLC0415
+        flow = self.loader.load("bioprospecting")
+        crate = {"@graph": flow.to_crate()}
+        near = kgview.neighbourhood(crate, flow.crate_id())
+        svg = kgview.draw(near, per_side=4)
+        self.assertTrue(svg.startswith('<svg class="kg"'))
+        # four neighbours drawn, plus the centre
+        self.assertEqual(svg.count("<circle"), 5)
+        self.assertEqual(svg.count('<a href="/?focus='), 4)
+        self.assertIn("and 10 more", svg)
+        self.assertNotIn("#000000", svg)        # colours come from the palette
+        self.assertIn("var(--fg)", svg)
+
+    def test_an_identifier_cannot_break_the_drawing(self):
+        """An unescaped `&` or `<` in an id would silently ruin the SVG."""
+        from architect.web import kgview                            # noqa: PLC0415
+        # `result`, not `about`: `about` is in kgview.QUIET, so an edge made
+        # with it is deliberately not drawn and this would test nothing.
+        crate = {"@graph": [
+            {"@id": "#a&b", "@type": "Thing", "name": "a & b",
+             "result": {"@id": "#c<d"}},
+            {"@id": "#c<d", "@type": "Thing", "name": "c < d"}]}
+        svg = kgview.draw(kgview.neighbourhood(crate, "#a&b"))
+        self.assertIn("&amp;", svg)
+        self.assertIn("&lt;", svg)
+        # no raw `&` that is not the start of an entity
+        self.assertNotIn("& ", svg)
+
     def test_the_graph_view_finds_both_directions(self):
         """Provenance is read backwards, so one direction is not enough."""
         from architect.web import kgview                            # noqa: PLC0415
