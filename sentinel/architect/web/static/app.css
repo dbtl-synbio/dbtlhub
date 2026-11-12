@@ -304,3 +304,57 @@ footer { padding-top: 1rem; }
   body { font-size: 14px; }
   .panel { padding: 0.8rem; }
 }
+
+/* ---- the workflow: steps, handovers, attrition ------------------------- */
+/* The handover rows are the point of this table. They are the only rows that
+   are not a step: they are where a sentinel stands, and they have to be
+   visible as a different kind of thing at a glance. */
+table.steps { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+
+table.steps th {
+  text-align: left;
+  font-weight: normal;
+  color: var(--fg_dim);
+  border-bottom: 1px solid var(--grid);
+  padding: 0.3rem 0.5rem;
+}
+
+table.steps td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px dotted var(--grid);
+  vertical-align: top;
+}
+
+table.steps td:first-child { color: var(--fg_dim); width: 2.2rem; }
+table.steps .hint { display: block; margin-top: 0.2rem; }
+
+table.steps tr.handover-row td {
+  background: var(--bg_panel);
+  color: var(--fg);
+  border-bottom: 1px solid var(--fg_dim);
+}
+
+table.steps tr.handover-row td:first-child { color: var(--fg); }
+
+/* A faint left edge per phase, so the four blocks read without a legend. */
+tr.phase-design td:first-child { border-left: 2px solid var(--fg_dim); }
+tr.phase-build  td:first-child { border-left: 2px solid var(--fg); }
+tr.phase-test   td:first-child { border-left: 2px solid var(--flag); }
+tr.phase-learn  td:first-child { border-left: 2px solid var(--human); }
+
+details.own { margin-top: 1.2rem; border-top: 1px dotted var(--grid); padding-top: 0.8rem; }
+details.own summary { cursor: pointer; color: var(--fg_bright); }
+
+details.own textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.5rem;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--fg_dim);
+}
+
+form.pick-flow { margin-bottom: 0.5rem; }

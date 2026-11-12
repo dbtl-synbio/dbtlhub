@@ -1,0 +1,126 @@
+# The blank workflow: a starting point, not a use case. It is the counterpart
+# of forms/template.yaml. The template asks the generic questions; this file
+# gives the generic steps. Same rule as architect/forms.py: you may add a step,
+# rename a step or narrow what a step means, but you may not remove a phase or
+# a handover, because that is what makes two projects comparable.
+name: blank
+title: A blank design-build-test-learn cycle to rewrite
+use_case: any
+based_on: bioprospecting
+source: >-
+  A starting point written for this system, not a record of real work. Its
+  shape follows the bioprospecting cycle; none of its content is observed, and
+  it contains no counts on purpose.
+description: |
+  This is the smallest honest DBTL cycle: ten steps you are meant to replace
+  with your own. Rename them, split them, add to them, and say in each note
+  what actually happens in your laboratory. What has to survive the replacing
+  is the phase order (design, build, test, learn) and the four handovers,
+  one at the end of each phase, because those are what a contract checks.
+steps:
+
+  - number: 1
+    name: Decide what to make
+    phase: design
+    note: >-
+      Replace with the first real design action of your cycle, in the verb you
+      would use at the bench or the keyboard. Say where the candidates came
+      from; a contract will later ask you to trace each one back to its origin.
+      If the candidate list shrinks here, that is attrition: put the count and
+      the reason for each loss on this step, because a later phase cannot
+      recover a number that was never written down.
+
+  - number: 2
+    name: Choose which candidates go forward
+    phase: design
+    note: >-
+      Replace with your selection step and state its limit (plate size, budget,
+      time) before the selection happens. A limit stated afterwards is an
+      argument, not a constraint. This is the most common place for a count to
+      belong: write how many candidates went in, how many came out, and why.
+
+  - number: 3
+    name: Specify exactly what will be built
+    phase: design
+    handover_after: design_to_build
+    handover_number: 1
+    note: >-
+      Replace with the precise specification Build receives: identifiers,
+      sequences or compositions, and anything that must not appear. Handover 1
+      lives here. The contract will refuse a design that Build cannot act on
+      without asking you a question, so write down what you would otherwise
+      say aloud.
+
+  - number: 4
+    name: Make the material
+    phase: build
+    routes: [route A, route B]
+    note: >-
+      Replace with how the material is actually made. If your cycle can go two
+      ways here (for example a fast route and a slow one), list them in
+      routes and delete the example names. The route taken must travel with
+      each sample: downstream nothing can tell the populations apart
+      otherwise, and Learn will pool them as one. If you have only one route,
+      keep the field with a single entry, so the choice is visibly made.
+
+  - number: 5
+    name: Check what was made
+    phase: build
+    handover_after: build_to_test
+    handover_number: 2
+    manual_parts: [a step done by hand]
+    note: >-
+      Replace with your quality check and list in manual_parts every part done
+      by a person rather than a machine or script. A manual step must be
+      recorded as a first-class thing, with who did it, when and what they
+      saw, not left implicit; otherwise it is invisible to the next phase.
+      Handover 2 lives here. Attrition normally happens here too: record how
+      many items were made against how many were designed, and the reason
+      for each that was not.
+
+  - number: 6
+    name: Prepare the test
+    phase: test
+    note: >-
+      Replace with how samples are set up for measurement: layout, controls,
+      replicates. State which controls exist, since a later phase cannot judge
+      a result it has no reference for.
+
+  - number: 7
+    name: Run the measurement
+    phase: test
+    note: >-
+      Replace with your assay, naming the instrument and the unit of what it
+      reports. A contract will demand that every value carry its unit and
+      that a failed measurement is recorded as failed, not silently omitted.
+
+  - number: 8
+    name: Record and check the results
+    phase: test
+    handover_after: test_to_learn
+    handover_number: 3
+    note: >-
+      Replace with the step where raw measurements become a result Learn can
+      read. Handover 3 lives here. Count again: how many samples were
+      measured against how many were built, with the reason for each
+      difference. The contract will refuse results it cannot join back to a
+      design.
+
+  - number: 9
+    name: Interpret the results
+    phase: learn
+    note: >-
+      Replace with how you decide what the results mean. Say what would count
+      as success before you look, and keep the failures in the record; a
+      lesson drawn only from the items that worked cannot be audited.
+
+  - number: 10
+    name: Decide what to try next
+    phase: learn
+    handover_after: learn_to_design
+    handover_number: 4
+    note: >-
+      Replace with the decision that opens the next round. Handover 4 lives
+      here: it closes the loop by giving Design something concrete, such as
+      new constraints, a narrowed candidate set or a changed question. If
+      nothing is handed back, the cycle has ended rather than looped.

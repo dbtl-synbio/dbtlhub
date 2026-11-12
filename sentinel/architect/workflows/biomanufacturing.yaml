@@ -1,0 +1,173 @@
+name: biomanufacturing
+title: Biomanufacturing of styrene, one DBTL turn
+use_case: biomanufacturing
+based_on: bioprospecting
+source: >-
+  "Workflow 1: Biomanufacturing of Styrene" (PDF, dbtlhub/biomanufacturing/examples),
+  15 listed activities (10 design, 3 build, 2 test, 2 learn, the PDF's own
+  headings), with tool names from that document; stage structure cross-checked
+  against the BioHackathon26 deck "BH DBTLHub Biomanfacturing case Workflows".
+  Instruments, units and id patterns come from our profile
+  framework/contracts/profiles/biomanufacturing.json, which describes a
+  different case (pinocembrin).
+description: |
+  One turn of the cycle for microbial production of styrene, from chassis and
+  pathway choice to a model that proposes the next strains. The steps follow
+  the styrene workflow document, which is a list of activities and tools, not
+  a record of a measured run: it gives no counts, timings or manual work.
+  Where a step is a person's work it is marked as inferred, to be confirmed
+  with the lab. The styrene workflow and our profile describe different
+  cases: the profile is the SYNBIOCHEM pinocembrin pipeline (Carbonell et al.,
+  Commun Biol 2018; mg/L, UPLC-MS/MS MRM, Sanger, Hamilton STAR). Its units
+  carry over as contract quantities; its instruments are not asserted for
+  styrene.
+steps:
+
+  - number: 1
+    name: Select chassis and retrieve its metabolic model
+    phase: design
+    note: >-
+      Fixes the host before anything else. The chassis must be recorded with a
+      strain-collection identifier or a construct cannot be compared across
+      cycles (`dbtl:Chassis` in the profile). Tool named in the source: BiGG Models.
+
+  - number: 2
+    name: Predict and reconstruct candidate pathways
+    phase: design
+    note: >-
+      Covers the source's pathway prediction and enumeration steps (RetroPath2.0,
+      RP2Paths, rpCompletion). Reactions should carry MetaNetX or Rhea
+      accessions, which is what the profile's `accession` pattern accepts.
+
+  - number: 3
+    name: Rank pathways by flux and thermodynamics
+    phase: design
+    note: >-
+      FBA, thermodynamics and pathway scoring (rpFBA, rpThermo, rpRank,
+      COBRApy). The predicted flux is the number the Learn phase will later be
+      held to, so it needs a unit now.
+
+  - number: 4
+    name: Select enzymes and homologs for each reaction
+    phase: design
+    note: Selenzyme and EnzymeMiner in the source. UniProt accessions are the profile's reference form.
+
+  - number: 5
+    name: Choose engineering targets and regulatory parts
+    phase: design
+    note: >-
+      Merges two source activities: gene deletion or overexpression targets
+      (OptFlux) and promoter and RBS selection (PartsGenie, RBS Calculator).
+
+  - number: 6
+    name: Design the combinatorial experiment
+    phase: design
+    note: >-
+      OptDoE in the source. The size limit on the library has to be stated
+      before the design exists. For scale only, and from a different case: the
+      pinocembrin crate on disk compresses 2592 combinations to 16 constructs.
+      No styrene library size is given, so none is recorded here.
+
+  - number: 7
+    name: Design DNA constructs and assembly strategy
+    phase: design
+    note: >-
+      DNA Weaver, rpBASICDesign and AssemblX in the source. This is the
+      construct specification that crosses the first handover: identifier,
+      parts with registry accessions, chassis, and plate and well.
+    manual_parts:
+      - review of the design before it is released (inferred, not stated in source)
+
+  - number: 8
+    name: Design the cultivation experiment
+    phase: design
+    handover_after: design_to_build
+    handover_number: 1
+    note: >-
+      Conditions, factors and biological replicates (OptDoE). Without the
+      replicate count in the package the Test side cannot say whether a titre
+      is a measurement or a single colony.
+
+  - number: 9
+    name: Generate the robot assembly protocol
+    phase: build
+    note: >-
+      DNA-BOT in the source translates designs into liquid-handler
+      instructions. The robot and its worklist format are not named for
+      styrene, so none is asserted here.
+
+  - number: 10
+    name: Assemble the constructs
+    phase: build
+    manual_parts:
+      - loading reagents and plates onto the deck (inferred, not stated in source)
+      - transformation into the chassis (inferred, not stated in source)
+    note: >-
+      Not a separate item in the source, which lists protocol generation and
+      then verification; the assembly run sits between them. Losses here are
+      where attrition happens in practice, and nothing in the source counts them.
+
+  - number: 11
+    name: Verify constructs against expected sequence
+    phase: build
+    note: >-
+      Sequencing results are compared with the designed sequences (TraceTrack
+      in the source). The profile requires `sequence_verified` as a pass/fail
+      at the next handover.
+
+  - number: 12
+    name: Register strains and samples
+    phase: build
+    handover_after: build_to_test
+    handover_number: 2
+    note: >-
+      eLabFTW in the source. Ties each strain to its genetic modifications
+      and to the samples made from it, so a later titre can be traced back to
+      a construct. The profile also asks for biomass (OD600) at this handover.
+
+  - number: 13
+    name: Culture strains and measure growth
+    phase: test
+    manual_parts:
+      - inoculation and sampling (inferred, not stated in source)
+    note: >-
+      Growth curves give rates and show whether styrene is toxic to the host
+      (omniplate in the source). Biomass is the basis a titre is normalised
+      against.
+
+  - number: 14
+    name: Quantify styrene and substrate by chromatography
+    phase: test
+    note: >-
+      The source names OpenChrom and generic chromatographic measurements. The
+      profile's mg/L titre against a calibration curve is the contract unit;
+      the UPLC-MS/MS method in the profile belongs to the pinocembrin case.
+
+  - number: 15
+    name: Calculate titre, yield and productivity
+    phase: test
+    handover_after: test_to_learn
+    handover_number: 3
+    note: >-
+      R or Python for derived metrics in the source. A reading below the limit
+      of quantification must say so rather than appear as a small titre.
+
+  - number: 16
+    name: Find metabolic bottlenecks
+    phase: learn
+    note: >-
+      Experimental results are compared with the model's predictions to find
+      where precursor supply or pathway flux limits production
+      (CellNetAnalyzer, COBRApy in the source).
+
+  - number: 17
+    name: Train models and propose the next strains
+    phase: learn
+    handover_after: learn_to_design
+    handover_number: 4
+    note: >-
+      Regression on designs, conditions and production data, then prediction
+      for untested strains (scikit-learn, OptDoE). The profile requires the
+      predicted titre in mg/L with uncertainty, so the next round can be
+      scored against it. The source describes this step but records no run
+      of it.

@@ -289,5 +289,99 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(done.returncode, 0)
 
 
+class TestWorkflows(unittest.TestCase):
+    """The workflows that ship, and the rules a researcher's own is held to.
+
+    A workflow decides how many things a run is about and where each handover
+    falls, so a broken one is not a cosmetic problem - it is a run that checks
+    the wrong boundary or none at all. These are the same five rules the
+    interface refuses an edited workflow with.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import yaml                                    # noqa: F401,PLC0415
+        except ImportError:                                # pragma: no cover
+            raise unittest.SkipTest(
+                "the workflows are YAML and PyYAML is not installed; the "
+                "framework itself still runs without it")
+        from architect.workflows import loader             # noqa: PLC0415
+        cls.loader = loader
+
+    def test_every_shipped_workflow_holds_together(self):
+        """Whatever we ship has to pass what we ask of other people."""
+        found = self.loader.available()
+        self.assertGreaterEqual(len(found), 4,
+                                f"expected the four demonstrations, found {found}")
+        for name in found:
+            with self.subTest(workflow=name):
+                flow = self.loader.load(name)
+                self.assertEqual(flow.problems(), [],
+                                 f"{name}.yaml does not pass its own rules")
+
+    def test_each_one_marks_all_four_handovers(self):
+        """Four phases have four boundaries. An unmarked one is unchecked."""
+        for name in self.loader.available():
+            flow = self.loader.load(name)
+            for handover in ("design_to_build", "build_to_test",
+                             "test_to_learn", "learn_to_design"):
+                with self.subTest(workflow=name, handover=handover):
+                    step = flow.handover_step(handover)
+                    self.assertIsNotNone(
+                        step, f"{name} never marks {handover}")
+                    self.assertEqual(
+                        step.number,
+                        [s for s in flow.steps if s.phase == step.phase][-1].number,
+                        f"{name} marks {handover} before the phase ends")
+
+    def test_attrition_only_goes_one_way(self):
+        flow = self.loader.load("bioprospecting")
+        counts = [c for _, c, _ in flow.attrition()]
+        self.assertEqual(counts, sorted(counts, reverse=True))
+        self.assertEqual(counts, [96, 86, 75],
+                         "the worked cycle's real numbers have changed")
+
+    def test_a_workflow_that_gains_things_is_refused(self):
+        """The fault that is easiest to write and hardest to see by eye."""
+        flow = self.loader.from_dict({
+            "name": "gains", "steps": [
+                {"number": 1, "name": "a", "phase": "design",
+                 "count_observed": 10, "handover_after": "design_to_build",
+                 "handover_number": 1},
+                {"number": 2, "name": "b", "phase": "build",
+                 "count_observed": 40, "handover_after": "build_to_test",
+                 "handover_number": 2},
+                {"number": 3, "name": "c", "phase": "test",
+                 "handover_after": "test_to_learn", "handover_number": 3},
+                {"number": 4, "name": "d", "phase": "learn",
+                 "handover_after": "learn_to_design", "handover_number": 4},
+            ]})
+        self.assertTrue(any("attrition only goes one way" in p
+                            for p in flow.problems()),
+                        f"a count that grew was not refused: {flow.problems()}")
+
+    def test_a_missing_handover_is_refused(self):
+        flow = self.loader.from_dict({
+            "name": "unmarked", "steps": [
+                {"number": 1, "name": "a", "phase": "design"},
+                {"number": 2, "name": "b", "phase": "build",
+                 "handover_after": "build_to_test", "handover_number": 2},
+                {"number": 3, "name": "c", "phase": "test",
+                 "handover_after": "test_to_learn", "handover_number": 3},
+                {"number": 4, "name": "d", "phase": "learn",
+                 "handover_after": "learn_to_design", "handover_number": 4},
+            ]})
+        self.assertTrue(any("design_to_build" in p for p in flow.problems()),
+                        f"an unmarked handover was not refused: {flow.problems()}")
+
+    def test_the_workflow_decides_how_big_a_run_is(self):
+        """If this stops being true the workflow is decoration."""
+        self.assertEqual(self.loader.load("bioprospecting").to_inputs(),
+                         {"n": 96})
+        # The blank one counts nothing on purpose, and must not invent a size.
+        self.assertEqual(self.loader.load("blank").to_inputs(), {})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

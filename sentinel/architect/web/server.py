@@ -69,6 +69,7 @@ from architect.contract import Move, PHASES, Question                 # noqa: E4
 from architect.interface import (SKIPPED, STOPPED, Interface,         # noqa: E402
                                  Stopped)
 from architect.web import setup as setup_mod                          # noqa: E402
+from architect.workflows import loader as workflows                   # noqa: E402
 
 STATIC = HERE / "static"
 COOKIE_NAME = "dbtl_session"
@@ -459,6 +460,22 @@ SESSIONS: dict[str, "Session"] = {}
 SESSIONS_LOCK = threading.Lock()
 
 
+def _default_workflow():
+    """The workflow a new session starts on, or None if none can be read.
+
+    None is survivable: every panel that shows a workflow checks for it, and
+    the run falls back to the form's own panel size. A missing PyYAML should
+    cost you the demonstrations, not the interface.
+    """
+    try:
+        return workflows.load("bioprospecting")
+    except Exception:                             # noqa: BLE001
+        try:
+            return next(iter(workflows.load_all()), None)
+        except Exception:                         # noqa: BLE001
+            return None
+
+
 class Session:
     """What one browser is doing: a form being filled, and at most one run."""
 
@@ -468,6 +485,12 @@ class Session:
         # enzymes and only then learns that no model is reachable has spent
         # the interesting part of their attention on the boring failure.
         self.setup = setup_mod.Setup()
+        # Which cycle this run is a turn of. One is loaded by default rather
+        # than left empty, because an empty workflow teaches nobody what a
+        # workflow is, and this one is a record of real work.
+        self.workflow = _default_workflow()
+        self.workflow_problems: list[str] = []
+        self.workflow_source = "the demonstration workflows on disk"
         self.filled = Filled(form=FORM)
         self.log: list[dict] = []
         self.crate_growth: list[dict] = []
@@ -720,9 +743,30 @@ def _cycle(session: Session) -> None:
     # ---- what the phase agents are given ----------------------------------
     # The Architect does not interpret these; wiring them from the form is this
     # deployment's job, which is why the mapping is here and is short.
+    flow = session.workflow
+    if flow is not None:
+        session.note(f"this run is one turn of {flow.name}: {len(flow.steps)} "
+                     f"steps, from {session.workflow_source}", kind="architect")
+        for handover in ("design_to_build", "build_to_test",
+                         "test_to_learn", "learn_to_design"):
+            step = flow.handover_step(handover)
+            if step is not None:
+                session.note(f"handover {step.handover_number} "
+                             f"({handover}) follows step {step.number}, "
+                             f"{step.name}", kind="sentinel")
+        for step in flow.manual_steps():
+            session.note(f"step {step.number} is partly done by hand: "
+                         f"{', '.join(step.manual_parts)}", kind="note")
+
     raw_size, size_from = wanted(values, "panel_size")
     panel_size = as_number(raw_size)
-    if panel_size is None:
+    # The workflow decides how big a run is, when it has committed to a
+    # number. The form's panel size stays as the answer for a workflow that
+    # counts nothing - the blank one counts nothing on purpose.
+    from_flow = flow.starting_count() if flow is not None else None
+    if from_flow:
+        panel_size, size_from = from_flow, f"the {flow.name} workflow"
+    elif panel_size is None:
         panel_size, size_from = 6, "the phase agent's own default"
     session.note(f"Design generates {int(panel_size)} candidate(s), from "
                  f"{size_from}", kind="phase_agent")
@@ -1150,6 +1194,114 @@ def render_setup(session: Session) -> str:
     return "".join(out)
 
 
+PHASE_ICON = {"design": "⧉", "build": "⧉", "test": "⧉", "learn": "⧉"}
+
+
+def render_workflow(session: Session) -> str:
+    """The demonstrations, and the door out of them.
+
+    Four workflows ship with this interface. Three describe a real use case and
+    one is a blank to rewrite, and all four are held to the same five rules -
+    numbered steps, the four phases in order, exactly four handovers each on
+    the last step of its phase, and counts that only go down. A workflow the
+    researcher writes is checked against those same rules and refused in the
+    same words, because a system that validates handovers and waves its own
+    inputs through is only half honest.
+    """
+    flow = session.workflow
+    out = ['<div class="flows">']
+
+    # ---- pick one ---------------------------------------------------------
+    out.append('<form method="post" action="/workflow" class="pick-flow">')
+    for other in workflows.load_all():
+        chosen = ' checked' if flow is not None and other.name == flow.name else ''
+        marks = other.problems()
+        state = (f'<span class="ok">{icon("accepted")}{len(other.steps)} steps</span>'
+                 if not marks else
+                 f'<span class="no">{icon("refused")}{len(marks)} problem(s)</span>')
+        out.append(
+            f'<label class="choice"><input type="radio" name="pick" '
+            f'value="{esc(other.name)}"{chosen}> '
+            f'<strong>{esc(other.title or other.name)}</strong> {state}'
+            f'<span class="hint">{esc(other.use_case)} &middot; '
+            f'{esc(other.source[:150])}</span></label>')
+    out.append('<p class="actions"><button type="submit">Use this workflow'
+               '</button><span class="hint">it decides how many things the run '
+               'is about, and which step each handover follows</span></p>'
+               '</form>')
+
+    if flow is None:
+        out.append('<p class="hint">No workflow could be read. The run will '
+                   'use the panel size from the form below.</p></div>')
+        return "".join(out)
+
+    # ---- what the chosen one says ----------------------------------------
+    out.append(f'<div class="chosen"><p><strong>{esc(flow.title)}</strong></p>'
+               f'<p class="hint">{esc(flow.description)}</p>'
+               f'<p class="hint">source: {esc(flow.source)}</p>')
+    for bad in session.workflow_problems:
+        out.append(f'<p class="no">{icon("refused")}{esc(bad)}</p>')
+    out.append('</div>')
+
+    out.append('<table class="steps"><thead><tr><th>#</th><th>step</th>'
+               '<th>phase</th><th>left</th><th>by hand</th></tr></thead><tbody>')
+    previous = None
+    for step in flow.steps:
+        lost = ""
+        if step.count_observed is not None:
+            lost = str(step.count_observed)
+            if previous is not None and previous > step.count_observed:
+                lost += (f' <span class="no">&minus;{previous - step.count_observed}'
+                         f'</span>')
+            previous = step.count_observed
+        row = (f'<tr class="phase-{esc(step.phase)}">'
+               f'<td>{step.number}</td>'
+               f'<td>{esc(step.name)}'
+               + (f'<span class="hint">{esc(step.note)}</span>' if step.note else '')
+               + (f'<span class="hint">routes: '
+                  f'{esc(" or ".join(step.routes))}</span>' if step.routes else '')
+               + '</td>'
+               f'<td>{esc(step.phase)}</td>'
+               f'<td>{lost}</td>'
+               f'<td>{esc(", ".join(step.manual_parts))}</td></tr>')
+        out.append(row)
+        if step.is_handover:
+            number = step.handover_number or "?"
+            out.append(
+                f'<tr class="handover-row"><td>{icon("sentinel")}</td>'
+                f'<td colspan="4">handover {number} &middot; '
+                f'<code>{esc(step.handover_after)}</code> &middot; the sentinel '
+                f'checks it here, and the crate grows by what it finds</td></tr>')
+    out.append('</tbody></table>')
+
+    counted = flow.attrition()
+    if counted:
+        unexplained = sum(lost or 0 for _, _, lost in counted)
+        out.append(f'<p class="hint">{icon("flagged")}{unexplained} thing(s) '
+                   f'disappear between the counted steps. A Build handover that '
+                   f'cannot say why is incomplete - this is the gap, shown '
+                   f'before the run rather than after it.</p>')
+
+    # ---- or write your own ------------------------------------------------
+    out.append(
+        '<details class="own"><summary>Write your own workflow</summary>'
+        '<p class="hint">Paste YAML in the same shape. It is checked against '
+        'the same five rules the four above pass, and refused in the same '
+        'words if it does not. Start from the blank one and rename the steps.'
+        '</p>'
+        '<form method="post" action="/workflow">'
+        '<label>your workflow'
+        '<textarea name="yaml" rows="14" spellcheck="false" '
+        'placeholder="name: my_cycle&#10;title: ...&#10;steps:&#10;'
+        '  - number: 1&#10;    name: Decide what to make&#10;'
+        '    phase: design"></textarea></label>'
+        '<p class="actions"><button type="submit">Check and use it</button>'
+        '<span class="hint">nothing runs yet</span></p></form></details>')
+
+    out.append('</div>')
+    return "".join(out)
+
+
 def render_page(session: Session) -> str:
     items = missing_report(session.filled)
     palette = "".join(f"  --{key}: {value};\n"
@@ -1215,6 +1367,15 @@ def _rest_of_page(session: Session, items: list[dict]) -> str:
     """
     return f"""
 {render_question(session)}
+<section class="panel" id="workflow-panel">
+  <h2>{icon("phase_agent")}The workflow this run is a turn of</h2>
+  <p class="intent">A contract says what must travel between two phases. A
+    workflow says what the lab does in each phase and which step the handover
+    follows. Both are needed: a contract with no workflow is a rule with
+    nothing to apply to.</p>
+  {render_workflow(session)}
+</section>
+
 <section class="panel" id="missing-panel">
   <h2>What is still missing</h2>
   {render_missing(items)}
@@ -1513,6 +1674,48 @@ class Handler(BaseHTTPRequestHandler):
             for line in session.setup.notes[-3:]:
                 session.note(line, kind="note")
             self._redirect("/#setup-panel", new_session=cookie)
+        elif path == "/workflow":
+            picked = (posted.get("pick") or [""])[0].strip()
+            written = (posted.get("yaml") or [""])[0]
+            if written.strip():
+                # A workflow the researcher wrote. It is read, then checked
+                # against the same rules the four demonstrations pass, and
+                # refused in the same words - the interface does not get to
+                # hold its own inputs to a lower standard than its handovers.
+                try:
+                    import yaml as _yaml                   # noqa: PLC0415
+                    flow = workflows.from_dict(_yaml.safe_load(written) or {})
+                except Exception as exc:                   # noqa: BLE001
+                    session.workflow_problems = [f"it could not be read: {exc}"]
+                    session.note(f"the workflow you wrote could not be read: "
+                                 f"{exc}", kind="refused", state="refused")
+                else:
+                    session.workflow_problems = flow.problems()
+                    if flow.problems():
+                        session.note(f"the workflow you wrote was refused: "
+                                     f"{len(flow.problems())} problem(s)",
+                                     kind="refused", state="refused")
+                        for bad in flow.problems():
+                            session.note(bad, kind="refused")
+                    else:
+                        session.workflow = flow
+                        session.workflow_source = "written here"
+                        session.note(f"workflow accepted: {flow.name}, "
+                                     f"{len(flow.steps)} steps, written here",
+                                     kind="architect", state="accepted")
+            elif picked:
+                try:
+                    session.workflow = workflows.load(picked)
+                    session.workflow_problems = []
+                    session.workflow_source = f"{picked}.yaml on disk"
+                    flow = session.workflow
+                    session.note(f"workflow: {flow.title} ({len(flow.steps)} "
+                                 f"steps, {flow.starting_count() or 'no'} "
+                                 f"counted things)", kind="architect")
+                except Exception as exc:                   # noqa: BLE001
+                    session.note(f"no workflow named {picked!r}: {exc}",
+                                 kind="refused", state="refused")
+            self._redirect("/#workflow-panel", new_session=cookie)
         elif path == "/verify":
             # One real, minimal call. A probe knows a key is present; only a
             # call knows it works, and the researcher asked to be able to test
