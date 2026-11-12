@@ -289,6 +289,79 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(done.returncode, 0)
 
 
+class TestASentinelIsAFile(unittest.TestCase):
+    """The claim the recipe in `template/MAKE_A_SENTINEL.md` makes.
+
+    If a handover ever needs Python again, these fail and the recipe is a
+    lie. That is the point of testing it rather than only writing it down.
+    """
+
+    HANDOVER = "coat_to_cure"
+
+    def setUp(self):
+        from framework.agents import sentinel as mod                # noqa: PLC0415
+        self.mod = mod
+        source = ROOT / "template" / "example" / f"{self.HANDOVER}.yaml"
+        self.assertTrue(source.is_file(), f"{source} is the worked example")
+        self.placed = mod.CONTRACTS / f"{self.HANDOVER}.yaml"
+        self.placed.write_text(source.read_text())
+
+    def tearDown(self):
+        self.placed.unlink(missing_ok=True)
+
+    def test_dropping_a_file_in_is_the_whole_installation(self):
+        self.assertIn(self.HANDOVER, self.mod.known(),
+                      "a contract on disk is not discovered, so a handover "
+                      "still needs code")
+        sentinel = self.mod.Sentinel(profile="bioprospecting")
+        contract = sentinel.contract(self.HANDOVER)
+        self.assertEqual(contract["$id"], "dbtl:coat_to_cure/0.1.0")
+
+    def test_it_accepts_and_refuses_without_any_code_for_it(self):
+        sentinel = self.mod.Sentinel(profile="bioprospecting")
+        clean = {"contract": self.HANDOVER, "run_id": "r1",
+                 "panels": [{"panel_id": "P1", "thickness_um": 42.0}]}
+        clashing = {"contract": self.HANDOVER, "run_id": "r1",
+                    "panels": [{"panel_id": "P1", "thickness_um": 42.0},
+                               {"panel_id": "P1", "thickness_um": 9.0}]}
+        self.assertEqual(sentinel.check(self.HANDOVER, clean).verdict,
+                         "accepted")
+        refused = sentinel.check(self.HANDOVER, clashing)
+        self.assertEqual(refused.verdict, "refused")
+        self.assertIn("duplicate_panel",
+                      [e.code for e in refused.report.errors])
+
+    def test_it_records_its_act_in_the_crate_like_any_other(self):
+        sentinel = self.mod.Sentinel(profile="bioprospecting")
+        package = {
+            "contract": self.HANDOVER, "run_id": "r1",
+            "panels": [{"panel_id": "P1"}, {"panel_id": "P1"}],
+            "crate": {"@graph": [
+                {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+                 "about": {"@id": "./"}},
+                {"@id": "./", "@type": "Dataset"}]}}
+        sentinel.check_and_record(self.HANDOVER, package)
+        acts = [e for e in package["crate"]["@graph"]
+                if str(e.get("@id", "")).startswith("#check/")
+                and e.get("@type") == "CreateAction"]
+        self.assertEqual(len(acts), 1)
+        self.assertEqual(acts[0]["dbtl:verdict"], "refused")
+        self.assertEqual(acts[0]["dbtl:contract"], "dbtl:coat_to_cure/0.1.0")
+
+    def test_a_malformed_check_is_a_finding_and_not_a_crash(self):
+        """A contract author must not meet a traceback from inside this code.
+
+        This is how it was found: a `unique` check written with `field`
+        instead of `fields` raised KeyError out of the validator, so a run
+        stopped having checked nothing and said nothing about the rest.
+        """
+        from framework.validator import validate                    # noqa: PLC0415
+        broken = {"type": "object", "x-dbtl-checks": [
+            {"kind": "unique", "of": "panels", "code": "no_fields_given"}]}
+        report = validate({"panels": [{"panel_id": "P1"}]}, broken)
+        self.assertIn("malformed_check", [e.code for e in report.errors])
+
+
 class TestWorkflows(unittest.TestCase):
     """The workflows that ship, and the rules a researcher's own is held to.
 

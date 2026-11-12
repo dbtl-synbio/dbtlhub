@@ -1,0 +1,26 @@
+$id: dbtl:coat_to_cure/0.1.0
+title: Coating -> Curing
+description: >-
+  A handover nobody wrote code for. It exists only as this file, to prove that
+  a team can prepare a sentinel without touching Python.
+type: object
+required: [contract, run_id, panels]
+properties:
+  contract: {const: coat_to_cure}
+  run_id: {type: string}
+  panels:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [panel_id, thickness_um]
+      properties:
+        panel_id: {type: string}
+        thickness_um: {type: number}
+x-dbtl-checks:
+  - kind: unique
+    of: panels
+    fields: [panel_id]
+    code: duplicate_panel
+    message: two panels carry the same identifier
+    fix_hint: "not auto-fixable: somebody has to say which panel this is."

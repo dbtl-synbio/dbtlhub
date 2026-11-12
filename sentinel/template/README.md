@@ -1,11 +1,25 @@
 # The handover agent template
 
+> **Start with [MAKE_A_SENTINEL.md](MAKE_A_SENTINEL.md).** A sentinel is a
+> *file*: write a contract, put it in `framework/contracts/`, and the one
+> sentinel guards it. No Python, no registration, no import. There is a worked
+> example in [`example/coat_to_cure.yaml`](example/coat_to_cure.yaml) — a
+> handover invented only to prove it — and `tests/test_framework.py` fails if
+> that ever stops being true.
+>
+> This page is the older, longer route: scaffolding a Python *agent* as well.
+> You need it only when a handover has to do something before it validates —
+> `sentinel_d2b.py` projects an order out of a crate. Most do not.
+
 ```bash
 python3 scripts/new_handover.py test_to_learn \
-    --number 3 --label "screening results" --from test --to learn
+    --number 3 --label "screening results" --from test --to learn \
+    --with-agent
 ```
 
-Two files appear, both full of TODOs and neither guessing at your use case.
+Without `--with-agent` only the contract is written, which is the normal case.
+With it, two files appear, both full of TODOs and neither guessing at your use
+case.
 
 ## Why a template at all
 

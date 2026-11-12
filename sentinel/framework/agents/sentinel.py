@@ -36,8 +36,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from framework.validator import (Error, Report, load_contract,      # noqa: E402
                                  validate)
 
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
+
+# The four this project started with. Kept because demos, tests and the
+# Architect's own cycle name them, and NOT used as a gate: `known()` reads the
+# folder. A handover must be addable by writing a file, and a tuple in code
+# that a new contract has to be added to is exactly the thing that makes that
+# false. The rule is borrowed, with the words: "If anybody ever needs to edit
+# Python to add a handover, this module has failed."
 HANDOVERS = ("design_to_build", "build_to_test", "test_to_learn",
              "learn_to_design")
+
+
+def known() -> tuple[str, ...]:
+    """Every handover there is a contract for, found by looking.
+
+    The four above come first so the usual order is the cycle's order, and
+    anything else a person has written follows, in the order the folder gives.
+    """
+    found = {p.stem for p in CONTRACTS.glob("*.yaml")}
+    found |= {p.name[:-len(".schema.json")] for p in
+              CONTRACTS.glob("*.schema.json")}
+    first = [h for h in HANDOVERS if h in found]
+    return tuple(first + sorted(found - set(first)))
 
 ACCEPTED = "accepted"
 ACCEPTED_WITH_FLAGS = "accepted_with_flags"
@@ -106,8 +127,13 @@ class Sentinel:
     def contract(self, handover: str) -> dict:
         """Loaded once per handover and kept, because the files do not change
         during a run and reading them four times per cycle buys nothing."""
-        if handover not in HANDOVERS:
-            raise ValueError(f"{handover!r} is not one of {HANDOVERS}")
+        if handover not in known():
+            raise ValueError(
+                f"no contract named {handover!r}. There is: "
+                f"{', '.join(known())}. A handover is a FILE: put "
+                f"{handover}.yaml in framework/contracts/ and this sentinel "
+                f"will guard it. No Python is involved, and if it ever is, "
+                f"this class has failed.")
         if handover not in self._contracts:
             self._contracts[handover] = load_contract(handover, profile=self.profile)
         return self._contracts[handover]

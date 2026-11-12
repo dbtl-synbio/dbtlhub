@@ -864,8 +864,27 @@ def validate(package: dict, contract: dict) -> Report:
                 "either the kind is misspelt, or the validator is older than "
                 "the contract. Do not assume the check passed."))
             continue
-        handler(package, check, errors, profile)
-        _check_it_matched_something(package, check, errors)
+        try:
+            handler(package, check, errors, profile)
+        except (KeyError, TypeError, ValueError) as exc:
+            # A check whose own settings are wrong - a missing `fields`, a
+            # `between` that is not a pair - used to come back as a traceback
+            # from inside this file. A contract is written by somebody who is
+            # not holding this code open, so a malformed check has to read as
+            # a sentence about their file, and it has to be a FINDING rather
+            # than a crash: a run that stops here has checked nothing and
+            # said nothing about the rest of the contract.
+            errors.append(Error(
+                f"x-dbtl-checks.{check.get('code', check.get('kind', '?'))}",
+                "malformed_check",
+                f"the {check.get('kind')!r} check named "
+                f"{check.get('code', '?')!r} could not run: "
+                f"{type(exc).__name__}: {exc}. Nothing checked it.",
+                f"look at this check in the contract. A {check.get('kind')!r} "
+                f"check needs the settings that kind reads - see the other "
+                f"checks of the same kind for the shape."))
+        else:
+            _check_it_matched_something(package, check, errors)
     return Report(errors)
 
 
