@@ -188,7 +188,7 @@ def draw(near: dict, width: int = 820, per_side: int = 9) -> str:
             anchor = "end" if left else "start"
             text_x = x - 20 if left else x + 20
             out.append(
-                f'<a href="/?focus={_attr(edge["id"])}#kg-panel">'
+                f'<a href="/?focus={_url(edge["id"])}&amp;view=graph#view">'
                 f'<title>{_attr(edge["id"])} \u2014 {_attr(edge["kind"])}</title>'
                 f'<circle cx="{x:.0f}" cy="{y:.0f}" r="11" '
                 f'fill="var(--bg_panel)" stroke="var(--fg_dim)" '
@@ -234,6 +234,17 @@ def draw(near: dict, width: int = 820, per_side: int = 9) -> str:
         f'<text x="{centre_x:.0f}" y="{centre_y + 54:.0f}" text-anchor="middle" '
         f'font-size="11.5" fill="var(--fg)">{_attr(centre_label)}</text>'
         f'{"".join(more)}</svg>')
+
+
+def _url(value: object) -> str:
+    """A query-string value, percent-encoded.
+
+    An entity id begins with `#`. Left raw in a URL the browser reads it as a
+    fragment, so the link does nothing at all - which is exactly what every
+    node in this drawing did until this existed.
+    """
+    from urllib.parse import quote                              # noqa: PLC0415
+    return quote(str(value), safe="")
 
 
 def _attr(text: object) -> str:

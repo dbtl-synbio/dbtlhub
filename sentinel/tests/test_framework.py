@@ -691,6 +691,21 @@ class TestWorkflows(unittest.TestCase):
         self.assertNotIn("#000000", svg)        # colours come from the palette
         self.assertIn("var(--fg)", svg)
 
+    def test_a_link_to_an_entity_is_percent_encoded(self):
+        """An entity id starts with `#`, and a URL takes that as a fragment.
+
+        Left raw in `?focus=`, the browser never sends it - nor anything
+        after it - so every link into the graph did nothing at all and the
+        page simply stayed where it was. It looked like the graph was
+        missing rather than like the link was broken.
+        """
+        from architect.web import kgview                            # noqa: PLC0415
+        flow = self.loader.load("bioprospecting")
+        crate = {"@graph": flow.to_crate()}
+        svg = kgview.draw(kgview.neighbourhood(crate, flow.crate_id()))
+        self.assertIn("?focus=%23workflow%2Fbioprospecting", svg)
+        self.assertNotIn('?focus=#', svg)
+
     def test_an_identifier_cannot_break_the_drawing(self):
         """An unescaped `&` or `<` in an id would silently ruin the SVG."""
         from architect.web import kgview                            # noqa: PLC0415

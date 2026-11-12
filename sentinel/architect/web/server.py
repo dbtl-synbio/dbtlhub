@@ -1053,6 +1053,20 @@ def _record_answer(arch: Architect, phase: str, researcher: str,
 # --------------------------------------------------------------------------- #
 #  5. The page
 # --------------------------------------------------------------------------- #
+def url(value: Any) -> str:
+    """One query-string value, percent-encoded.
+
+    `esc()` is for HTML and leaves `#` alone, which is correct there and
+    catastrophic in a URL: an entity id like `#check/design_to_build-1` put
+    raw into `?focus=` makes the browser treat everything from the `#` as a
+    fragment, so neither the focus nor anything after it ever reaches the
+    server. Every link into the graph silently did nothing, and the page just
+    stayed where it was.
+    """
+    from urllib.parse import quote                              # noqa: PLC0415
+    return quote(str(value), safe="")
+
+
 def esc(text: Any) -> str:
     return html.escape(str(text), quote=True)
 
@@ -1297,7 +1311,7 @@ def render_sentinel_card(session: Session, handover: str) -> str:
         out.append(f'<tr><td>when</td><td>{esc(act.get("startTime", "?"))} '
                    f'&rarr; {esc(act.get("endTime", "?"))}</td></tr>')
         out.append(f'<tr><td>recorded as</td><td>'
-                   f'<a href="/?focus={esc(act["@id"])}&view=graph#view">'
+                   f'<a href="/?focus={url(act["@id"])}&amp;view=graph#view">'
                    f'<code>{esc(act["@id"])}</code></a>'
                    f'<span class="hint">follow it into the graph</span>'
                    f'</td></tr>')
@@ -1320,7 +1334,7 @@ def render_sentinel_card(session: Session, handover: str) -> str:
                 severity = str(found.get("dbtl:severity", ""))
                 row_ink = "no" if severity == "error" else "flag"
                 about = found.get("about")
-                where = (f'<a href="/?focus={esc(about["@id"])}&view=graph#view">'
+                where = (f'<a href="/?focus={url(about["@id"])}&amp;view=graph#view">'
                          f'<code>{esc(found.get("dbtl:path", ""))}</code></a>'
                          if isinstance(about, dict) else
                          f'<code>{esc(found.get("dbtl:path", ""))}</code>')
@@ -1702,7 +1716,7 @@ def render_kg(session: Session) -> str:
                'them. Provenance is read backwards, so both directions are '
                'shown.</p><ul class="starts">')
     for ref, what in starts[:8]:
-        out.append(f'<li><a href="/?focus={esc(ref)}#kg-panel">'
+        out.append(f'<li><a href="/?focus={url(ref)}&amp;view=graph#view">'
                    f'<code>{esc(ref)}</code></a> '
                    f'<span class="hint">{esc(what)}</span></li>')
     out.append('</ul>')
@@ -1743,7 +1757,7 @@ def render_kg(session: Session) -> str:
                 for edge in items[:14]:
                     out.append(
                         f'<tr><td>{esc(edge["property"])}</td>'
-                        f'<td><a href="/?focus={esc(edge["id"])}#kg-panel">'
+                        f'<td><a href="/?focus={url(edge["id"])}&amp;view=graph#view">'
                         f'<code>{esc(edge["id"])}</code></a></td>'
                         f'<td class="hint">{esc(edge["kind"])}</td></tr>')
                 if len(items) > 14:
@@ -1962,7 +1976,12 @@ def render_overview(session: Session, items: list[dict]) -> str:
     eight panels down is a page where the question is missed.
     """
     crate = _live_crate(session)
-    state = ring.read(crate, session.crate_growth)
+    # The growth belongs to THIS session's run. Handing it alongside a crate
+    # read from disk mixes two runs into one drawing - it showed "design:
+    # 1038 entities added" over a crate of 435, which is two answers to one
+    # question. When looking at disk, the crate alone is asked.
+    state = ring.read(crate, None if session.looking_at
+                      else session.crate_growth)
     focus = (f"sentinel:{session.sentinel}" if session.sentinel else
              f"phase:{session.phase}" if session.phase else "")
 

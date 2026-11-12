@@ -232,8 +232,14 @@ def draw(state: dict, focus: str = "", width: int = 640,
         here = focus == f"phase:{phase}"
         out.append(
             f'<a href="/?phase={phase}#overview" class="node">'
-            f'<title>{phase}: ' + (f'{info["added"]} entities added'
-                                   if done else 'has not run') + '</title>'
+            # The number of entities a phase added is known only while the
+            # session that ran it is alive; the crate does not attribute them
+            # by phase. So it is said when it is known and left out when it is
+            # not, rather than reported as nought - which read as "it ran and
+            # added nothing", the opposite of the truth.
+            f'<title>{phase}: '
+            + (f'{info["added"]} entities added' if info["added"] else
+               'has run' if done else 'has not run') + '</title>'
             f'<circle cx="{x:.0f}" cy="{y:.0f}" r="30" '
             f'fill="var({"--grid" if here else "--bg_panel"})" '
             f'stroke="var(--{ink})" stroke-width="{3 if here else 1.8}"/>'
