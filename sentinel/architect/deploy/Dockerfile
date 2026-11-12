@@ -24,7 +24,13 @@
 # RulesEngine - deterministic, offline - and a run with no key is the normal
 # case, not a degraded one.
 #
-# NOTHING LISTENS. There is no server in this framework, so there is no EXPOSE,
+# ONE THING LISTENS, and only when it is asked to: `architect/web/server.py`,
+# which the `web` service in compose.yaml runs. Everything else here is a
+# run-to-completion job. The EXPOSE below is documentation - it publishes
+# nothing by itself - and the compose file is where the address is decided.
+EXPOSE 8765
+
+# What follows was written when nothing in this framework bound a socket:
 # no port and no bind address. If one is ever added, the operator says where it
 # binds; see the commented block in compose.yaml.
 #

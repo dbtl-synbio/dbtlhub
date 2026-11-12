@@ -27,10 +27,18 @@
 # FIRST - as of today it is not listed, and the usual way a key escapes is not
 # a container, it is a commit.
 #
-# NOTHING LISTENS. There is no `ports:` section anywhere below, because nothing
-# in this framework binds a socket. The commented block in `architect` is the
-# shape to use if a service is ever added, and it binds to 127.0.0.1 unless the
-# operator names something else.
+# ONE THING LISTENS, AND ONLY TO LOOPBACK BY DEFAULT.
+# `architect` and `check` bind nothing: they are run-to-completion jobs. The
+# `web` service below serves the Architect's interface, and it is published on
+# 127.0.0.1 unless the operator names something else. Inside the container it
+# must bind 0.0.0.0, because a process bound to the container's own loopback
+# is unreachable through a published port however the port is mapped - that
+# combination is why the interface could not be reached from a host at all
+# until today, while three files in this folder still said nothing listened.
+#
+# On a cloud VM: publish to 127.0.0.1 there too and reach it through an SSH or
+# IAP tunnel. There is no authentication in this interface and /run starts real
+# agents, so a public address would be an open door.
 
 name: dbtl-architect
 
@@ -82,14 +90,39 @@ services:
     # does not exist inside this container, which is what makes the offline
     # path the one that is actually exercised every time.
 
-    # ports:
-    #   # There is no server in this framework, so this is commented out and
-    #   # not merely restricted. If one is added: 127.0.0.1 by default, because
-    #   # on conference wifi, publishing on every interface means everyone on
-    #   # that wifi can reach a service that asks for no password. Set
-    #   # ARCHITECT_BIND=0.0.0.0 deliberately, and put something that
-    #   # authenticates in front of it before you do.
-    #   - "${ARCHITECT_BIND-127.0.0.1}:${ARCHITECT_PORT-8080}:${ARCHITECT_PORT-8080}"
+    # No ports: this service runs the cycle and exits.
+
+  # -------------------------------------------------------------------------
+  # The interface, in a browser.
+  # -------------------------------------------------------------------------
+  #   docker compose up web      then open http://127.0.0.1:8765/
+  #
+  # On conference wifi, publishing on every interface means everyone on that
+  # wifi can reach a service that asks for no password and whose Run button
+  # starts real agents. So the published address is 127.0.0.1 unless somebody
+  # sets ARCHITECT_BIND on purpose, and anything else should have something
+  # that authenticates in front of it.
+  web:
+    <<: *image
+    command:
+      - "architect/web/server.py"
+      - "--host=0.0.0.0"
+      - "--port=${ARCHITECT_PORT-8765}"
+    environment:
+      # The key, if there is one, comes from the host shell or an .env file -
+      # never from this file and never baked into the image. Empty is a normal
+      # state: the default engine is RulesEngine, deterministic and offline.
+      ANTHROPIC_API_KEY:
+    ports:
+      - "${ARCHITECT_BIND-127.0.0.1}:${ARCHITECT_PORT-8765}:${ARCHITECT_PORT-8765}"
+    healthcheck:
+      # The image has Python, so this needs no second container and no curl.
+      test: ["CMD", "python3", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${ARCHITECT_PORT-8765}/', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # -------------------------------------------------------------------------
   # The health check, on demand. Exits 0 or 1, prints what it checked.

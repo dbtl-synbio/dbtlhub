@@ -47,7 +47,15 @@ of a final stage. PyYAML is still optional and still absent, and
 placeholder and no `--build-arg` for one. A build argument would be visible in
 `docker history` for the life of the image, which is why the key is not one.
 
-**Nothing listens.** No `EXPOSE`, no port, no bind address, and no `ports:`
+**One thing listens, on loopback.** `docker compose up web` serves the
+Architect's interface at `http://127.0.0.1:8765/`. Inside the container it
+binds `0.0.0.0`, because a process bound to the container's own loopback
+cannot be reached through a published port; the publishing is what restricts
+it, and `ARCHITECT_BIND` is how an operator widens that on purpose. There is no
+authentication and the Run button starts real agents, so on a cloud VM publish
+to loopback there and reach it through a tunnel.
+
+Of the rest: No `EXPOSE`, no port, no bind address, and no `ports:`
 section in `compose.yaml`, because nothing in this framework opens a socket.
 The commented block in `compose.yaml` is the shape to use if that ever changes,
 and it binds `127.0.0.1` unless the operator deliberately names something else.

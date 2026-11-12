@@ -33,7 +33,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from framework.validator import Report, load_contract, validate      # noqa: E402
+from framework.validator import (Error, Report, load_contract,      # noqa: E402
+                                 validate)
 
 HANDOVERS = ("design_to_build", "build_to_test", "test_to_learn",
              "learn_to_design")
@@ -56,6 +57,9 @@ class Checked:
     verdict: str
     report: Report
     at: str = field(default_factory=now)
+    # Every agreement this handover was held to, ours first. More than one
+    # means two sentinels' contracts were applied to the same package.
+    held_to: tuple = ()
 
     @property
     def blocking(self):
@@ -77,9 +81,27 @@ class Sentinel:
 
     name = "sentinel"
 
-    def __init__(self, profile: str = "bioprospecting"):
+    def __init__(self, profile: str = "bioprospecting", also=None):
+        """`also` is a folder of `sentinel-oo` contracts to guard as well.
+
+        Two sentinels now guard the same handovers: this one and Anil Wipat's
+        `sentinel-oo`. Their contracts look at different objects - his
+        requirements apply to entities in a crate, by type; ours apply to
+        paths in a package - which is why a comparison of the two Design ->
+        Build contracts found thirteen checks on one side, twenty on the
+        other, and two in common.
+
+        Reimplementing his twenty as ours would make a second copy that
+        drifts. So his file is run as it is: when a handover has a contract on
+        both sides, this sentinel holds the package to both and reports them
+        together, naming which agreement each finding came from. A handover
+        that satisfies one and not the other is refused, and the trace says
+        which.
+        """
         self.profile = profile
         self._contracts: dict[str, dict] = {}
+        self._foreign_dir = Path(also) if also else None
+        self._foreign: dict[str, object] = {}
 
     def contract(self, handover: str) -> dict:
         """Loaded once per handover and kept, because the files do not change
@@ -90,18 +112,56 @@ class Sentinel:
             self._contracts[handover] = load_contract(handover, profile=self.profile)
         return self._contracts[handover]
 
+    # ---- the other side's contract, if there is one -----------------------
+    def foreign(self, handover: str):
+        """The `sentinel-oo` contract for this handover, or None.
+
+        None is a normal answer: a handover the other side has not written a
+        contract for is guarded by ours alone, and that is said in the trace
+        rather than left to be assumed.
+        """
+        if self._foreign_dir is None:
+            return None
+        if handover not in self._foreign:
+            from framework import oo_contract                   # noqa: PLC0415
+            found = oo_contract.available(self._foreign_dir)
+            self._foreign[handover] = (oo_contract.load(found[handover])
+                                       if handover in found else None)
+        return self._foreign[handover]
+
     # ---- the check ---------------------------------------------------------
     def check(self, handover: str, package: dict) -> Checked:
         contract = self.contract(handover)
         report = validate(package, contract)
+
+        other = self.foreign(handover)
+        if other is not None:
+            from framework import oo_contract                   # noqa: PLC0415
+            crate = package.get("crate")
+            if isinstance(crate, dict):
+                base = package.get("crate_ref", {}).get("folder")
+                for error in oo_contract.check(
+                        other, crate, base=Path(base) if base else None):
+                    # Stamped with whose agreement it came from. Two contracts
+                    # reporting into one list, with no way to tell them apart,
+                    # would make a disagreement between them unreadable.
+                    report.errors.append(Error(
+                        error.path, f"{other.name}:{error.code}",
+                        f"[sentinel-oo {other.version}] {error.message}",
+                        error.fix_hint, error.severity))
+
         if report.blocking:
             verdict = REFUSED
         elif report.flags:
             verdict = ACCEPTED_WITH_FLAGS
         else:
             verdict = ACCEPTED
+        held_to = [contract.get("$id", "?")]
+        if other is not None:
+            held_to.append(other.id)
         return Checked(handover=handover, contract_id=contract.get("$id", "?"),
-                       profile=self.profile, verdict=verdict, report=report)
+                       profile=self.profile, verdict=verdict, report=report,
+                       held_to=tuple(held_to))
 
     # ---- handing the crate on, richer --------------------------------------
     def record(self, crate: dict, checked: Checked) -> dict:
