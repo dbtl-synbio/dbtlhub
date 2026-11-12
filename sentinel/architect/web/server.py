@@ -509,6 +509,8 @@ class Session:
         self.last_snapshot: dict | None = None
         # Which entity the knowledge-graph panel is looking at, if any.
         self.focus: str = ""
+        # And which run's crate it is showing. Empty means this session's.
+        self.looking_at: str = ""
         self.arch: Architect | None = None
         self.run_id = f"web-{session_id[:6]}"
         self.thread: threading.Thread | None = None
@@ -1336,11 +1338,40 @@ def render_kg(session: Session) -> str:
     cloud that looks like insight and answers nothing; a count by type and one
     entity's neighbourhood each answer a question and stay readable.
     """
-    if session.arch is None:
-        return ('<p class="hint">There is no graph yet. It appears as soon as '
-                'the first phase has written into the crate.</p>')
-    crate = session.arch.memory.snapshot()
-    where = kgview.paths(session.run_id)
+    # Which crate this panel is showing: this session's run, or any run on
+    # disk the person picked. Looking at a graph should not require making
+    # one first - somebody who opens this to SEE something would otherwise
+    # have to run a cycle before there was anything to look at.
+    showing, crate = session.run_id, None
+    if session.looking_at:
+        try:
+            crate = kgview.load(session.looking_at)
+            showing = session.looking_at
+        except FileNotFoundError:
+            crate = None
+    if crate is None and session.arch is not None:
+        crate = session.arch.memory.snapshot()
+
+    on_disk = kgview.runs_on_disk()
+    picker = ['<form method="get" action="/" class="focus-form">'
+              '<label>look at a run on disk'
+              '<select name="run"><option value="">'
+              '&mdash; this session&rsquo;s run &mdash;</option>']
+    for name, size in on_disk[:20]:
+        chosen = ' selected' if name == session.looking_at else ''
+        picker.append(f'<option value="{esc(name)}"{chosen}>{esc(name)} '
+                      f'&middot; {size} entities</option>')
+    picker.append('</select></label><p class="actions">'
+                  '<button type="submit">Show it</button>'
+                  '<span class="hint">the crate on disk, read as it stands. '
+                  'Nothing is run.</span></p></form>')
+
+    if crate is None:
+        return ('<p class="hint">There is no graph in this session yet - it '
+                'appears as soon as the first phase has written into the '
+                'crate. You can look at an earlier run in the meantime:</p>'
+                + "".join(picker))
+    where = kgview.paths(showing)
     marks = kgview.landmarks(crate)
     links = kgview.edges(crate)
     graph = [e for e in crate.get("@graph", []) if isinstance(e, dict)]
@@ -1378,6 +1409,7 @@ def render_kg(session: Session) -> str:
                    f'<span class="hint">{esc(what)}</span></li>')
     out.append('</ul>')
 
+    out.extend(picker)
     out.append('<form method="get" action="/" class="focus-form">'
                '<label>or an entity id<input type="text" name="focus" '
                f'value="{esc(session.focus or "")}" spellcheck="false" '
@@ -1617,10 +1649,22 @@ def render_page(session: Session) -> str:
                       for key, value in theme.PALETTE.items())
     status = ("a run is going" if session.running else
               "the run has ended" if session.finished else "nothing running")
-    rest = (_rest_of_page(session, items) if session.setup.answered else
-            '<p class="hint">The specification form, the cycle and the crate '
-            'appear once this is answered. Pick the first option and nothing '
-            'leaves this machine.</p>')
+    if session.setup.answered:
+        rest = _rest_of_page(session, items)
+    elif session.looking_at:
+        # Arrived by a `?run=` link, which is a VIEW. The setup question gates
+        # running a cycle, not looking at one that already happened, and a
+        # link somebody was sent should open on the thing it points at.
+        rest = (f'<section class="panel" id="kg-panel">'
+                f'<h2>{icon("graph")}The knowledge graph</h2>'
+                f'{render_kg(session)}</section>'
+                f'<p class="hint">You are looking at a run on disk. Answer '
+                f'the question above to fill in a specification and start '
+                f'one of your own.</p>')
+    else:
+        rest = ('<p class="hint">The specification form, the cycle and the '
+                'crate appear once this is answered. Pick the first option '
+                'and nothing leaves this machine.</p>')
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -1890,9 +1934,17 @@ class Handler(BaseHTTPRequestHandler):
             # `?focus=` moves the knowledge-graph panel to one entity. A GET
             # because it is a view, which means it can be linked, bookmarked
             # and sent to somebody else.
-            asked = parse_qs(urlparse(self.path).query).get("focus")
+            query = parse_qs(urlparse(self.path).query)
+            asked = query.get("focus")
             if asked is not None:
                 session.focus = asked[0].strip()[:200]
+            run = query.get("run")
+            if run is not None:
+                # Through `safe_run_id`, so a name from a query string cannot
+                # reach outside `runs/`.
+                session.looking_at = (safe_run_id(run[0].strip(), "")
+                                      if run[0].strip() else "")
+                session.focus = ""
             self._send(render_page(session).encode(), new_session=cookie)
         elif path.startswith("/static/"):
             self._static(path)

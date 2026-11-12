@@ -188,6 +188,34 @@ def paths(run_id: str) -> dict:
     }
 
 
+def runs_on_disk() -> list[tuple[str, int]]:
+    """Every run that has a crate, newest first, with how big it is.
+
+    So the graph can be looked at without starting a run. A person who opens
+    this interface to SEE something should not have to make something first,
+    and the runs from yesterday are the interesting ones anyway.
+    """
+    out: list[tuple[str, int, float]] = []
+    if not RUNS.is_dir():
+        return []
+    for folder in RUNS.iterdir():
+        if not folder.is_dir():
+            continue
+        for spot in (folder / "crate" / "ro-crate-metadata.json",
+                     folder / "ro-crate-metadata.json"):
+            if not spot.is_file():
+                continue
+            try:
+                crate = json.loads(spot.read_text())
+            except (OSError, ValueError):
+                break
+            graph = [e for e in crate.get("@graph", []) if isinstance(e, dict)]
+            out.append((folder.name, len(graph), spot.stat().st_mtime))
+            break
+    out.sort(key=lambda row: -row[2])
+    return [(name, size) for name, size, _ in out]
+
+
 def load(run_id: str) -> dict:
     path = RUNS / run_id / "crate" / "ro-crate-metadata.json"
     if not path.is_file():                     # older runs wrote it flat
