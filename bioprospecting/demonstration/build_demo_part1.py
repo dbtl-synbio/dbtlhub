@@ -30,6 +30,8 @@ md("""
 
 **ELIXIR BioHackathon Europe 2026, Project 25.**
 
+Developed by Neil Wipat, Newcastle University, and Claude.
+
 This notebook creates a machine in Google Cloud, deploys a service called
 sentinel-oo onto it, and submits packages of laboratory results to that
 service. For each package the service reads what is inside it, compares it
@@ -42,14 +44,16 @@ A Design, Build, Test, Learn cycle hands work from one phase to the next.
 In the handover used throughout this notebook, the Design phase finishes
 with a panel of candidate proteins, a synthetic gene designed for each one,
 and a plate layout recording which gene goes in which well. The Build phase
-then orders those genes from a synthesis company, at a real cost per well.
+then orders those genes from a synthesis company, which charges for each
+gene it synthesises.
 
 When something the Build phase requires is absent from what Design handed
 over, the omission is found after the order has been placed.
 
-Validators do not close this gap. Several good tools check that a package is
-well formed, and a package can be well formed in every respect and still be
-unusable by the phase receiving it.
+RO-Crate validators do not close this gap. An RO-Crate is the packaging
+format used throughout this notebook, and there are good validators for it
+which check that a package is well formed. A package can be well formed in
+every respect and still be unusable by the phase receiving it.
 
 ## What sentinel-oo does
 
@@ -67,6 +71,34 @@ The service holds no knowledge of the subject matter. It does not know what
 a plate or a protein is. Everything it checks is read from the contract file
 when it starts, so a different contract file makes the same service check a
 different handover.
+
+## Why the first half of this notebook is setting up
+
+Sections 1 to 7 create a machine in Google Cloud, put the code on it,
+download the LLM and deploy sentinel-oo. That takes approximately 5 minutes
+and produces nothing to look at. The reason for doing it, rather than
+running the checks inside this notebook, is that sentinel-oo is built as a
+service: one running instance, reached over HTTP at an address, rather than
+a program each person runs on their own files. Three things follow from
+that.
+
+**Everybody reaches the same instance.** Any number of people and any
+number of programs send packages to one address and are answered by one
+deployment, holding one set of contracts at one version, with one LLM at one
+version. Two checks performed a month apart are therefore comparable, and
+the record written inside each checked package names the versions that
+performed it.
+
+**A workflow can call it.** A step in a Nextflow, Snakemake or Galaxy
+workflow submits the package as an HTTP request and reads the verdict from a
+response header, without unpacking the reply. That is what sections 9, 10
+and 11 of this notebook do, and nothing in those sections is specific to a
+notebook, so a workflow step placed at the handover does the same thing.
+
+**Nothing is installed on the machine of whoever calls it.** No part of
+sentinel-oo is installed in Colab. The service, its contracts and the LLM
+all live on the machine created in section 3, and this notebook holds only
+example packages to send and the code that sends them.
 
 ## Order of the notebook
 
@@ -99,8 +131,19 @@ md("""
 
 ## Settings
 
-The names, sizes and versions used by the rest of the notebook. This cell
-contacts nothing and creates nothing, so it cannot fail.
+This cell chooses the names, sizes and versions that the rest of the
+notebook uses, and defines one helper.
+
+It builds a project identifier from today's date and the time, since a
+Google Cloud project identifier has to be unique across the whole of Google
+Cloud. It names the zone the machine is created in, the machine's type,
+which fixes how many processors and how much memory it has, the LLM by name
+and version, the name given to the deployment, and the address of the
+repository the code is cloned from.
+
+The helper, `gcloud(...)`, runs one `gcloud` command and returns its
+standard output, its standard error and its exit code. Every later cell that
+talks to Google Cloud goes through it.
 """)
 
 code("""
@@ -143,9 +186,10 @@ One further step is then needed, and it is not obvious. Signing in that way
 gives credentials to Python's own Google libraries. It does not give them to
 the `gcloud` command line tool, which is what the rest of this notebook
 uses, and `gcloud` would report having no account at all. This cell
-therefore takes the token Colab has just obtained and passes it to `gcloud`
-through the environment variable `gcloud` reads for that purpose. There is
-no second sign-in and nothing to paste.
+therefore takes the token Colab has just obtained and puts it in
+`CLOUDSDK_AUTH_ACCESS_TOKEN`, which is the environment variable `gcloud`
+reads an access token from. There is no second sign-in and nothing to
+paste.
 
 The token is valid for approximately one hour. Calling `refresh()` obtains a
 new one, which is the first thing to try if a later cell reports that you
@@ -204,12 +248,11 @@ BILLING = accounts[0]["name"].split("/")[-1]
 BILLING_NAME = accounts[0]["displayName"]
 print(f"billing : {BILLING_NAME}")
 
-# Projects left behind by an earlier run of this notebook.
-#
-# A billing account permits a limited number of attached projects. A run
-# that stops part way through leaves its project attached, and possibly a
-# machine running and charging, so what remains is reported before another
-# project is created.
+# Lists every project whose identifier begins with "dbtl-sentinel-", which
+# is the pattern this notebook names its projects with, prints the ones it
+# finds, and prints the command that deletes each one. Each such project is
+# the remains of an earlier run that did not reach section 13, and it may
+# still hold a machine that is charging.
 leftovers = json.loads(gcloud(
     "projects", "list", "--filter=projectId:dbtl-sentinel-*",
     "--format=json").stdout or "[]")
@@ -277,8 +320,8 @@ md("""
 
 # 3. Create a machine
 
-One Linux machine in the `europe-southwest1` region, which is Google's
-Madrid data centre and the nearest one to Barcelona.
+Creates one Linux machine, of the type and in the zone chosen in the
+Settings cell.
 
 The machine installs Docker as it starts. Docker runs sentinel-oo and the
 LLM alongside each other, each in its own container, which is what allows
@@ -388,13 +431,35 @@ whatever is newest, so that a check performed today and the same check
 performed next year are performed by the same LLM. The record written inside
 every checked package names it.
 
+**The problem the LLM is used to solve.** A contract requirement reads a
+value that has been recorded as a value. In the RO-Crate format used here
+that means a `PropertyValue` entity carrying a `name` and a `value`, which
+a program can find by name and act on. People frequently record the
+same information as prose instead, in the free-text description of a step,
+because that is where somebody writing up their work naturally puts it. The
+sentence is in the package, the information is in the package, and no rule
+can read it.
+
+That leaves two unsatisfactory outcomes. Refusing the package is wrong in
+substance, because the package does contain what the receiving phase needs;
+refuse enough packages that way and people stop believing the check and
+start working around it. Accepting the prose is also wrong, because the
+receiving phase is a program that orders genes, and a program can no more
+read an English sentence than a rule can.
+
 **The task the LLM performs here.** One requirement in the contract is
 marked as a requirement an LLM may assist with. When that requirement fails,
 the LLM is asked a single question: is this value already recorded somewhere
 in this package, including inside prose that no rule can read? It answers
-from the package's own text. Whatever it proposes is then put back through
-the contract's rules, and is kept only if every requirement concerning that
-value passes.
+from the package's own text, and it proposes a value.
+
+The proposal is not accepted on the LLM's word. It is written down as a
+properly recorded value and put back through the contract's own rules, and
+it is kept only if every requirement concerning that value then passes. The
+requirement itself is never relaxed. What the LLM does is turn a sentence
+into a recorded value, which the contract then checks exactly as it checks
+any other value, and the package comes back carrying a flag that says this
+happened.
 
 **The narrow task is a deliberate choice and not the limit of the LLM.** The
 task is kept narrow here so that every answer can be verified by a mechanism
@@ -446,8 +511,11 @@ md("""
 
 # 6. The contract
 
-Everything sentinel-oo does in the rest of this notebook is determined by
-this one file, so the file is set out here before the service is deployed.
+**This section is the centre of the demonstration.** The contract is the
+whole of what sentinel-oo knows. Every verdict, every refusal and every
+sentence printed in sections 8 to 12 comes out of this one file, so the rest
+of the notebook is this file being enforced and nothing more. It is worth
+reading before going on.
 
 A contract is a file written by the team that receives the handover. It
 records which handover it governs, which kinds of thing it expects to find
@@ -460,8 +528,10 @@ kind and nothing else. No class is written, no name is registered anywhere,
 and no table maps a handover onto any part of sentinel-oo.
 
 The cell below clones the repository into this notebook as well, so that the
-notebook has packages to submit in later sections, and prints the opening of
-the contract file.
+notebook has packages to submit in later sections. It then prints the head
+of the contract file, two requirements exactly as they are written, and
+then every requirement in the file in short form, so that nothing in the
+contract is hidden from view.
 """)
 
 code("""
@@ -506,7 +576,48 @@ print("\\n          . . .\\n")
 
 # The one requirement in the file that an LLM is permitted to assist with.
 print(requirement_called("edge_handling_is_recorded"))
-print(f"\\n{len(lines)} lines in all, holding 20 requirements")
+
+# Then every requirement in the file, one line each: its name, the kind of
+# thing it examines, what it demands of that thing, and whether a failure
+# refuses the handover or only flags it. Read from the file with a YAML
+# parser, so this listing cannot drift from what the contract says.
+import yaml
+
+parsed = yaml.safe_load(text)
+requirements = parsed["requires"]
+
+
+def demand_of(requirement):
+    # The condition a requirement imposes, as one short phrase. `must` is
+    # one of the five conditions the contract language allows, and the
+    # keys beside it narrow that condition further.
+    demand = requirement.get("must", "")
+    if requirement.get("one_of"):
+        demand += ", one of: " + ", ".join(str(v)
+                                           for v in requirement["one_of"])
+    if requirement.get("between"):
+        low, high = requirement["between"]
+        demand += f" {low} and {high}"
+    if requirement.get("of_type"):
+        demand += ", of type " + str(requirement["of_type"])
+    return demand
+
+
+print(f"\\n--- every requirement in this contract: {len(requirements)} "
+      f"of them, in {len(lines)} lines of file ---\\n")
+
+# Two lines each rather than one row each, because the longest name is 37
+# characters and the longest condition 48, and a single line wide enough
+# for both wraps in the middle of a word.
+for requirement in requirements:
+    reads = requirement.get("property") or requirement.get("named_value")
+    looks_at = requirement.get("applies_to", "")
+    if reads:
+        looks_at = f"{looks_at}, {reads}"
+    print(f"  on failure: {requirement.get('severity', ''):8}"
+          f"{requirement['name']}")
+    print(f"      reads {looks_at}")
+    print(f"      must  {demand_of(requirement)}")
 """)
 
 md("""
@@ -539,14 +650,19 @@ Then the requirements. Each one carries:
   allows it through and records a finding
 - `message`, the sentence a person reads
 
+The listing at the end of the output above gives every requirement in the
+file in those terms: whether a failure refuses the handover or flags it, the
+requirement's name, what it reads, and what it demands.
+
 Every sentence in those messages was written by a person, about their own
 laboratory, in their own words. None of it originates in sentinel-oo. A
 refusal shown later in this notebook is that person's sentence, read back
 out of this file.
 
-One requirement further down the file carries `repairable: true`. That is
-the requirement the LLM may answer a question about, and it is the only
-point in the system at which an LLM may propose anything.
+One requirement in the file carries `repairable: true`, and it is the one
+printed in full above: `edge_handling_is_recorded`. That is the only
+requirement the LLM may answer a question about, and that key is the only
+point in the whole system at which an LLM may propose anything.
 """)
 
 # ----------------------------------------------------------------- 6 deploy
@@ -559,15 +675,19 @@ md("""
 One command, run on the machine. It performs five steps and stops at the
 first one that fails.
 
-1. Reads every contract file and refuses to build anything if one of them
-   does not make sense
+1. Reads every contract file in the folder it is given, and stops before
+   building anything if a file cannot be parsed, if it carries a field the
+   contract language does not define, or if a requirement demands a
+   condition that is not one of the five the language allows
 2. Builds the container image
 3. Runs sentinel-oo's own test suite inside the build, so that an image
    whose tests fail is never produced
 4. Starts sentinel-oo, with the contracts mounted read only, alongside the
    LLM downloaded in section 5
-5. Confirms by checksum that the running instance is serving exactly the
-   contracts read in step 1
+5. Asks the running instance for the SHA-256 checksum of the contracts it
+   is serving, and compares it with the checksum of the files read in
+   step 1, so that the instance now answering is known to hold exactly
+   what was validated
 
 No package has been submitted at this point. This is sentinel-oo standing
 ready.
@@ -601,17 +721,18 @@ sentinel-oo listens on its machine's loopback address only, so nothing on
 the internet can reach it. The cell below forwards a port from this notebook
 to the machine over SSH, which is how any machine of your own is reached.
 
-Three queries are then sent over that connection.
+Three queries are then sent over that connection: `GET /health`,
+`GET /contracts`, and `GET /contracts/design_to_build`.
 
 **Identity and health.** Which image the instance was built from, which
 commit of the code it holds, and which LLM it can see. An instance given an
 LLM it cannot reach reports that here rather than continuing silently.
 
-**The contracts it is serving**, with a checksum over all of them. The
-deployment compared that checksum against the contracts it read in step 1 of
-section 7, which is how it established that the running instance holds
-exactly what was validated, and not some other file that happened to be on
-the machine.
+**The contracts it is serving**, with a SHA-256 checksum over all of them.
+The deployment compared that checksum against the contracts it read in
+step 1 of section 7, which is how it established that the running instance
+holds exactly what was validated, and not some other file that happened to
+be on the machine.
 
 **The contract in plain words, reported by the running service** rather than
 read from the file. This is the form sent to the team that produces the
@@ -735,7 +856,9 @@ simulated, and each one is labelled as such.
 It is submitted as a zip archive, so that the data files travel with the
 metadata describing them. What comes back is the whole package rather than a
 report about it: the same crate, with the record of the check written inside
-it, ready to pass to whoever runs the Build phase.
+it, ready to pass to whoever runs the Build phase. The verdict also comes
+back on its own in the `X-Sentinel-Verdict` response header, so that a
+caller can act on it without opening the archive.
 """)
 
 code("""
@@ -813,8 +936,8 @@ md("""
 The record inside the returned package is shown next. sentinel-oo wrote that
 record into the package itself, and it is the part that persists: it travels
 with the package, so that whoever receives the package a year later can see
-what was checked, by which version of which service, and what was found,
-without asking anybody.
+what was checked, which version of sentinel-oo checked it, which version of
+the contract was applied, and what was found, without asking anybody.
 """)
 
 code("""
@@ -846,8 +969,14 @@ md("""
 
 # 10. Submit packages with defects
 
-Three packages, each with exactly one defect, so that every refusal can be
-traced to a single cause.
+Three packages, each a copy of the package just submitted with exactly one
+thing changed, so that every refusal can be traced to a single cause.
+
+| Package | What was changed |
+|---|---|
+| `missing-conformsto` | The `conformsTo` statement is deleted from the metadata descriptor, so the package no longer states which profile it follows, which is Process Run Crate 0.6 |
+| `dangling-reference` | A file named `sequencing-report.pdf` is listed as part of the package, and nothing in the package describes it |
+| `missing-gene-calling-mode` | The gene calling step's recorded `edge handling` value, which was `closed`, is deleted, and no sentence anywhere replaces it |
 
 Each of these packages passes a standard RO-Crate validator with no issues
 reported. That was measured with `rocrate-validator` version 0.13.1 on
@@ -860,9 +989,12 @@ code("""
 # so that each refusal can be traced to one cause rather than to several at
 # once.
 broken = [
-    ("missing-conformsto",        "does not say which standard it follows"),
-    ("dangling-reference",        "lists a file it never describes"),
-    ("missing-gene-calling-mode", "a setting the Build phase needs is absent"),
+    ("missing-conformsto",
+     "the conformsTo statement is gone, so no profile is declared"),
+    ("dangling-reference",
+     "sequencing-report.pdf is listed and described nowhere"),
+    ("missing-gene-calling-mode",
+     "the gene calling step's edge handling value is gone"),
 ]
 
 for folder, what in broken:
@@ -886,17 +1018,35 @@ md("""
 
 # 11. A defect the LLM can repair
 
-This package carries a subtler defect. The setting the Build phase requires
-is not recorded as a value. It appears inside an ordinary English sentence
-in the description of the step that produced the data: "contig edges were
-treated as closed, so no partial genes were kept".
+This package carries a subtler defect, and the setting in question needs
+naming before the defect makes sense.
 
-No rule can read that sentence. A rule reads a value recorded as a value.
+**The setting is called `edge handling`**, and the gene calling step is
+supposed to record it. A metagenome is assembled into contigs, which are
+stretches of reconstructed sequence with two ends. A gene predicted at an
+end may run off it, in which case the gene is a fragment rather than a whole
+one. `edge handling` records what the gene caller did about that. The value
+`closed` means it discarded any gene running off a contig end, so every
+protein in the panel is a complete gene with a start codon and a stop codon.
 
-The contract marks this requirement as one an LLM may assist with, so the
-LLM is asked its single question. It reads the sentence, proposes the value
-`closed`, and the contract's own rules then check the proposal before it is
-kept.
+**Why the Build phase requires it.** Build orders a synthetic gene for each
+protein in the panel and pays per gene. If the panel was called in a way
+that keeps fragments, some of those orders are for partial sequences, and a
+partial sequence makes a protein that does not fold or does not function.
+Two requirements in the contract therefore read this value: one that it is
+recorded at all, and one that it is `closed`, since this contract is written
+for panels called that way.
+
+**The defect.** In this package `edge handling` is not recorded as a value
+at all. It appears inside an ordinary English sentence in the description of
+the gene calling step: "Contig edges were treated as closed, so no partial
+genes were kept". The information is in the package and no rule can read it,
+because a rule reads a value recorded as a value.
+
+The contract marks the requirement that the value be recorded as one an LLM
+may assist with, so the LLM is asked its single question. It reads the
+sentence, proposes `closed`, and the contract's own rules then check that
+proposal before anything is kept.
 
 The verdict is `ACCEPTED_WITH_FLAGS` rather than `ACCEPTED`, and the flag
 records what happened: which value was recovered, by which LLM, and which
@@ -933,15 +1083,20 @@ FLAGGED_RUN = answer.headers.get("X-Sentinel-Run")
 md("""
 The next package shows the opposite case, which matters equally.
 
-In it the same setting appears only as `-c`, a flag within a recorded
-command line. Recovering the value would require knowing what that
-program's flags mean, rather than reading what the record states. Two LLMs
-of this size were asked to do exactly that on 10 November 2026, and both
+In it the `edge handling` value is absent again, and the only trace of it is
+the flag `-c` inside a command line recorded in the same description: "Ran
+as: prodigal -i contigs.fasta -a proteins.faa -p meta -c -q". Recovering the
+value from that would require knowing what that program's flags mean, rather
+than reading what the record states.
+
+Two LLMs were asked to do exactly that on 10 November 2026, `qwen2.5:14b`
+and `qwen2.5-coder:14b`, each with 14 billion parameters. Neither recovered
+anything from the package, and when asked directly what `-c` means, both
 stated a wrong meaning without qualification.
 
-The contract's rules reject the proposed answer, nothing is written into the
-package, and the verdict remains `REFUSED`. The LLM is never the component
-that decides.
+The contract's rules reject any proposed answer that fails them, nothing is
+written into the package, and the verdict remains `REFUSED`. The LLM is
+never the component that decides.
 """)
 
 code("""
@@ -973,10 +1128,11 @@ A package is a set of things that refer to each other. A plate well refers
 to the gene it holds; that gene refers to the protein it was designed from;
 a processing step refers to the files it read and the files it produced.
 
-Requesting the graph of one check returns the nodes and the edges of that
-structure, with the check itself, each finding, and any value the LLM
-recovered marked so that they are distinguishable from the handover they
-describe.
+The request is `GET /graph/<run identifier>`, where the run identifier is
+the one sentinel-oo returned in the `X-Sentinel-Run` header when it checked
+the package. It returns the nodes and the edges of that structure, with the
+check itself, each finding, and any value the LLM recovered marked so that
+they are distinguishable from the handover they describe.
 """)
 
 code("""
@@ -1058,6 +1214,11 @@ value in this package that no person recorded.
 The blue nodes are the handover: the wells, the genes, the proteins and the
 steps that produced them.
 
+The picture shows fewer lines than the edge count printed above it, because
+the drawing leaves out the references that hold an RO-Crate together, such
+as every file being a part of the crate. Those connect almost everything to
+one node and hide the structure of the handover.
+
 Dragging a node separates the picture. Holding the pointer over a node shows
 its role, its type and its identifier.
 """)
@@ -1103,8 +1264,8 @@ Everything it checks was read from a contract file. No code was written to
 teach it about plates, genes or proteins, and a different laboratory writes
 a different file for the same service to enforce.
 
-A package that passes a standards validator can still be refused, and
-should be, when what the receiving phase requires is absent.
+A package that passes an RO-Crate validator with no issues can still be
+refused, and should be, when what the receiving phase requires is absent.
 
 The LLM is used where rules cannot reach, recovering values recorded only in
 prose, and it is never permitted to decide. Every answer it proposes is
