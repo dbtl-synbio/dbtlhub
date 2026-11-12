@@ -44,9 +44,24 @@ def md(text):
                   "source": text.strip("\n").splitlines(keepends=True)})
 
 
-def code(text):
-    cells.append({"cell_type": "code", "metadata": {}, "execution_count": None,
-                  "outputs": [], "source": text.strip("\n").splitlines(keepends=True)})
+def code(text, title=None):
+    """One code cell. A cell given a title is shown collapsed.
+
+    Colab collapses a cell whose first line is a `#@title` comment and whose
+    metadata says `cellView: form`. It still runs in full, and a double
+    click on the title bar opens it. This is used for the cells that are
+    plumbing rather than content: nobody needs to read 195 lines of
+    function definitions to use the tool, and scrolling past them is what
+    makes a notebook feel like somebody else's code.
+    """
+    body = text.strip("\n")
+    metadata = {}
+    if title:
+        body = f"#@title {title}\n{body}"
+        metadata = {"cellView": "form"}
+    cells.append({"cell_type": "code", "metadata": metadata,
+                  "execution_count": None, "outputs": [],
+                  "source": body.splitlines(keepends=True)})
 
 
 # ---------------------------------------------------------------- the opening
@@ -59,7 +74,12 @@ you need, without learning the contract language first.**
 
 **ELIXIR BioHackathon Europe 2026, Project 25.**
 
-Developed by Neil Wipat, Newcastle University, and Claude.
+Developed by Neil Wipat, Newcastle University, and Claude, with Prozomix
+Ltd.
+
+The bioprospecting handover this tool is built around comes from work with
+Prozomix Ltd. The example crate holds simulated data only: no sequence in it
+is real.
 
 A contract is the file that says what one phase of a Design, Build, Test,
 Learn cycle must hand to the next, and what the receiving phase will refuse.
@@ -272,7 +292,7 @@ if pulled.returncode != 0:
     raise SystemExit(f"{MODEL} did not download. See the lines above.")
 
 print(f"\\n{MODEL} is on this machine and ready")
-""")
+""", title="Install sentinel-oo, Ollama and the model. Takes about 3 minutes. Double click to read the code")
 
 # ------------------------------------------------------------- 2 the machinery
 
@@ -669,18 +689,51 @@ def schema_for(folder):
     }
 
 
+# What to say when the model is not there. It is said in full rather than
+# as a traceback, because sixteen frames of urllib tells a person nothing
+# about what to do next.
+NOT_RUNNING = """
+Nothing is answering where the language model should be.
+
+The model runs as a background program on this machine, started by step 1.
+It dies whenever the Python kernel restarts, which Colab does when the
+runtime type is changed and sometimes on its own. The step 1 cell still
+shows as having run, because it did, on a machine that no longer exists.
+
+WHAT TO DO: run the step 1 cell again. It is the collapsed one titled
+"Install sentinel-oo, Ollama and the model". It is quicker the second time,
+because the model is usually still on this machine's disk.
+"""
+
+
+def the_model_is_there():
+    """True when something is listening where the model should be."""
+    host, port = OLLAMA.replace("http://", "").split(":")
+    with socket.socket() as probe:
+        probe.settimeout(2)
+        return probe.connect_ex((host, int(port))) == 0
+
+
 def ask(prompt, schema):
     """One question to the model, with its answer held to the schema."""
+    if not the_model_is_there():
+        raise SystemExit(NOT_RUNNING)
+
     body = json.dumps({"model": MODEL, "prompt": prompt, "stream": False,
                        "format": schema,
                        "options": {"num_ctx": WINDOW, "temperature": 0}}).encode()
     started = time.time()
-    with urllib.request.urlopen(urllib.request.Request(
-            f"{OLLAMA}/api/generate", data=body,
-            headers={"Content-Type": "application/json"}), timeout=3600) as reply:
-        answer = json.load(reply)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(
+                f"{OLLAMA}/api/generate", data=body,
+                headers={"Content-Type": "application/json"}), timeout=3600) as reply:
+            answer = json.load(reply)
+    except urllib.error.URLError as unreachable:
+        # It was listening a moment ago and is not now, or it refused the
+        # request. Either way the person needs the same instruction.
+        raise SystemExit(f"{NOT_RUNNING}\\nWhat the request said: {unreachable}")
     return json.loads(answer["response"]), time.time() - started
-''')
+''', title="Define how a crate is described and how the model is constrained. Prints nothing. Double click to read the code")
 
 code('''
 THE_LANGUAGE = """
@@ -858,7 +911,7 @@ be trusted."""
     print(f"\\n  {len(merged['requires'])} requirements and "
           f"{len(merged['questions'])} question(s) in {spent:.0f} seconds")
     return as_a_contract(merged), merged.get("questions", [])
-''')
+''', title="Define the contract language given to the model, and how its answer becomes a contract. Prints nothing. Double click to read the code")
 
 # --------------------------------------------------------------- 3 the crate
 
@@ -1107,7 +1160,7 @@ def run(contract_file, folder, quiet=False):
     return (found.group(1) if found else "could not be read",
             re.findall(r"^\\s*REFUSE\\s+(.*)$", said, re.M),
             re.findall(r"^\\s*FLAG\\s+(.*)$", said, re.M))
-''')
+''', title="Define the three checks and how a crate is run through a contract. Prints nothing. Double click to read the code")
 
 code("""
 all_three_passed = check(DRAFT, CRATE)
@@ -1203,7 +1256,7 @@ else:
         "<style>.contract-editor textarea "
         "{font-family: monospace; font-size: 13px; line-height: 1.35;}</style>"))
     display(box, saving, said)
-''')
+''', title="Build the editing box. Double click to read the code")
 
 md("""
 ### If the editing box did not appear

@@ -41,7 +41,11 @@ md("""
 
 **ELIXIR BioHackathon Europe 2026, Project 25.**
 
-Developed by Neil Wipat, Newcastle University, and Claude.
+Developed by Neil Wipat, Newcastle University, and Claude, with Prozomix
+Ltd.
+
+The bioprospecting handover shown here comes from work with Prozomix Ltd.
+The crates hold simulated data only: no sequence in them is real.
 
 In part one of this demonstration, one instance of sentinel-oo was deployed
 on a Google Cloud machine and watched from the room. In this notebook you

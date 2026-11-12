@@ -1,5 +1,10 @@
 # The Agent Contract Wizard
 
+Developed by Neil Wipat, Newcastle University, and Claude, with Prozomix
+Ltd. The bioprospecting handover it is built around comes from work with
+Prozomix Ltd, and the example crate holds simulated data only: no sequence
+in it is real.
+
 A tool that writes an interoperability contract for a handover between two
 phases of a Design, Build, Test, Learn cycle, from two things the person
 supplies: the handover itself, as an RO-Crate, and a description of what
