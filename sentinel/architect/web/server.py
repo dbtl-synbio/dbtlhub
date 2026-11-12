@@ -653,7 +653,8 @@ def workflow_from(values: dict[str, Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 #  4. The run: four phases, with the questions put to the browser
 # --------------------------------------------------------------------------- #
-def start_run(session: Session) -> None:
+def start_run(session: Session, from_phase: str | None = None,
+              reason: str = "") -> None:
     """Start the cycle in its own thread, so the page stays answerable.
 
     Refuses to start while required fields have no answer. The missing list is
@@ -672,13 +673,15 @@ def start_run(session: Session) -> None:
                          kind="refused")
         return
     session.finished = False
-    session.thread = threading.Thread(target=_run, args=(session,), daemon=True)
+    session.thread = threading.Thread(target=_run, args=(session, from_phase,
+                                                         reason), daemon=True)
     session.thread.start()
 
 
-def _run(session: Session) -> None:
+def _run(session: Session, from_phase: str | None = None,
+         reason: str = "") -> None:
     try:
-        _cycle(session)
+        _cycle(session, from_phase=from_phase, reason=reason)
     except Stopped as stopped:
         session.note(str(stopped), kind="stop", state="stop")
     except Exception:
@@ -701,32 +704,67 @@ def _run(session: Session) -> None:
         session.note("the run has ended", kind="note")
 
 
-def _cycle(session: Session) -> None:
+def _cycle(session: Session, from_phase: str | None = None,
+           reason: str = "") -> None:
+    """One turn of the cycle, or a return to one phase of the one before it.
+
+    `from_phase` is a deliberate return, asked for by the researcher after
+    seeing what happened - which is a different thing from the Architect's own
+    GO_BACK, and both are kept. The Architect goes back when a sentinel refuses
+    something it can name; a person goes back because they looked at the result
+    and were not satisfied, which no contract can detect.
+
+    NOTHING IS UNDONE. The same Architect and the same crate carry on: a repeat
+    ADDS a second attempt beside the first, and both stay readable. An
+    append-only crate that quietly replaced a phase's work on a retry would be
+    append-only in name. That is why the reason is required and goes into the
+    ledger - a repeat with no reason recorded is indistinguishable from a loop.
+    """
     from architect.wiring import phase_runner, sentinel_checker     # noqa: PLC0415
 
     values = dict(session.filled.values)
     researcher = str(wanted(values, "researcher")[0] or "researcher")
     profile = str(wanted(values, "profile")[0] or "")
-    named_run, _ = wanted(values, "run_id")
-    session.run_id = safe_run_id(named_run or "", session.run_id)
-    arch = Architect(session.run_id, researcher=researcher)
-    session.arch = arch
-    session.note(f"Architect for run {session.run_id}, answering to "
-                 f"{researcher}", kind="architect")
+    returning = from_phase is not None and session.arch is not None
+
+    if returning:
+        arch = session.arch
+        session.note(f"{researcher} sent the run back to {from_phase}: "
+                     f"{reason or 'no reason given'}", kind="ask", state="ask")
+        session.note("nothing is undone. The crate keeps what the earlier "
+                     "attempt wrote, and this one is added beside it.",
+                     kind="crate")
+        arch.ledger.append({
+            "at": now_iso(), "step": "returned", "phase": from_phase,
+            "by": researcher, "because": reason or "no reason given",
+            "move": "go_back", "asked_by": "the researcher",
+        })
+    else:
+        named_run, _ = wanted(values, "run_id")
+        session.run_id = safe_run_id(named_run or "", session.run_id)
+        arch = Architect(session.run_id, researcher=researcher)
+        session.arch = arch
+        session.note(f"Architect for run {session.run_id}, answering to "
+                     f"{researcher}", kind="architect")
 
     # ---- a crate somebody else wrote, if there is one ---------------------
-    adopt, _ = wanted(values, "adopt")
+    # Skipped on a return: it was adopted once, and adopting it again would
+    # be a second claim that the same crate arrived from somewhere else.
+    adopt, _ = wanted(values, "adopt") if not returning else (None, "")
     adopt_path, _ = wanted(values, "adopt_path")
     if adopt is True and adopt_path:
         adoption = arch.adopt(str(adopt_path))
         session.note(f"adopted {adopt_path}: {adoption}", kind="crate")
 
     # ---- the consultation -------------------------------------------------
+    # Also skipped on a return. What was agreed is still agreed; asking again
+    # would invite a different answer to the same question inside one run.
     workflow = workflow_from(values)
-    questions = arch.consult(objective=str(wanted(values, "objective")[0] or ""),
-                             workflow=workflow or None)
+    questions = [] if returning else arch.consult(
+        objective=str(wanted(values, "objective")[0] or ""),
+        workflow=workflow or None)
     reading = getattr(arch.spec, "reading", None)
-    if reading is not None:
+    if reading is not None and not returning:
         session.note(f"read the form as a workflow: understood "
                      f"{len(reading.understood)} decision(s), kept "
                      f"{len(reading.kept)} description key(s), could not "
@@ -767,14 +805,18 @@ def _cycle(session: Session) -> None:
         # recorded what happened and not what it was supposed to be - and
         # nothing downstream could tell the difference.
         try:
+            if returning:
+                raise RuntimeError("already recorded for this run")
             landed = workflows.record_in(arch.memory.store, flow,
                                          by=researcher)
             session.note(f"the plan is in the crate: "
                          f"{len(landed.added)} entities as schema:HowTo and "
                          f"prov:Plan, at {flow.crate_id()}", kind="crate")
         except Exception as exc:                          # noqa: BLE001
-            session.note(f"the plan could not be written into the crate: "
-                         f"{exc}", kind="flagged", state="accepted_with_flags")
+            if not returning:
+                session.note(f"the plan could not be written into the crate: "
+                             f"{exc}", kind="flagged",
+                             state="accepted_with_flags")
         for handover in ("design_to_build", "build_to_test",
                          "test_to_learn", "learn_to_design"):
             step = flow.handover_step(handover)
@@ -845,7 +887,8 @@ def _cycle(session: Session) -> None:
 
     # ---- the four phases --------------------------------------------------
     order = list(PHASES)
-    index, guard = 0, 0
+    index = order.index(from_phase) if from_phase in order else 0
+    guard = 0
     while index < len(order) and guard < 2 * len(order) + 4:
         guard += 1
         phase = order[index]
@@ -1154,6 +1197,132 @@ def render_crate(session: Session) -> str:
             f'RO-Crate after each phase, and what each one added</caption>'
             f'<thead><tr><th>phase</th><th>entities</th><th>added</th>'
             f'<th></th></tr></thead><tbody>{"".join(rows)}</tbody></table>')
+
+
+def _replace_phase_steps(flow, phase: str, text: str):
+    """One phase's steps rewritten, the rest of the workflow untouched.
+
+    `text` is one step per line, optionally `name | manual: a, b | routes: x, y`.
+    The handover marker is carried over from the step that had it, onto the new
+    last step of the phase - because which step ends a phase is a fact about
+    the phase, and a researcher rewriting their bench protocol should not have
+    to remember to re-mark it.
+    """
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    if not lines:
+        return None
+    old = [s for s in flow.steps if s.phase == phase]
+    ending = next((s for s in old if s.handover_after), None)
+
+    fresh = []
+    for i, line in enumerate(lines):
+        bits = [b.strip() for b in line.split("|")]
+        name = bits[0].lstrip("0123456789. ").strip() or f"step {i + 1}"
+        manual, routes = (), ()
+        for extra in bits[1:]:
+            low = extra.lower()
+            if low.startswith("manual:"):
+                manual = tuple(x.strip() for x in extra.split(":", 1)[1].split(",")
+                               if x.strip())
+            elif low.startswith("routes:"):
+                routes = tuple(x.strip() for x in extra.split(":", 1)[1].split(",")
+                               if x.strip())
+        fresh.append({"name": name, "phase": phase, "manual_parts": list(manual),
+                      "routes": list(routes)})
+    if ending is not None:
+        fresh[-1]["handover_after"] = ending.handover_after
+        fresh[-1]["handover_number"] = ending.handover_number
+
+    out, number = [], 0
+    for step in flow.steps:
+        if step.phase == phase:
+            continue
+        out.append(step)
+    # Rebuild in phase order, renumbering: the numbers are positions, not
+    # names, so they have to be recomputed rather than preserved.
+    rebuilt = []
+    for ph in workflows.PHASES:
+        if ph == phase:
+            rebuilt.extend(fresh)
+        else:
+            rebuilt.extend({
+                "name": s.name, "phase": s.phase, "note": s.note,
+                "count_observed": s.count_observed,
+                "manual_parts": list(s.manual_parts), "routes": list(s.routes),
+                "handover_after": s.handover_after,
+                "handover_number": s.handover_number,
+                "carried_out": s.carried_out,
+            } for s in out if s.phase == ph)
+    for item in rebuilt:
+        number += 1
+        item["number"] = number
+    return workflows.from_dict({
+        "name": flow.name, "title": flow.title, "use_case": flow.use_case,
+        "based_on": flow.based_on, "description": flow.description,
+        "source": f"{flow.source} - {phase} steps rewritten in the interface",
+        "steps": rebuilt})
+
+
+def render_redo(session: Session) -> str:
+    """Sending the run back to a phase, on purpose, with the steps rewritten.
+
+    The Architect already goes back by itself when a sentinel refuses something
+    it can name. This is the other case, which no contract can detect: the
+    result was valid and the researcher is not satisfied with it.
+    """
+    if session.arch is None:
+        return ('<p class="hint">This appears once a run has happened. '
+                'Nothing can be sent back before there is something to send '
+                'back.</p>')
+    flow = session.workflow
+    out = ['<p class="hint">Nothing is undone. The crate keeps what the '
+           'earlier attempt wrote and this one is added beside it, so the '
+           'two stay comparable - an append-only crate that replaced a '
+           'phase\'s work on a retry would be append-only in name only.</p>',
+           '<form method="post" action="/redo">']
+    out.append('<fieldset><legend>Which phase, and why</legend>')
+    for phase in PHASES:
+        done = any(row["phase"] == phase for row in session.crate_growth)
+        out.append(
+            f'<label class="choice"><input type="radio" name="phase" '
+            f'value="{esc(phase)}"{" checked" if phase == "design" else ""}> '
+            f'<strong>{esc(phase)}</strong>'
+            f'<span class="hint">'
+            + ("it has run; everything from here on runs again"
+               if done else "it has not run yet in this run")
+            + '</span></label>')
+    out.append('<label>why you are sending it back'
+               '<input type="text" name="reason" spellcheck="false" '
+               'placeholder="the panel was too narrow to say anything about '
+               'thermostability"></label>'
+               '<p class="hint">Required, and it goes into the ledger. A '
+               'repeat with no reason recorded cannot be told apart from a '
+               'retry loop by anybody reading the run afterwards.</p>'
+               '</fieldset>')
+
+    if flow is not None:
+        example = "\n".join(
+            s.name + (f" | manual: {', '.join(s.manual_parts)}"
+                      if s.manual_parts else "")
+            + (f" | routes: {', '.join(s.routes)}" if s.routes else "")
+            for s in flow.steps if s.phase == "design")
+        out.append(
+            '<details class="own"><summary>Rewrite that phase\'s steps too'
+            '</summary>'
+            '<p class="hint">One step per line. Add <code>| manual: a, b</code> '
+            'or <code>| routes: x, y</code> after a step. The handover marker '
+            'moves to the new last step by itself. Leave it empty to re-run '
+            'the phase unchanged. The whole workflow is re-checked against '
+            'the same five rules, because changing one phase can break a rule '
+            'that spans the cycle.</p>'
+            f'<label>the steps of the phase you picked'
+            f'<textarea name="steps" rows="8" spellcheck="false" '
+            f'placeholder="{esc(example)}"></textarea></label></details>')
+
+    out.append('<p class="actions"><button type="submit">Send it back</button>'
+               '<span class="hint">it runs again from there to the end of the '
+               'cycle</span></p></form>')
+    return "".join(out)
 
 
 def render_kg(session: Session) -> str:
@@ -1563,6 +1732,11 @@ def _rest_of_page(session: Session, items: list[dict]) -> str:
     as <code>route.py</code> wrote it.</p>
 </section>
 
+<section class="panel" id="redo-panel">
+  <h2>{icon("go_back")}Send it back</h2>
+  {render_redo(session)}
+</section>
+
 <section class="panel" id="kg-panel">
   <h2>{icon("graph")}The knowledge graph</h2>
   {render_kg(session)}
@@ -1920,6 +2094,49 @@ class Handler(BaseHTTPRequestHandler):
                              f"and took the first option instead: "
                              f"{', '.join(guessed[:8])}", kind="note")
             self._redirect("/#form-panel", new_session=cookie)
+        elif path == "/redo":
+            phase = (posted.get("phase") or [""])[0].strip().lower()
+            why = (posted.get("reason") or [""])[0].strip()
+            steps = (posted.get("steps") or [""])[0]
+            if session.running:
+                session.note("a run is going; wait for it before sending it "
+                             "back", kind="note")
+            elif session.arch is None:
+                session.note("there is nothing to send back: no run has "
+                             "happened yet", kind="refused", state="refused")
+            elif phase not in PHASES:
+                session.note(f"{phase!r} is not one of {list(PHASES)}",
+                             kind="refused", state="refused")
+            elif not why:
+                # The reason is not politeness. A repeat with no reason in the
+                # ledger cannot be told apart from a loop by anybody reading
+                # the run afterwards, including us.
+                session.note("say why. A repeat with no reason recorded is "
+                             "indistinguishable from a retry loop",
+                             kind="refused", state="refused")
+            else:
+                if steps.strip() and session.workflow is not None:
+                    # The steps of that phase, rewritten. The whole workflow is
+                    # rebuilt and re-checked, because changing one phase can
+                    # break a rule that spans the cycle - moving a handover, or
+                    # a count that now climbs.
+                    edited = _replace_phase_steps(session.workflow, phase, steps)
+                    bad = edited.problems() if edited else ["it could not be read"]
+                    if bad:
+                        session.note(f"the rewritten {phase} steps were "
+                                     f"refused: {len(bad)} problem(s)",
+                                     kind="refused", state="refused")
+                        for line in bad:
+                            session.note(line, kind="refused")
+                        self._redirect("/#redo-panel", new_session=cookie)
+                        return
+                    session.workflow = edited
+                    session.workflow_source = f"{phase} steps rewritten here"
+                    session.note(f"the {phase} steps were rewritten and pass "
+                                 f"the same five rules", kind="architect",
+                                 state="accepted")
+                start_run(session, from_phase=phase, reason=why)
+            self._redirect("/#redo-panel", new_session=cookie)
         elif path == "/verify":
             # One real, minimal call. A probe knows a key is present; only a
             # call knows it works, and the researcher asked to be able to test
