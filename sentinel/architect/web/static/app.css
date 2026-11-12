@@ -358,3 +358,25 @@ details.own textarea {
 }
 
 form.pick-flow { margin-bottom: 0.5rem; }
+
+/* ---- the knowledge graph ----------------------------------------------- */
+ul.where, ul.starts { list-style: none; padding: 0; margin: 0.6rem 0; }
+ul.where li, ul.starts li { padding: 0.35rem 0; border-bottom: 1px dotted var(--grid); }
+ul.where .hint, ul.starts .hint { display: block; }
+
+table.shape { border-collapse: collapse; margin: 0.8rem 0; width: 100%; }
+table.shape caption { text-align: left; color: var(--fg_dim); padding-bottom: 0.3rem; }
+table.shape td { padding: 0.25rem 0.6rem 0.25rem 0; border-bottom: 1px dotted var(--grid); vertical-align: top; }
+table.shape td.n { text-align: right; color: var(--fg_bright); width: 4rem; }
+
+/* The bar is the shape of the growth: four phases that each add a little
+   look nothing like one that adds everything. */
+table.crate td.bar { width: 40%; padding-left: 0.6rem; }
+table.crate td.bar span { display: block; height: 0.55rem; background: var(--fg_dim); }
+table.crate tr.kinds td { color: var(--fg_dim); font-size: 0.85rem; padding-top: 0; border-bottom: 1px dotted var(--grid); }
+
+.focus-form input[type="text"] {
+  display: block; width: 100%; max-width: 26rem; margin-top: 0.35rem;
+  padding: 0.4rem 0.5rem; font-family: var(--font);
+  color: var(--fg); background: var(--bg); border: 1px solid var(--fg_dim);
+}

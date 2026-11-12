@@ -68,6 +68,7 @@ from architect.architect import Architect                             # noqa: E4
 from architect.contract import Move, PHASES, Question                 # noqa: E402
 from architect.interface import (SKIPPED, STOPPED, Interface,         # noqa: E402
                                  Stopped)
+from architect.web import kgview                                      # noqa: E402
 from architect.web import setup as setup_mod                          # noqa: E402
 from architect.workflows import loader as workflows                   # noqa: E402
 
@@ -128,6 +129,15 @@ def _load_seam():
 _seam = _load_seam()
 Field, Form, Kind, Section, Filled = (_seam.Field, _seam.Form, _seam.Kind,
                                       _seam.Section, _seam.Filled)
+
+# AND THAT IS WHY NOTHING BELOW COMPARES A KIND WITH `is`.
+# `architect/forms/` is a package, so the fallback above loads `forms.py` a
+# second time under its own name - which means there are two `Kind` enums in
+# this process, and a field built by the loader carries the OTHER one.
+# `Kind.STEPS is Kind.STEPS` was False, silently, and every list and steps
+# field in this interface was rendered and parsed as a plain string. Both
+# enums are `str` valued, so `.value` is the comparison that holds whichever
+# class a field happens to carry.
 
 LOADER_PATH = ROOT / "architect" / "forms" / "loader.py"
 # The names a loader is likely to expose. Guessing a function name is not
@@ -494,6 +504,11 @@ class Session:
         self.filled = Filled(form=FORM)
         self.log: list[dict] = []
         self.crate_growth: list[dict] = []
+        # The crate as it stood after the last phase, kept so the next one can
+        # say what IT added rather than only how big the whole thing got.
+        self.last_snapshot: dict | None = None
+        # Which entity the knowledge-graph panel is looking at, if any.
+        self.focus: str = ""
         self.arch: Architect | None = None
         self.run_id = f"web-{session_id[:6]}"
         self.thread: threading.Thread | None = None
@@ -590,20 +605,20 @@ def values_from_post(posted: dict[str, list[str]]) -> dict[str, Any]:
     values: dict[str, Any] = {}
     for field in FORM.all_fields():
         raw = posted.get(field.key, [])
-        if field.kind is Kind.MULTI:
+        if field.kind.value == "multi":
             values[field.key] = [v for v in raw if v]
             continue
         text = (raw[0] if raw else "").strip()
-        if field.kind in (Kind.LIST, Kind.STEPS):
+        if field.kind.value in ("list", "steps"):
             values[field.key] = [line.strip() for line in text.splitlines()
                                  if line.strip()]
-        elif field.kind is Kind.BOOL:
+        elif field.kind.value == "bool":
             # Not a checkbox. A checkbox has a default - unticked - and this
             # form is not allowed one, so a bool is two radios and neither is
             # chosen until somebody chooses it.
             values[field.key] = (True if text == "yes"
                                  else False if text == "no" else "")
-        elif field.kind in (Kind.NUMBER, Kind.QUANTITY):
+        elif field.kind.value in ("number", "quantity"):
             values[field.key] = text          # kept as typed; see `as_number`
         else:
             values[field.key] = text
@@ -747,6 +762,19 @@ def _cycle(session: Session) -> None:
     if flow is not None:
         session.note(f"this run is one turn of {flow.name}: {len(flow.steps)} "
                      f"steps, from {session.workflow_source}", kind="architect")
+        # The plan goes into the crate before the run it is a plan for. Until
+        # this existed the workflow drove the run and vanished, so the crate
+        # recorded what happened and not what it was supposed to be - and
+        # nothing downstream could tell the difference.
+        try:
+            landed = workflows.record_in(arch.memory.store, flow,
+                                         by=researcher)
+            session.note(f"the plan is in the crate: "
+                         f"{len(landed.added)} entities as schema:HowTo and "
+                         f"prov:Plan, at {flow.crate_id()}", kind="crate")
+        except Exception as exc:                          # noqa: BLE001
+            session.note(f"the plan could not be written into the crate: "
+                         f"{exc}", kind="flagged", state="accepted_with_flags")
         for handover in ("design_to_build", "build_to_test",
                          "test_to_learn", "learn_to_design"):
             step = flow.handover_step(handover)
@@ -842,8 +870,14 @@ def _cycle(session: Session) -> None:
 
         before = session.crate_growth[-1]["entities"] if session.crate_growth else 0
         total = session.entities()
+        # What this phase added, by kind, not only how many. "+100" says the
+        # graph got bigger; "+100 schema:MediaObject" says what it got.
+        now_crate = arch.memory.snapshot()
+        changed = kgview.what_changed(session.last_snapshot, now_crate)
+        session.last_snapshot = now_crate
         session.crate_growth.append({"phase": phase, "entities": total,
-                                     "added": total - before})
+                                     "added": total - before,
+                                     "by_kind": changed["by_kind"][:6]})
         session.note(f"RO-Crate: {total} entities (+{total - before} from "
                      f"{phase})", kind="crate")
 
@@ -946,20 +980,20 @@ def render_control(field: Any, value: Any) -> str:
     name, fid = esc(field.key), f"field-{esc(field.key)}"
     place = f' placeholder="{esc(field.placeholder)}"' if field.placeholder else ""
 
-    if field.kind is Kind.LONGTEXT:
+    if field.kind.value == "longtext":
         return (f'<textarea id="{fid}" name="{name}" rows="3"{place}>'
                 f'{esc(value or "")}</textarea>')
-    if field.kind in (Kind.LIST, Kind.STEPS):
+    if field.kind.value in ("list", "steps"):
         text = "\n".join(value) if isinstance(value, list) else (value or "")
-        ordered = ("one per line, in order" if field.kind is Kind.STEPS
+        ordered = ("one per line, in order" if field.kind.value == "steps"
                    else "one per line")
         return (f'<textarea id="{fid}" name="{name}" rows="4"{place}>'
                 f'{esc(text)}</textarea>'
                 f'<span class="hint">{ordered}</span>')
-    if field.kind is Kind.NUMBER:
+    if field.kind.value == "number":
         return (f'<input id="{fid}" name="{name}" type="number" step="any" '
                 f'inputmode="decimal" value="{esc(value or "")}"{place}>')
-    if field.kind is Kind.QUANTITY:
+    if field.kind.value == "quantity":
         # The unit is shown and is not editable. It is the form's statement,
         # not the researcher's: a quantity whose unit can be retyped is a
         # quantity that arrives in whatever unit somebody felt like.
@@ -968,7 +1002,7 @@ def render_control(field: Any, value: Any) -> str:
                 f'inputmode="decimal" value="{esc(value or "")}"{place}>'
                 f'<span class="unit">{esc(field.unit or "")}</span></span>'
                 f'<span class="hint">the unit is fixed by the form</span>')
-    if field.kind is Kind.BOOL:
+    if field.kind.value == "bool":
         out = [f'<span class="options">']
         for word in ("yes", "no"):
             chosen = value is (word == "yes")
@@ -977,8 +1011,8 @@ def render_control(field: Any, value: Any) -> str:
                        f'name="{name}" value="{word}"{mark}> {word}</label>')
         out.append("</span>")
         return "".join(out)
-    if field.kind in (Kind.CHOICE, Kind.MULTI):
-        kind = "radio" if field.kind is Kind.CHOICE else "checkbox"
+    if field.kind.value in ("choice", "multi"):
+        kind = "radio" if field.kind.value == "choice" else "checkbox"
         chosen = value if isinstance(value, list) else [value]
         out = [f'<span class="options">']
         for option in field.options:
@@ -1101,14 +1135,120 @@ def render_crate(session: Session) -> str:
     if not session.crate_growth:
         return ('<p class="hint">The crate grows one phase at a time. The '
                 'count per phase appears here.</p>')
-    rows = "".join(
-        f'<tr><td>{esc(row["phase"])}</td><td class="n">{row["entities"]}</td>'
-        f'<td class="n">+{row["added"]}</td></tr>'
-        for row in session.crate_growth)
+    biggest = max(row["entities"] for row in session.crate_growth) or 1
+    rows = []
+    for row in session.crate_growth:
+        kinds = ", ".join(f"{n}&times; {esc(k)}"
+                          for k, n in (row.get("by_kind") or []))
+        # A bar, because the shape of the growth is the thing: four phases
+        # that each add a little look nothing like one that adds everything.
+        width = int(100 * row["entities"] / biggest)
+        rows.append(
+            f'<tr><td>{esc(row["phase"])}</td>'
+            f'<td class="n">{row["entities"]}</td>'
+            f'<td class="n">+{row["added"]}</td>'
+            f'<td class="bar"><span style="width:{width}%"></span></td></tr>'
+            + (f'<tr class="kinds"><td></td><td colspan="3">{kinds}</td></tr>'
+               if kinds else ""))
     return (f'<table class="crate"><caption>{icon("crate")}entities in the '
-            f'RO-Crate after each phase</caption><thead><tr><th>phase</th>'
-            f'<th>entities</th><th>added</th></tr></thead><tbody>{rows}'
-            f'</tbody></table>')
+            f'RO-Crate after each phase, and what each one added</caption>'
+            f'<thead><tr><th>phase</th><th>entities</th><th>added</th>'
+            f'<th></th></tr></thead><tbody>{"".join(rows)}</tbody></table>')
+
+
+def render_kg(session: Session) -> str:
+    """The knowledge graph itself: where it is, its shape, and one hop of it.
+
+    There is no second database. The RO-Crate IS the graph, and this panel
+    says so with the two paths rather than leaving a reader to assume there is
+    a store somewhere they have not been shown.
+
+    No picture of the whole thing. Four hundred nodes drawn at once is a grey
+    cloud that looks like insight and answers nothing; a count by type and one
+    entity's neighbourhood each answer a question and stay readable.
+    """
+    if session.arch is None:
+        return ('<p class="hint">There is no graph yet. It appears as soon as '
+                'the first phase has written into the crate.</p>')
+    crate = session.arch.memory.snapshot()
+    where = kgview.paths(session.run_id)
+    marks = kgview.landmarks(crate)
+    links = kgview.edges(crate)
+    graph = [e for e in crate.get("@graph", []) if isinstance(e, dict)]
+
+    out = [f'<p class="hint">There is no separate graph database. The RO-Crate '
+           f'<em>is</em> the knowledge graph, and it is on disk in two forms '
+           f'that are the same thing said twice:</p>'
+           f'<ul class="where"><li><code>{esc(where["crate"])}</code>'
+           f'<span class="hint">JSON-LD, the authority, append-only</span></li>'
+           f'<li><code>{esc(where["graph"])}</code>'
+           f'<span class="hint">the same lifted to N-Triples, rewritten on '
+           f'every change, for querying</span></li></ul>']
+
+    out.append(f'<p>{len(graph)} entities, {len(links)} internal edges.</p>')
+
+    out.append('<table class="shape"><caption>what is in it</caption><tbody>')
+    for kind, count in kgview.shape(crate)[:12]:
+        out.append(f'<tr><td class="n">{count}</td><td>{esc(kind)}</td></tr>')
+    out.append('</tbody></table>')
+
+    # ---- where to start ---------------------------------------------------
+    starts = []
+    if marks["plan"]:
+        starts.append((marks["plan"][0], "the plan this run followed"))
+    starts.append((marks["root"], "the root of the crate"))
+    for check in marks["checks"]:
+        starts.append((check["id"],
+                       f'the sentinel at {check["contract"]} - {check["verdict"]}'))
+    out.append('<p class="hint">Follow one thing rather than look at all of '
+               'them. Provenance is read backwards, so both directions are '
+               'shown.</p><ul class="starts">')
+    for ref, what in starts[:8]:
+        out.append(f'<li><a href="/?focus={esc(ref)}#kg-panel">'
+                   f'<code>{esc(ref)}</code></a> '
+                   f'<span class="hint">{esc(what)}</span></li>')
+    out.append('</ul>')
+
+    out.append('<form method="get" action="/" class="focus-form">'
+               '<label>or an entity id<input type="text" name="focus" '
+               f'value="{esc(session.focus or "")}" spellcheck="false" '
+               'placeholder="#sample/BP1-A01"></label>'
+               '<p class="actions"><button type="submit">Look at it</button>'
+               '</p></form>')
+
+    # ---- the neighbourhood ------------------------------------------------
+    if session.focus:
+        near = kgview.neighbourhood(crate, session.focus)
+        if not near["found"]:
+            out.append(f'<p class="no">{icon("refused")}nothing in this crate '
+                       f'has the id <code>{esc(session.focus)}</code></p>')
+        else:
+            out.append(f'<div class="chosen"><p><code>{esc(near["id"])}</code> '
+                       f'&middot; {esc(", ".join(near["types"]))}</p>')
+            if near["name"]:
+                out.append(f'<p><strong>{esc(near["name"])}</strong></p>')
+            if near["literals"]:
+                out.append('<table class="shape"><tbody>' + "".join(
+                    f'<tr><td>{esc(k)}</td><td>{esc(str(v)[:120])}</td></tr>'
+                    for k, v in list(near["literals"].items())[:12])
+                    + '</tbody></table>')
+            for title, key in (("it points at", "points_at"),
+                               ("points at it", "pointed_at_by")):
+                items = near[key]
+                out.append(f'<p class="hint">{len(items)} {esc(title)}:</p>'
+                           '<table class="shape"><tbody>')
+                for edge in items[:14]:
+                    out.append(
+                        f'<tr><td>{esc(edge["property"])}</td>'
+                        f'<td><a href="/?focus={esc(edge["id"])}#kg-panel">'
+                        f'<code>{esc(edge["id"])}</code></a></td>'
+                        f'<td class="hint">{esc(edge["kind"])}</td></tr>')
+                if len(items) > 14:
+                    out.append(f'<tr><td></td><td class="hint">and '
+                               f'{len(items) - 14} more</td><td></td></tr>')
+                out.append('</tbody></table>')
+            out.append('</div>')
+    return "".join(out)
 
 
 def render_setup(session: Session) -> str:
@@ -1387,6 +1527,11 @@ def _rest_of_page(session: Session, items: list[dict]) -> str:
   <p class="hint">Every field says why it is asked, because that is the whole
     difference between a form and an open prompt. Nothing is prefilled and no
     option is preselected.</p>
+  <form method="post" action="/example" class="example-form">
+    <button type="submit">Load the worked example</button>
+    <span class="hint">the answers from Anil Wipat's cycle, which are what
+      each field's own placeholder says. Then press Save, and Run.</span>
+  </form>
   {render_form(session)}
 </section>
 
@@ -1416,6 +1561,11 @@ def _rest_of_page(session: Session, items: list[dict]) -> str:
   </p>
   <p class="hint">The ledger carries the reason for every decision verbatim,
     as <code>route.py</code> wrote it.</p>
+</section>
+
+<section class="panel" id="kg-panel">
+  <h2>{icon("graph")}The knowledge graph</h2>
+  {render_kg(session)}
 </section>
 """
 
@@ -1563,6 +1713,12 @@ class Handler(BaseHTTPRequestHandler):
         cookie = session.id if is_new else None
 
         if path == "/":
+            # `?focus=` moves the knowledge-graph panel to one entity. A GET
+            # because it is a view, which means it can be linked, bookmarked
+            # and sent to somebody else.
+            asked = parse_qs(urlparse(self.path).query).get("focus")
+            if asked is not None:
+                session.focus = asked[0].strip()[:200]
             self._send(render_page(session).encode(), new_session=cookie)
         elif path.startswith("/static/"):
             self._static(path)
@@ -1716,6 +1872,54 @@ class Handler(BaseHTTPRequestHandler):
                     session.note(f"no workflow named {picked!r}: {exc}",
                                  kind="refused", state="refused")
             self._redirect("/#workflow-panel", new_session=cookie)
+        elif path == "/example":
+            # Load the worked example. Not invented answers: every field in
+            # `architect/forms/bioprospecting.yaml` carries a placeholder,
+            # and those placeholders ARE the worked cycle's own answers -
+            # 96 candidates, Twist, the OT-2, the two build routes. So this
+            # fills from them, and from the first option of a choice, and the
+            # log says which came from where. Nothing is hidden behind a
+            # button that says "example".
+            filled, guessed = {}, []
+            for field in FORM.all_fields():
+                if field.placeholder:
+                    filled[field.key] = field.placeholder
+                elif field.options:
+                    filled[field.key] = (list(field.options)
+                                         if field.kind.value == "multi"
+                                         else field.options[0])
+                    guessed.append(field.key)
+                elif field.kind.value == "steps":
+                    # The form asks for the numbered steps, and the workflow
+                    # IS the numbered steps. Filling this from anywhere else
+                    # would put the same cycle in the interface twice and let
+                    # the two drift apart.
+                    flow = session.workflow
+                    filled[field.key] = (
+                        [f"{s.number}. {s.name} [{s.phase}]"
+                         for s in flow.steps] if flow else [])
+                elif field.kind.value == "bool":
+                    filled[field.key] = False
+                    guessed.append(field.key)
+            session.filled.values = filled
+            session.filled.provenance = {
+                key: {"source": "the worked example", "at": now_iso(),
+                      "by": "architect/forms/bioprospecting.yaml"}
+                for key in filled}
+            try:
+                session.workflow = workflows.load("bioprospecting")
+                session.workflow_source = "bioprospecting.yaml on disk"
+                session.workflow_problems = []
+            except Exception:                              # noqa: BLE001
+                pass
+            session.note(f"loaded the worked example: {len(filled)} field(s) "
+                         f"from the form's own placeholders, which are the "
+                         f"answers from Anil Wipat's cycle", kind="architect")
+            if guessed:
+                session.note(f"{len(guessed)} field(s) had no example answer "
+                             f"and took the first option instead: "
+                             f"{', '.join(guessed[:8])}", kind="note")
+            self._redirect("/#form-panel", new_session=cookie)
         elif path == "/verify":
             # One real, minimal call. A probe knows a key is present; only a
             # call knows it works, and the researcher asked to be able to test

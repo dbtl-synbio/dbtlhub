@@ -88,6 +88,15 @@ def run(name: str, answer: str, run_id: str, fresh: bool) -> int:
     arch = Architect(run_id, researcher="the workflow runner")
     arch.consult(objective=f"one turn of {flow.name}")
 
+    # The plan goes into the crate BEFORE the run it is a plan for. A workflow
+    # added afterwards would be a claim about what was intended, written by
+    # somebody who already knew what happened.
+    landed = workflows.record_in(arch.memory.store, flow, by="the workflow runner")
+    print(f"  the plan is in the crate: {len(flow.to_crate())} entities "
+          f"({flow.crate_id()}), as schema:HowTo and prov:Plan")
+    if getattr(landed, "conflicts", None) or getattr(landed, "collisions", None):
+        print(f"  the store had something to say about it: {landed}")
+
     # THE DATA IS THE SAME WHICHEVER WORKFLOW IS CHOSEN, AND THAT IS ON PURPOSE.
     # The four phase agents are the bioprospecting ones, producing simulated
     # candidates, plates and readings. A workflow supplies the SHAPE of a run -

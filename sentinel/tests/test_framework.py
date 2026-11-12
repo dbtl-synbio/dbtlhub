@@ -382,6 +382,71 @@ class TestWorkflows(unittest.TestCase):
         # The blank one counts nothing on purpose, and must not invent a size.
         self.assertEqual(self.loader.load("blank").to_inputs(), {})
 
+    def test_a_workflow_survives_the_trip_through_a_crate(self):
+        """The crate form is a format, not a summary.
+
+        If anything is lost here, "attach your own workflow as an RO-Crate"
+        quietly means "attach most of your own workflow".
+        """
+        for name in self.loader.available():
+            with self.subTest(workflow=name):
+                before = self.loader.load(name)
+                after = self.loader.Workflow.from_crate(
+                    {"@graph": before.to_crate()})
+                self.assertEqual([s.number for s in after.steps],
+                                 [s.number for s in before.steps])
+                self.assertEqual([s.name for s in after.steps],
+                                 [s.name for s in before.steps])
+                self.assertEqual([s.phase for s in after.steps],
+                                 [s.phase for s in before.steps])
+                self.assertEqual([s.count_observed for s in after.steps],
+                                 [s.count_observed for s in before.steps])
+                self.assertEqual([s.manual_parts for s in after.steps],
+                                 [s.manual_parts for s in before.steps])
+                self.assertEqual([s.routes for s in after.steps],
+                                 [s.routes for s in before.steps])
+                self.assertEqual([s.handover_after for s in after.steps],
+                                 [s.handover_after for s in before.steps])
+                self.assertEqual(after.problems(), [])
+
+    def test_the_plan_lands_in_the_crate(self):
+        """A refused addition leaves no plan, and says nothing unless asked.
+
+        This caught exactly that: the action named an agent that was never
+        written, the store refused the whole addition because it was dangling,
+        and the run carried on with no plan in its crate.
+        """
+        from framework.crate_store import CrateStore                # noqa: PLC0415
+        store = CrateStore("test-plan-lands", root=Path(self.tmp))
+        flow = self.loader.load("bioprospecting")
+        report = self.loader.record_in(store, flow, by="a tester")
+        self.assertEqual(report.dangling, [],
+                         f"the plan was refused: {report.dangling}")
+        ids = {e.get("@id") for e in store.crate["@graph"]}
+        self.assertIn(flow.crate_id(), ids)
+        for step in flow.steps:
+            self.assertIn(flow.step_id(step), ids)
+
+    def test_the_graph_view_finds_both_directions(self):
+        """Provenance is read backwards, so one direction is not enough."""
+        from architect.web import kgview                            # noqa: PLC0415
+        flow = self.loader.load("bioprospecting")
+        crate = {"@graph": flow.to_crate()}
+        near = kgview.neighbourhood(crate, flow.step_id(flow.steps[0]))
+        self.assertTrue(near["found"])
+        self.assertTrue(any(e["id"] == flow.crate_id()
+                            for e in near["pointed_at_by"]),
+                        "the plan does not point at its own first step")
+        shape = dict(kgview.shape(crate))
+        self.assertEqual(shape.get("schema:HowToStep"), len(flow.steps))
+
+    def setUp(self):
+        import tempfile                                             # noqa: PLC0415
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

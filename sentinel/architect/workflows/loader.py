@@ -128,6 +128,143 @@ class Workflow:
         n = self.starting_count()
         return {"n": n} if n else {}
 
+    # ---- the crate form --------------------------------------------------
+    # A workflow is a PLAN. PROV already has the word for that, and schema.org
+    # already has the shape - a HowTo with ordered HowToSteps - so neither is
+    # invented here. Being both means a reader who knows only one of the two
+    # vocabularies can still follow it.
+    #
+    # Until this existed the workflow drove the run and then vanished: the
+    # crate recorded what happened and not the plan it was a turn of, so
+    # nothing downstream could ask "what was this supposed to be?". A crate
+    # that cannot answer that cannot say whether a run went as intended.
+    def crate_id(self) -> str:
+        return f"#workflow/{self.name}"
+
+    def step_id(self, step: Step) -> str:
+        return f"{self.crate_id()}/step-{step.number}"
+
+    def to_crate(self) -> list[dict]:
+        """This workflow as RO-Crate entities, ready to add to a crate.
+
+        One `HowTo` and one `HowToStep` per step, in order. Everything the
+        YAML carries survives the trip, which is what makes the crate form a
+        format and not a summary: `from_crate()` reads it back.
+        """
+        plan = {
+            "@id": self.crate_id(),
+            "@type": ["schema:HowTo", "prov:Plan"],
+            "name": self.title or self.name,
+            "description": self.description,
+            "dbtl:workflowName": self.name,
+            "dbtl:useCase": self.use_case,
+            "schema:isBasedOn": self.based_on,
+            "dbtl:source": self.source,
+            # `step` is schema.org's own property for an ordered HowTo. The
+            # order of this list is the order of the cycle.
+            "step": [{"@id": self.step_id(s)} for s in self.steps],
+        }
+        out = [plan]
+        for step in self.steps:
+            entity = {
+                "@id": self.step_id(step),
+                "@type": ["schema:HowToStep", "prov:Plan"],
+                "position": step.number,
+                "name": step.name,
+                "dbtl:phase": step.phase,
+            }
+            if step.note:
+                entity["description"] = step.note
+            if step.count_observed is not None:
+                entity["dbtl:countObserved"] = step.count_observed
+            if step.manual_parts:
+                entity["dbtl:manualPart"] = list(step.manual_parts)
+            if step.routes:
+                entity["dbtl:route"] = list(step.routes)
+            if not step.carried_out:
+                entity["dbtl:carriedOut"] = False
+            if step.handover_after:
+                entity["dbtl:handoverAfter"] = step.handover_after
+                entity["dbtl:handoverNumber"] = step.handover_number
+            out.append(entity)
+        return out
+
+    @classmethod
+    def from_crate(cls, crate: dict, name: str | None = None) -> "Workflow":
+        """Read a workflow back out of an RO-Crate.
+
+        This is the half that makes "attach your own" mean something: anybody
+        with a crate that describes a plan in these terms can hand it to this
+        system without converting it to our YAML first.
+
+        It is deliberately forgiving about `@type` being a string or a list,
+        and about the step order, which it takes from the HowTo's `step` list
+        when there is one and from `position` otherwise - a crate written by
+        somebody else will not have made the same choices we did.
+        """
+        graph = crate.get("@graph") or []
+        index = {e.get("@id"): e for e in graph if isinstance(e, dict)}
+
+        def types(entity) -> list[str]:
+            raw = entity.get("@type") or []
+            return [raw] if isinstance(raw, str) else list(raw)
+
+        plans = [e for e in graph if isinstance(e, dict)
+                 and any(t.endswith("HowTo") or t.endswith("Plan")
+                         for t in types(e))
+                 and e.get("step")]
+        if name:
+            plans = [p for p in plans
+                     if p.get("dbtl:workflowName") == name
+                     or p.get("@id", "").endswith(f"/{name}")] or plans
+        if not plans:
+            raise ValueError(
+                "no workflow in this crate: expected an entity typed "
+                "schema:HowTo or prov:Plan with a `step` list")
+        plan = plans[0]
+
+        refs = plan.get("step") or []
+        refs = [refs] if isinstance(refs, dict) else refs
+        entities = []
+        for ref in refs:
+            got = index.get(ref.get("@id") if isinstance(ref, dict) else ref)
+            if got is not None:
+                entities.append(got)
+        if not entities:                       # no usable list: fall back
+            entities = [e for e in graph if isinstance(e, dict)
+                        and any(t.endswith("HowToStep") for t in types(e))]
+        entities.sort(key=lambda e: int(e.get("position") or 0))
+
+        steps = []
+        for i, e in enumerate(entities, start=1):
+            manual = e.get("dbtl:manualPart") or []
+            routes = e.get("dbtl:route") or []
+            steps.append(Step(
+                number=int(e.get("position") or i),
+                name=str(e.get("name", "")),
+                phase=str(e.get("dbtl:phase", "")),
+                note=str(e.get("description", "") or ""),
+                count_observed=(int(e["dbtl:countObserved"])
+                                if e.get("dbtl:countObserved") is not None
+                                else None),
+                manual_parts=tuple([manual] if isinstance(manual, str) else manual),
+                routes=tuple([routes] if isinstance(routes, str) else routes),
+                handover_after=str(e.get("dbtl:handoverAfter", "") or ""),
+                handover_number=(int(e["dbtl:handoverNumber"])
+                                 if e.get("dbtl:handoverNumber") is not None
+                                 else None),
+                carried_out=bool(e.get("dbtl:carriedOut", True)),
+            ))
+        return cls(
+            name=str(plan.get("dbtl:workflowName")
+                     or plan.get("@id", "#workflow/attached").rsplit("/", 1)[-1]),
+            title=str(plan.get("name", "")),
+            use_case=str(plan.get("dbtl:useCase", "any")),
+            based_on=str(plan.get("schema:isBasedOn", "")),
+            source=str(plan.get("dbtl:source", "") or "attached as an RO-Crate"),
+            description=str(plan.get("description", "") or ""),
+            steps=steps)
+
     # ---- checking it -----------------------------------------------------
     def problems(self) -> list[str]:
         """What is wrong with this workflow, in the order it would be met.
@@ -268,6 +405,36 @@ def load(name: str) -> Workflow:
         raise FileNotFoundError(
             f"no workflow named {name!r}. There is: {', '.join(available())}")
     return load_file(path)
+
+
+def record_in(store, flow: Workflow, by: str = "the researcher") -> dict:
+    """Put the plan in the crate, before the run that follows it.
+
+    Returns what the store reported, so a caller can say whether it landed.
+    Called once at the start of a run: a plan added afterwards would be a
+    claim about what was intended, written by someone who already knew what
+    happened.
+    """
+    from datetime import datetime, timezone                        # noqa: PLC0415
+
+    who = f"#person/{by.replace(' ', '-')}"
+    # The person is created here, not merely referenced. The store refuses an
+    # addition that points at something absent, and it is right to: an action
+    # whose agent does not exist is a record of nobody doing something. The
+    # first version of this function named an agent it never wrote and the
+    # whole plan was refused - correctly, and silently enough to miss.
+    entities = flow.to_crate() + [
+        {"@id": who, "@type": "Person", "name": by},
+    ]
+    action = {
+        "@id": f"#action/plan/{flow.name}",
+        "@type": "CreateAction",
+        "name": f"adopted the {flow.name} workflow as the plan for this run",
+        "endTime": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "agent": {"@id": who},
+        "result": [{"@id": flow.crate_id()}],
+    }
+    return store.add("plan", entities, action=action)
 
 
 def load_all() -> list[Workflow]:
