@@ -69,6 +69,7 @@ from architect.contract import Move, PHASES, Question                 # noqa: E4
 from architect.interface import (SKIPPED, STOPPED, Interface,         # noqa: E402
                                  Stopped)
 from architect.web import kgview                                      # noqa: E402
+from architect.web import ring                                        # noqa: E402
 from architect.web import setup as setup_mod                          # noqa: E402
 from architect.workflows import loader as workflows                   # noqa: E402
 
@@ -511,6 +512,11 @@ class Session:
         self.focus: str = ""
         # And which run's crate it is showing. Empty means this session's.
         self.looking_at: str = ""
+        # Which single view is on show, and which phase or sentinel is open.
+        # One at a time: the page used to stack every panel down one scroll.
+        self.view: str = "cycle"
+        self.phase: str = ""
+        self.sentinel: str = ""
         # Which palette. Both carry the same key names, so nothing below
         # knows which is in force.
         self.theme: str = theme.DEFAULT_THEME
@@ -1227,6 +1233,173 @@ def render_question(session: Session) -> str:
 </section>"""
 
 
+def _live_crate(session: Session) -> dict:
+    """The crate this page is about: the session's, or a run from disk."""
+    if session.looking_at:
+        try:
+            return kgview.load(session.looking_at)
+        except FileNotFoundError:
+            pass
+    return session.arch.memory.snapshot() if session.arch else {"@graph": []}
+
+
+def render_sentinel_card(session: Session, handover: str) -> str:
+    """What one sentinel actually did, read out of the crate.
+
+    The crate is the record, not a service and not this process's memory, so
+    this works for a run that finished yesterday exactly as for one going on
+    now. It reports `held to` and `checks applied` because a verdict alone
+    cannot tell a reader "it was checked and passed" from "nothing ran" -
+    the distinction `sentinel-oo` is careful about and this was not.
+    """
+    crate = _live_crate(session)
+    graph = [e for e in crate.get("@graph", []) if isinstance(e, dict)]
+    index = {e.get("@id"): e for e in graph}
+    acts = [e for e in graph
+            if str(e.get("@id", "")).startswith(f"#check/{handover}-")
+            and e.get("@type") == "CreateAction"]
+
+    out = [f'<p class="intent">The sentinel at <code>{esc(handover)}</code>. '
+           f'One agent stands at every handover and loads the contract for '
+           f'that one; what varies is what it checks against, which is data.'
+           f'</p>']
+    if not acts:
+        out.append('<p class="hint">It has not run in this crate. That is '
+                   'not the same as having passed, which is why this says so '
+                   'rather than showing nothing.</p>')
+        return "".join(out)
+
+    for act in reversed(acts):           # most recent first
+        verdict = str(act.get("dbtl:verdict", ""))
+        ink = {"accepted": "ok", "accepted_with_flags": "flag",
+               "refused": "no"}.get(verdict, "hint")
+        mark = {"accepted": icon("accepted"),
+                "accepted_with_flags": icon("flagged"),
+                "refused": icon("refused")}.get(verdict, "")
+        held = act.get("dbtl:heldTo") or [act.get("dbtl:contract", "?")]
+        held = [held] if isinstance(held, str) else held
+        applied = act.get("dbtl:checksApplied")
+
+        out.append(f'<div class="verdict-card">'
+                   f'<p class="{ink}">{mark}<strong>{esc(verdict.upper())}'
+                   f'</strong> &middot; {esc(act.get("description", ""))}</p>')
+        out.append('<table class="shape"><tbody>')
+        out.append(f'<tr><td>held to</td><td>'
+                   + "<br>".join(f'<code>{esc(h)}</code>' for h in held)
+                   + '</td></tr>')
+        if applied is not None:
+            out.append(f'<tr><td>checks applied</td><td>{esc(applied)}'
+                       f'<span class="hint">a verdict after no checks is not '
+                       f'the same claim as one after {esc(applied)}</span>'
+                       f'</td></tr>')
+        out.append(f'<tr><td>profile</td><td>'
+                   f'<code>{esc(act.get("dbtl:profile", "?"))}</code></td></tr>')
+        out.append(f'<tr><td>when</td><td>{esc(act.get("startTime", "?"))} '
+                   f'&rarr; {esc(act.get("endTime", "?"))}</td></tr>')
+        out.append(f'<tr><td>recorded as</td><td>'
+                   f'<a href="/?focus={esc(act["@id"])}&view=graph#view">'
+                   f'<code>{esc(act["@id"])}</code></a>'
+                   f'<span class="hint">follow it into the graph</span>'
+                   f'</td></tr>')
+        out.append('</tbody></table>')
+
+        refs = act.get("object") or []
+        refs = [refs] if isinstance(refs, dict) else refs
+        if not refs:
+            out.append('<p class="ok">Nothing to report: every check it '
+                       'applied was satisfied.</p>')
+        else:
+            out.append(f'<p class="hint">{len(refs)} finding(s), in the '
+                       f'contract author\'s own words:</p>'
+                       '<table class="findings"><tbody>')
+            for ref in refs:
+                found = index.get(ref.get("@id") if isinstance(ref, dict)
+                                  else ref)
+                if found is None:
+                    continue
+                severity = str(found.get("dbtl:severity", ""))
+                row_ink = "no" if severity == "error" else "flag"
+                about = found.get("about")
+                where = (f'<a href="/?focus={esc(about["@id"])}&view=graph#view">'
+                         f'<code>{esc(found.get("dbtl:path", ""))}</code></a>'
+                         if isinstance(about, dict) else
+                         f'<code>{esc(found.get("dbtl:path", ""))}</code>')
+                out.append(
+                    f'<tr class="{row_ink}"><td>{esc(severity)}</td>'
+                    f'<td><strong>{esc(found.get("name", ""))}</strong>'
+                    f'<span class="said">{esc(found.get("value", ""))}</span>'
+                    + (f'<span class="hint">{esc(found.get("description"))}'
+                       f'</span>' if found.get("description") else '')
+                    + f'</td><td>{where}</td></tr>')
+            out.append('</tbody></table>')
+        out.append('</div>')
+    return "".join(out)
+
+
+def render_phase_card(session: Session, phase: str) -> str:
+    """One phase: what it did, what it handed over, and who checked it."""
+    if phase == "architect":
+        crate = _live_crate(session)
+        out = ['<p class="intent">The Architect holds what was agreed, holds '
+               'the one crate, and decides what follows every verdict. It '
+               'does not do the science and it does not check anything: the '
+               'phase agents do the first and the sentinel does the second.'
+               '</p>']
+        out.append(render_crate(session))
+        if session.arch is not None:
+            out.append(f'<p class="hint">{esc(session.arch.summary())}</p>')
+        out.append(f'<p class="hint">{len(crate.get("@graph", []))} entities '
+                   f'in the crate right now.</p>')
+        return "".join(out)
+
+    flow = session.workflow
+    steps = [s for s in (flow.steps if flow else []) if s.phase == phase]
+    handover = ring.HANDOVER_AFTER.get(phase, "")
+    did = [row for row in session.crate_growth if row["phase"] == phase]
+
+    out = [f'<p class="intent">{esc(phase.title())} &mdash; what the lab does '
+           f'here, what it hands over, and who checks it.</p>']
+
+    if did:
+        total = did[-1]["entities"]
+        added = sum(row["added"] for row in did)
+        out.append(f'<p>It has run {len(did)} time(s) and added '
+                   f'<strong>{added}</strong> entities; the crate stood at '
+                   f'{total} after the last one.</p>')
+        kinds = did[-1].get("by_kind") or []
+        if kinds:
+            out.append('<p class="hint">what it added: '
+                       + ", ".join(f"{n}&times; {esc(k)}" for k, n in kinds)
+                       + '</p>')
+    else:
+        out.append('<p class="hint">It has not run in this session.</p>')
+
+    if steps:
+        out.append(f'<table class="steps"><caption>its {len(steps)} step(s) '
+                   f'in the {esc(flow.name)} workflow</caption><tbody>')
+        for step in steps:
+            out.append(
+                f'<tr><td>{step.number}</td><td>{esc(step.name)}'
+                + (f'<span class="hint">{esc(step.note)}</span>'
+                   if step.note else '')
+                + (f'<span class="hint">routes: '
+                   f'{esc(" or ".join(step.routes))}</span>'
+                   if step.routes else '')
+                + f'</td><td>{esc(", ".join(step.manual_parts))}</td>'
+                + f'<td class="n">{step.count_observed or ""}</td></tr>')
+        out.append('</tbody></table>')
+
+    if handover:
+        out.append(f'<p class="actions">'
+                   f'<a href="/?sentinel={esc(handover)}#view">'
+                   f'{icon("sentinel")}what the sentinel at '
+                   f'<code>{esc(handover)}</code> did</a></p>')
+    out.append(f'<p class="actions"><a href="/?view=redo&phase={esc(phase)}'
+               f'#view">{icon("go_back")}send the run back to {esc(phase)}'
+               f'</a></p>')
+    return "".join(out)
+
+
 def render_restart(session: Session) -> str:
     """Start another run. Two buttons, because they are different decisions.
 
@@ -1772,28 +1945,147 @@ def render_workflow(session: Session) -> str:
     return "".join(out)
 
 
+VIEWS = (("cycle", "the cycle"), ("spec", "specification"),
+         ("workflow", "workflow"), ("crate", "the crate"),
+         ("graph", "knowledge graph"), ("redo", "send it back"))
+
+
+def render_overview(session: Session, items: list[dict]) -> str:
+    """The band that never goes away: the shape, the state, the next move.
+
+    Overview first, then detail. The whole system is a ring - four phases,
+    a sentinel at each boundary, one crate in the middle - and a reader needs
+    that shape in their head before any panel below means anything. It was
+    drawn on slides for days before it was ever on the screen.
+
+    Everything urgent lives here too, because a page where the question is
+    eight panels down is a page where the question is missed.
+    """
+    crate = _live_crate(session)
+    state = ring.read(crate, session.crate_growth)
+    focus = (f"sentinel:{session.sentinel}" if session.sentinel else
+             f"phase:{session.phase}" if session.phase else "")
+
+    status = ("a run is going" if session.running else
+              "the run has ended" if session.finished else "nothing running")
+    out = [f'<div class="overview">',
+           ring.draw(state, focus=focus),
+           '<div class="overview-side">']
+
+    out.append(f'<p class="status {"going" if session.running else ""}">'
+               f'{esc(status)}</p>')
+    if session.looking_at:
+        out.append(f'<p class="hint">looking at <code>'
+                   f'{esc(session.looking_at)}</code> on disk &middot; '
+                   f'<a href="/?run=">back to this session</a></p>')
+    if state["plan"]:
+        out.append(f'<p class="hint">{icon("phase_agent")}'
+                   f'{esc(state["plan"])}</p>')
+
+    out.append('<form method="post" action="/run">'
+               f'<button type="submit"'
+               f'{" disabled" if session.running or items else ""}>'
+               f'Run the four phases</button>'
+               f'<span class="hint">'
+               + ('a run is already going' if session.running else
+                  f'<a href="/?view=spec#view">{len(items)} answer(s) still '
+                  f'missing</a>' if items else
+                  'Design, Build, Test, Learn, each followed by its sentinel')
+               + '</span></form>')
+    out.append('<p class="hint">Click a phase or a sentinel on the ring to '
+               'see what it did.</p>')
+    out.append('</div></div>')
+    return "".join(out)
+
+
+def _view_title(session: Session) -> tuple[str, str]:
+    """The heading of the one card on show, and its icon."""
+    if session.sentinel:
+        return f"the sentinel at {session.sentinel}", "sentinel"
+    if session.phase:
+        return (("the Architect" if session.phase == "architect"
+                 else f"the {session.phase} phase"),
+                "architect" if session.phase == "architect" else "phase_agent")
+    return dict(VIEWS).get(session.view, "the cycle"), {
+        "cycle": "phase_agent", "spec": "researcher", "workflow": "phase_agent",
+        "crate": "crate", "graph": "graph", "redo": "go_back",
+    }.get(session.view, "phase_agent")
+
+
+def render_view(session: Session, items: list[dict]) -> str:
+    """One view at a time. Each is a real URL, so it can be sent to somebody."""
+    if session.sentinel:
+        return render_sentinel_card(session, session.sentinel)
+    if session.phase:
+        return render_phase_card(session, session.phase)
+
+    if session.view == "spec":
+        return (f'<p class="intent">{esc(FORM.description)}</p>'
+                f'<p class="hint">Every field says why it is asked, because '
+                f'that is the whole difference between a form and an open '
+                f'prompt. Nothing is prefilled and no option is '
+                f'preselected.</p>'
+                f'<form method="post" action="/example" class="example-form">'
+                f'<button type="submit">Load the worked example</button>'
+                f'<span class="hint">the answers from Anil Wipat\'s cycle, '
+                f'which are what each field\'s own placeholder says.</span>'
+                f'</form>{render_missing(items)}{render_form(session)}')
+    if session.view == "workflow":
+        return (f'<p class="intent">A contract says what must travel between '
+                f'two phases. A workflow says what the lab does in each phase '
+                f'and which step the handover follows. Both are needed: a '
+                f'contract with no workflow is a rule with nothing to apply '
+                f'to.</p>{render_workflow(session)}')
+    if session.view == "crate":
+        return (f'{render_crate(session)}'
+                f'<p class="actions">'
+                f'<a href="/crate.json" download>{icon("crate")}download the '
+                f'RO-Crate (JSON)</a>'
+                f'<a href="/ledger.jsonl" download>{icon("ledger")}download '
+                f'the ledger (JSONL)</a></p>'
+                f'<p class="hint">The ledger carries the reason for every '
+                f'decision verbatim, as <code>route.py</code> wrote it.</p>')
+    if session.view == "graph":
+        return render_kg(session)
+    if session.view == "redo":
+        return render_redo(session)
+
+    # the cycle: the log, and the controls around it
+    return (f'<p class="hint">With JavaScript the log updates itself. '
+            f'Without it, reload to see where the run has got to: '
+            f'<a href="/">reload</a>.</p>'
+            f'{render_restart(session)}'
+            f'<div id="log">{render_log(session)}</div>')
+
+
 def render_page(session: Session) -> str:
     items = missing_report(session.filled)
     palette = "".join(f"  --{key}: {value};\n"
                       for key, value in theme.palette(session.theme).items())
-    status = ("a run is going" if session.running else
-              "the run has ended" if session.finished else "nothing running")
-    if session.setup.answered:
-        rest = _rest_of_page(session, items)
-    elif session.looking_at:
-        # Arrived by a `?run=` link, which is a VIEW. The setup question gates
-        # running a cycle, not looking at one that already happened, and a
-        # link somebody was sent should open on the thing it points at.
-        rest = (f'<section class="panel" id="kg-panel">'
-                f'<h2>{icon("graph")}The knowledge graph</h2>'
-                f'{render_kg(session)}</section>'
-                f'<p class="hint">You are looking at a run on disk. Answer '
-                f'the question above to fill in a specification and start '
-                f'one of your own.</p>')
+    title, title_icon = _view_title(session)
+
+    if not session.setup.answered and not session.looking_at:
+        body = (f'<section class="card" id="view">'
+                f'<h2>{icon("architect")}Before anything runs</h2>'
+                f'{render_setup(session)}</section>')
+        nav = ""
     else:
-        rest = ('<p class="hint">The specification form, the cycle and the '
-                'crate appear once this is answered. Pick the first option '
-                'and nothing leaves this machine.</p>')
+        here = (session.sentinel or session.phase or session.view)
+        nav = '<nav class="views">' + "".join(
+            f'<a href="/?view={name}#view"'
+            f'{" class=\"here\"" if here == name else ""}>{esc(label)}</a>'
+            for name, label in VIEWS) + '</nav>'
+        body = (
+            f'{render_question(session)}'
+            f'{render_overview(session, items)}'
+            f'{nav}'
+            f'<section class="card" id="view">'
+            f'<h2>{icon(title_icon)}{esc(title)}</h2>'
+            f'{render_view(session, items)}</section>'
+            f'<details class="setup-again"><summary>{icon("architect")}'
+            f'what will do the thinking</summary>{render_setup(session)}'
+            f'</details>')
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -1812,110 +2104,21 @@ def render_page(session: Session) -> str:
 <header>
   <h1>{icon("architect")}{esc(theme.PROJECT)}</h1>
   <p class="tagline">{esc(theme.TAGLINE)}</p>
-  <p class="hint">The Architect holds what was agreed and decides what follows
-    every verdict. Four phase agents do the work - Design, Build, Test, Learn -
-    and any of them may be a person. Four sentinels check each handover and may
-    refuse it. One RO-Crate grows.</p>
-  <p class="hint">{_theme_switch(session)}</p>
-  <p class="hint">session <code>{esc(session.id)}</code> &middot; run
-    <code>{esc(session.run_id)}</code> &middot; {esc(status)} &middot; form
-    from <code>{esc(FORM_SOURCE)}</code></p>
+  <p class="hint">{_theme_switch(session)} &middot; run
+    <code>{esc(session.run_id)}</code> &middot; form from
+    <code>{esc(FORM_SOURCE)}</code></p>
 </header>
 <main>
-<section class="panel" id="setup-panel">
-  <h2>{icon("architect")}{'Before anything runs' if not session.setup.answered
-                          else 'What will do the thinking'}</h2>
-  {render_setup(session)}
-</section>
-{rest}
+{body}
 </main>
 <footer>
-  <p class="hint">State lives on the server, one Architect per session. If this
-    process restarts, the form and the log are gone; the crate and the ledger
-    are on disk under <code>runs/{esc(session.run_id)}/</code>.</p>
+  <p class="hint">State lives on the server, one Architect per session. The
+    crate and the ledger are on disk under
+    <code>runs/{esc(session.run_id)}/</code>.</p>
 </footer>
 <script src="/static/app.js" defer></script>
 </body>
 </html>
-"""
-
-
-def _rest_of_page(session: Session, items: list[dict]) -> str:
-    """Everything after the setup questions: the form, the run, the crate.
-
-    Held back until the setup is answered, because the first screen has to be
-    one decision. A page that opens with a 20-field specification form AND a
-    model chooser invites someone to fill in the form and discover the engine
-    question afterwards, which is the order this was built to avoid.
-    """
-    return f"""
-{render_question(session)}
-<section class="panel" id="workflow-panel">
-  <h2>{icon("phase_agent")}The workflow this run is a turn of</h2>
-  <p class="intent">A contract says what must travel between two phases. A
-    workflow says what the lab does in each phase and which step the handover
-    follows. Both are needed: a contract with no workflow is a rule with
-    nothing to apply to.</p>
-  {render_workflow(session)}
-</section>
-
-<section class="panel" id="missing-panel">
-  <h2>What is still missing</h2>
-  {render_missing(items)}
-</section>
-
-<section class="panel" id="form-panel">
-  <h2>{esc(FORM.title)}</h2>
-  <p class="intent">{esc(FORM.description)}</p>
-  <p class="hint">Every field says why it is asked, because that is the whole
-    difference between a form and an open prompt. Nothing is prefilled and no
-    option is preselected.</p>
-  <form method="post" action="/example" class="example-form">
-    <button type="submit">Load the worked example</button>
-    <span class="hint">the answers from Anil Wipat's cycle, which are what
-      each field's own placeholder says. Then press Save, and Run.</span>
-  </form>
-  {render_form(session)}
-</section>
-
-<section class="panel" id="run-panel">
-  <h2>{icon("phase_agent")}The cycle</h2>
-  <form method="post" action="/run">
-    <button type="submit"{' disabled' if session.running else ''}>Run the four
-      phases</button>
-    <span class="hint">{'a run is already going' if session.running else
-      ('needs ' + str(len(items)) + ' more answer(s)') if items else
-      'Design, Build, Test, Learn, each followed by its sentinel'}</span>
-  </form>
-  <p class="hint">With JavaScript the log below updates itself. Without it,
-    reload the page to see where the run has got to:
-    <a href="/">reload</a>.</p>
-  {render_restart(session)}
-  <div id="log">{render_log(session)}</div>
-</section>
-
-<section class="panel" id="crate-panel">
-  <h2>{icon("crate")}The crate</h2>
-  <div id="crate">{render_crate(session)}</div>
-  <p class="actions">
-    <a href="/crate.json" download>{icon("crate")}download the RO-Crate
-      (JSON)</a>
-    <a href="/ledger.jsonl" download>{icon("ledger")}download the ledger
-      (JSONL)</a>
-  </p>
-  <p class="hint">The ledger carries the reason for every decision verbatim,
-    as <code>route.py</code> wrote it.</p>
-</section>
-
-<section class="panel" id="redo-panel">
-  <h2>{icon("go_back")}Send it back</h2>
-  {render_redo(session)}
-</section>
-
-<section class="panel" id="kg-panel">
-  <h2>{icon("graph")}The knowledge graph</h2>
-  {render_kg(session)}
-</section>
 """
 
 
@@ -2087,6 +2290,23 @@ class Handler(BaseHTTPRequestHandler):
             asked = query.get("focus")
             if asked is not None:
                 session.focus = asked[0].strip()[:200]
+                session.view = "graph"
+
+            # A view, a phase or a sentinel. Naming one clears the others,
+            # because "one view at a time" has to be true of the state and
+            # not only of the rendering.
+            chosen_view = query.get("view")
+            if chosen_view is not None:
+                session.view = chosen_view[0].strip()[:20] or "cycle"
+                session.phase = session.sentinel = ""
+            phase = query.get("phase")
+            if phase is not None:
+                session.phase = phase[0].strip()[:20]
+                session.sentinel = ""
+            seen = query.get("sentinel")
+            if seen is not None:
+                session.sentinel = seen[0].strip()[:40]
+                session.phase = ""
             self._send(render_page(session).encode(), new_session=cookie)
         elif path.startswith("/static/"):
             self._static(path)

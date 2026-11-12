@@ -111,6 +111,21 @@ def _stored(arch, phase: str) -> str:
 # --------------------------------------------------------------------------- #
 #  The four sentinels, as checkers
 # --------------------------------------------------------------------------- #
+def _could_not_flush(exc: Exception):
+    """A crate that could not be written is a finding, not a crash.
+
+    The verdict itself is sound - it was reached before this - so losing the
+    run over a disk error would throw away the answer along with the record.
+    It is reported at the same severity as anything else that means a handover
+    cannot be shown to have been checked.
+    """
+    from framework.validator import Error                       # noqa: PLC0415
+    return Error("crate", "crate_not_written",
+                 f"the sentinel's act could not be written to disk: {exc}",
+                 "the verdict above still stands; the record of it does not.",
+                 "flag")
+
+
 def sentinel_checker(profile: str = "bioprospecting"):
     """A `Checker` that runs the real sentinel and reports what it found.
 
@@ -130,6 +145,17 @@ def sentinel_checker(profile: str = "bioprospecting"):
 
     def check(handover: str, package: dict, arch) -> Checked:
         seen = sentinel.check_and_record(handover, package)
+        # The sentinel wrote its act into the crate in memory. Nothing else
+        # will write that crate out unless another phase adds to it, so the
+        # last handover of a run would be checked and leave no record on
+        # disk - a finished run looked as though nobody had checked its final
+        # handover. Flushing here costs one file write per handover.
+        store = getattr(getattr(arch, "memory", None), "store", None)
+        if store is not None:
+            try:
+                store.flush()
+            except Exception as exc:                  # noqa: BLE001
+                seen.report.errors.append(_could_not_flush(exc))
         findings = [Finding(code=e.code, path=e.path, message=e.message,
                             blocking=(e.severity == "error"),
                             fix_hint=e.fix_hint or "")

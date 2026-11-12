@@ -420,3 +420,94 @@ form.restart {
 form.restart button { margin: 0 0.5rem 0.4rem 0; }
 form.restart .hint { display: block; margin: 0 0 0.7rem; }
 form.restart button[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* ---- overview first, then one view at a time ---------------------------- */
+/* The band at the top never changes: the shape of the system, what state it
+   is in, and the next move. Everything else is one card below it, because a
+   page of stacked panels is a page where nothing is beside anything. */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(220px, 1fr);
+  gap: 1.2rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--fg_dim);
+  background: var(--bg_panel);
+}
+
+@media (max-width: 42rem) {
+  .overview { grid-template-columns: 1fr; }
+}
+
+svg.ring { display: block; width: 100%; height: auto; }
+svg.ring a { cursor: pointer; }
+svg.ring a circle { transition: stroke-width 0.12s ease; }
+svg.ring a:hover circle { stroke-width: 3.4; }
+svg.ring a:hover text { fill: var(--fg_bright); }
+
+.overview-side p { margin: 0 0 0.5rem; }
+.status { color: var(--fg_dim); }
+.status.going { color: var(--fg); }
+
+nav.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-bottom: -1px;
+}
+
+nav.views a {
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--grid);
+  border-bottom: 0;
+  color: var(--fg_dim);
+  text-decoration: none;
+}
+
+nav.views a:hover { color: var(--fg); }
+
+nav.views a.here {
+  color: var(--fg_bright);
+  border-color: var(--fg_dim);
+  background: var(--bg_panel);
+}
+
+/* A card, not a panel: one at a time, and it owns the screen below the band. */
+.card {
+  padding: 1.1rem 1.3rem 1.4rem;
+  border: 1px solid var(--fg_dim);
+  background: var(--bg_panel);
+}
+
+.card > h2:first-child { margin-top: 0; }
+
+/* The log gets a bounded, scrollable box so a long run does not push the
+   rest of the card off the screen. */
+#log { max-height: 26rem; overflow-y: auto; overflow-anchor: none; }
+
+details.setup-again {
+  margin-top: 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px dotted var(--grid);
+}
+
+details.setup-again summary { cursor: pointer; color: var(--fg_dim); }
+
+/* ---- a verdict, and what was found -------------------------------------- */
+.verdict-card {
+  margin: 0.9rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--grid);
+}
+
+table.findings { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+table.findings td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px dotted var(--grid);
+  vertical-align: top;
+}
+table.findings td:first-child { width: 4.5rem; color: var(--fg_dim); }
+table.findings tr.no td:first-child { color: var(--refuse); }
+table.findings tr.flag td:first-child { color: var(--flag); }
+table.findings .said { display: block; margin-top: 0.2rem; }

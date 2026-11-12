@@ -231,6 +231,22 @@ class CrateStore:
         return report
 
     # ---- persistence -------------------------------------------------------
+    def flush(self) -> None:
+        """Write the crate and its graph out as they stand.
+
+        `add()` writes as part of committing, which covers everything a phase
+        contributes. It does NOT cover something written into the crate by
+        hand afterwards - and the sentinel does exactly that, recording its
+        own act into the crate it was handed.
+
+        The result was that every sentinel act reached disk except the last
+        one: each was flushed by the NEXT phase's `add()`, and after the final
+        handover there is no next phase. A finished run looked, on disk, as
+        though its last handover had never been checked.
+        """
+        self._write()
+        self._append_graph()
+
     def _write(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(self.crate, indent=1) + "\n")

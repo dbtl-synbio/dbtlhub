@@ -78,9 +78,14 @@ class Checked:
     verdict: str
     report: Report
     at: str = field(default_factory=now)
+    started: str = field(default_factory=now)
     # Every agreement this handover was held to, ours first. More than one
     # means two sentinels' contracts were applied to the same package.
     held_to: tuple = ()
+    # How many individual checks actually ran. A verdict of "accepted" after
+    # nought checks is not the same claim as one after thirty-three, and a
+    # reader cannot tell them apart from the verdict alone.
+    checks_applied: int = 0
 
     @property
     def blocking(self):
@@ -157,8 +162,10 @@ class Sentinel:
 
     # ---- the check ---------------------------------------------------------
     def check(self, handover: str, package: dict) -> Checked:
+        started = now()
         contract = self.contract(handover)
         report = validate(package, contract)
+        applied = len(contract.get("x-dbtl-checks", []))
 
         other = self.foreign(handover)
         if other is not None:
@@ -166,6 +173,7 @@ class Sentinel:
             crate = package.get("crate")
             if isinstance(crate, dict):
                 base = package.get("crate_ref", {}).get("folder")
+                applied += len(other.requirements) + len(other.expects)
                 for error in oo_contract.check(
                         other, crate, base=Path(base) if base else None):
                     # Stamped with whose agreement it came from. Two contracts
@@ -187,7 +195,8 @@ class Sentinel:
             held_to.append(other.id)
         return Checked(handover=handover, contract_id=contract.get("$id", "?"),
                        profile=self.profile, verdict=verdict, report=report,
-                       held_to=tuple(held_to))
+                       started=started, held_to=tuple(held_to),
+                       checks_applied=applied)
 
     # ---- handing the crate on, richer --------------------------------------
     def record(self, crate: dict, checked: Checked) -> dict:
@@ -200,22 +209,40 @@ class Sentinel:
         graph = crate.setdefault("@graph", [])
         index = {e.get("@id"): e for e in graph if isinstance(e, dict)}
 
+        # Count only the ACTS, not the findings. Both start with `#check/`,
+        # so counting every id made the serial jump - a run's first check
+        # could be `-1` and its second `-8`, which reads like six checks
+        # nobody can find.
         serial = sum(1 for e in graph
                      if isinstance(e, dict)
-                     and str(e.get("@id", "")).startswith("#check/"))
+                     and str(e.get("@id", "")).startswith("#check/")
+                     and e.get("@type") == "CreateAction")
         ref = f"#check/{checked.handover}-{serial + 1}"
 
         findings = []
         for i, error in enumerate(checked.report.errors, start=1):
             pv = f"{ref}/finding-{i}"
             findings.append({"@id": pv})
-            graph.append({
+            finding = {
                 "@id": pv, "@type": "PropertyValue",
                 "name": error.code, "value": error.message,
                 "dbtl:path": error.path,
                 "dbtl:severity": error.severity,
                 "description": error.fix_hint or "",
-            })
+            }
+            # If the path names something that is actually in this crate, say
+            # so as a reference rather than only as a string. A string cannot
+            # be followed; `about` can, and a reader chasing a finding wants
+            # the entity it is about. Written only when it resolves - a
+            # dangling `about` would be a worse lie than none.
+            # `crate.@graph[#sample/SAMP-001].dbtl:storageContainer` holds
+            # the id between the LAST `[` and the `]` that follows it - not
+            # at the end of the string, which is where the first version
+            # looked, so nothing ever matched and no finding was followable.
+            target = error.path.rsplit("[", 1)[-1].split("]", 1)[0]
+            if target in index:
+                finding["about"] = {"@id": target}
+            graph.append(finding)
 
         action = {
             "@id": ref,
@@ -227,9 +254,18 @@ class Sentinel:
             "actionStatus": ("http://schema.org/CompletedActionStatus"
                              if checked.verdict != REFUSED else
                              "http://schema.org/FailedActionStatus"),
+            "startTime": checked.started,
             "dbtl:verdict": checked.verdict,
             "dbtl:contract": checked.contract_id,
             "dbtl:profile": checked.profile,
+            # EVERY agreement this handover was held to, not only ours.
+            # Without it a contract that found nothing leaves no trace, so a
+            # reader cannot tell "it was applied and passed" from "it never
+            # ran" - and those are not the same claim at all. It is the one
+            # thing `sentinel-oo`'s own design is careful about and ours was
+            # not: it distinguishes NOT CHECKED from ACCEPTED.
+            "dbtl:heldTo": list(checked.held_to) or [checked.contract_id],
+            "dbtl:checksApplied": checked.checks_applied,
             "object": findings,
         }
         graph.append(action)

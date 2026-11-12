@@ -362,6 +362,87 @@ class TestASentinelIsAFile(unittest.TestCase):
         self.assertIn("malformed_check", [e.code for e in report.errors])
 
 
+class TestTheRing(unittest.TestCase):
+    """The overview the whole interface is now built around.
+
+    It reads the crate rather than the session, so the same drawing works for
+    a run that finished yesterday. If that stops being true, looking at an
+    old run shows an empty cycle and says nothing about it.
+    """
+
+    def crate(self):
+        from framework.agents.sentinel import Sentinel, Checked   # noqa: PLC0415
+        from framework.validator import Error, Report             # noqa: PLC0415
+        crate = {"@graph": [
+            {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+             "about": {"@id": "./"}},
+            {"@id": "./", "@type": "Dataset"},
+            {"@id": "#sample/SAMP-001", "@type": "bioschemas:BioSample"}]}
+        Sentinel().record(crate, Checked(
+            handover="design_to_build", contract_id="dbtl:design_to_build/0.1.0",
+            profile="bioprospecting", verdict="refused",
+            report=Report([Error("crate.@graph[#sample/SAMP-001].x",
+                                 "missing_provenance", "m", "f", "error")]),
+            held_to=("dbtl:design_to_build/0.1.0",
+                     "sentinel-oo:design_to_build/0.11.0"),
+            checks_applied=33))
+        Sentinel().record(crate, Checked(
+            handover="build_to_test", contract_id="dbtl:build_to_test/0.2.0",
+            profile="bioprospecting", verdict="accepted", report=Report([]),
+            checks_applied=5))
+        return crate
+
+    def test_it_reads_the_verdicts_off_the_crate(self):
+        from architect.web import ring                            # noqa: PLC0415
+        state = ring.read(self.crate())
+        self.assertEqual(state["checks"]["design_to_build"]["verdict"],
+                         "refused")
+        self.assertEqual(state["checks"]["build_to_test"]["verdict"],
+                         "accepted")
+        self.assertNotIn("test_to_learn", state["checks"],
+                         "a handover that never ran must not look checked")
+
+    def test_every_phase_and_sentinel_is_a_link(self):
+        from architect.web import ring                            # noqa: PLC0415
+        svg = ring.draw(ring.read(self.crate()))
+        for phase in ring.PHASES:
+            self.assertIn(f'href="/?phase={phase}', svg)
+        for handover in ring.SENTINEL_AT:
+            self.assertIn(f'href="/?sentinel={handover}', svg)
+        self.assertIn('href="/?phase=architect', svg)
+
+    def test_the_record_says_what_it_was_held_to(self):
+        """A contract that finds nothing must still leave a trace.
+
+        Otherwise a reader cannot tell "it was applied and passed" from "it
+        never ran", and those are not the same claim.
+        """
+        crate = self.crate()
+        # The findings share the `#check/<handover>-N/` prefix and are written
+        # first, so the type is what tells the act from them.
+        act = next(e for e in crate["@graph"]
+                   if e.get("@id", "").startswith("#check/design_to_build")
+                   and e.get("@type") == "CreateAction")
+        self.assertEqual(act["dbtl:heldTo"],
+                         ["dbtl:design_to_build/0.1.0",
+                          "sentinel-oo:design_to_build/0.11.0"])
+        self.assertEqual(act["dbtl:checksApplied"], 33)
+        self.assertIn("startTime", act)
+
+    def test_a_finding_points_at_the_entity_it_concerns(self):
+        crate = self.crate()
+        found = next(e for e in crate["@graph"]
+                     if e.get("@type") == "PropertyValue")
+        self.assertEqual(found["about"], {"@id": "#sample/SAMP-001"})
+
+    def test_the_serial_counts_acts_and_not_findings(self):
+        crate = self.crate()
+        acts = sorted(e["@id"] for e in crate["@graph"]
+                      if e.get("@type") == "CreateAction")
+        self.assertEqual(acts, ["#check/build_to_test-2",
+                                "#check/design_to_build-1"])
+
+
 class TestStartingOver(unittest.TestCase):
     """Starting another run must not land in the last one's crate.
 
