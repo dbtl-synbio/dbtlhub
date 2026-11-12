@@ -136,6 +136,13 @@ class BuildPhaseAgent(PhaseAgent):
                            "contract": "design_to_build",
                            "run_id": store.run_id,
                            "items": self._panel},
+            # The crate travels with the package, as it does from Design and
+            # Test. Without it the sentinel still reaches a verdict and has
+            # nowhere to write it down, so this handover passed leaving no
+            # trace in the crate that anyone had checked it - which is the one
+            # thing the sentinel exists to make impossible.
+            "crate": store.crate,
+            "crate_ref_missing_files": [],
             "target_list": task.inputs.get("target_list", []),
             "samples": samples,
             "not_delivered": task.inputs.get("not_delivered", []),

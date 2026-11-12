@@ -130,6 +130,12 @@ class LearnPhaseAgent(PhaseAgent):
             "contract_version": "0.1.0",
             "profile": self.profile,
             "run_id": store.run_id,
+            # The crate travels with the package, as it does from Design and
+            # Test. Without it the sentinel reaches a verdict and has nowhere
+            # to write it down, and the round closes leaving no trace in the
+            # crate that anyone checked it.
+            "crate": store.crate,
+            "crate_ref_missing_files": [],
             "produced_by": {"agent": self.name, "tool": "scikit-learn 1.5.2",
                             # the agent's own engine, not the scientific model
                             "engine": self.engine.name},
