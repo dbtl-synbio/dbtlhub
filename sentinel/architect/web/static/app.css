@@ -513,3 +513,7 @@ table.findings td:first-child { width: 4.5rem; color: var(--fg_dim); }
 table.findings tr.no td:first-child { color: var(--refuse); }
 table.findings tr.flag td:first-child { color: var(--flag); }
 table.findings .said { display: block; margin-top: 0.2rem; }
+
+/* ---- choosing the use case ---------------------------------------------- */
+form.usecase { margin-bottom: 0.5rem; }
+hr.between { border: 0; border-top: 1px dotted var(--grid); margin: 1.4rem 0; }

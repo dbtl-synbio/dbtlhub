@@ -175,7 +175,7 @@ def _pick_form(result: Any) -> Any | None:
     return None
 
 
-def _from_loader() -> tuple[Any | None, str]:
+def _from_loader(prefer: str = "") -> tuple[Any | None, str]:
     """Try the structured forms someone else is writing. Never required.
 
     Everything here is wrapped: a loader half-written, a YAML half-valid, or a
@@ -193,8 +193,13 @@ def _from_loader() -> tuple[Any | None, str]:
         return None, f"architect/forms/loader.py did not import: {exc!r}"
 
     yamls = sorted(LOADER_PATH.parent.glob("*.y*ml"))
-    instances = [p for p in yamls if "template" not in p.name]
-    candidates = instances + [p for p in yamls if p not in instances]
+    if prefer:
+        wanted = [p for p in yamls if p.stem == prefer]
+        others = [p for p in yamls if p not in wanted]
+        candidates = wanted + others
+    else:
+        instances = [p for p in yamls if "template" not in p.name]
+        candidates = instances + [p for p in yamls if p not in instances]
     tried: list[str] = []
     for name in LOADER_CALLABLES:
         function = getattr(module, name, None)
@@ -389,14 +394,44 @@ def _fallback_form() -> Any:
         sections=[run, decisions, bench, crate, rehearsal])
 
 
-def load_form() -> tuple[Any, str]:
-    form, why = _from_loader()
+def load_form(prefer: str = "") -> tuple[Any, str]:
+    """The form to fill in, optionally the one belonging to a named use case.
+
+    `prefer` names a file stem under `architect/forms/`. A use case that has
+    no form of its own gets `template.yaml`, the generic one - which is the
+    honest answer rather than showing it somebody else's questions.
+    """
+    form, why = _from_loader(prefer)
     if form is not None:
         return form, why
     return _fallback_form(), f"fallback form ({why})"
 
 
 FORM, FORM_SOURCE = load_form()
+
+# What the interface can offer as a use case, and what each one actually has.
+# Said as data so the screen can be honest about the gaps rather than listing
+# three names as though they were equally supported.
+USE_CASES = {
+    "bioprospecting": {
+        "label": "Bioprospecting",
+        "form": "bioprospecting",
+        "profile": "bioprospecting",
+        "workflow": "bioprospecting",
+    },
+    "biomanufacturing": {
+        "label": "Biomanufacturing",
+        "form": "template",
+        "profile": "biomanufacturing",
+        "workflow": "biomanufacturing",
+    },
+    "directed_evolution": {
+        "label": "Directed evolution",
+        "form": "template",
+        "profile": "",            # there is none, and the screen says so
+        "workflow": "directed_evolution",
+    },
+}
 
 # Keys this layer consumes itself and therefore does not hand to the
 # consultation. Handing them over would get them reported back as keys the
@@ -499,10 +534,17 @@ class Session:
         # Which cycle this run is a turn of. One is loaded by default rather
         # than left empty, because an empty workflow teaches nobody what a
         # workflow is, and this one is a record of real work.
+        # Which use case this run belongs to, and the form that goes with it.
+        # Per session, not per process: the interface used to load one form at
+        # startup - the bioprospecting instance, whose `profile` choice is
+        # narrowed to itself - so every run was forced to be bioprospecting
+        # whatever the researcher actually had in front of them.
+        self.use_case = "bioprospecting"
+        self.form, self.form_source = FORM, FORM_SOURCE
         self.workflow = _default_workflow()
         self.workflow_problems: list[str] = []
         self.workflow_source = "the demonstration workflows on disk"
-        self.filled = Filled(form=FORM)
+        self.filled = Filled(form=self.form)
         self.log: list[dict] = []
         self.crate_growth: list[dict] = []
         # The crate as it stood after the last phase, kept so the next one can
@@ -585,7 +627,7 @@ class Session:
             said.append("the form's run id now says so too")
 
         if not keep_specification:
-            self.filled = Filled(form=FORM)
+            self.filled = Filled(form=self.form)
             self.workflow = _default_workflow()
             self.workflow_problems = []
             self.workflow_source = "the demonstration workflows on disk"
@@ -669,7 +711,7 @@ def session_for(session_id: str | None) -> tuple["Session", bool]:
 # --------------------------------------------------------------------------- #
 #  3. Reading the form back out of a POST
 # --------------------------------------------------------------------------- #
-def values_from_post(posted: dict[str, list[str]]) -> dict[str, Any]:
+def values_from_post(posted: dict[str, list[str]], form=None) -> dict[str, Any]:
     """One value per field, in the type its `Kind` says it is.
 
     Anything the form does not define is dropped. A blank is stored as the
@@ -677,7 +719,7 @@ def values_from_post(posted: dict[str, list[str]]) -> dict[str, Any]:
     `Filled.missing()` able to tell "not answered" from "answered with a 0".
     """
     values: dict[str, Any] = {}
-    for field in FORM.all_fields():
+    for field in (form or FORM).all_fields():
         raw = posted.get(field.key, [])
         if field.kind.value == "multi":
             values[field.key] = [v for v in raw if v]
@@ -930,7 +972,7 @@ def _cycle(session: Session, from_phase: str | None = None,
     temperature, temperature_key = wanted(values, "temperature")
     number = as_number(temperature)
     if number is not None:
-        field = FORM.field(temperature_key)
+        field = session.form.field(temperature_key)
         inputs["limits"] = [{
             "quantity": temperature_key, "value": number,
             # The unit is the form's, not the researcher's. That is the whole
@@ -1081,7 +1123,11 @@ def missing_report(filled: Any) -> list[dict]:
     """Every required field with no answer, and what each one would stop."""
     return [{"key": f.key, "label": f.label, "phase": f.phase or "",
              "stops": f.why_it_is_asked,
-             "section": next((s.title for s in FORM.sections
+             # `filled` carries its own form. Reaching for a session here
+             # was wrong twice over: there is none in scope, and a report
+             # about one filled form must not be able to read another's
+             # sections.
+             "section": next((s.title for s in filled.form.sections
                               if f in s.fields), "")}
             for f in filled.missing()]
 
@@ -1166,7 +1212,7 @@ def render_control(field: Any, value: Any) -> str:
 
 def render_form(session: Session) -> str:
     out = ['<form method="post" action="/save" id="spec-form">']
-    for section in FORM.sections:
+    for section in session.form.sections:
         out.append(f'<fieldset><legend>{esc(section.title)}</legend>'
                    f'<p class="intent">{esc(section.intent)}</p>')
         for field in section.fields:
@@ -1411,6 +1457,41 @@ def render_phase_card(session: Session, phase: str) -> str:
     out.append(f'<p class="actions"><a href="/?view=redo&phase={esc(phase)}'
                f'#view">{icon("go_back")}send the run back to {esc(phase)}'
                f'</a></p>')
+    return "".join(out)
+
+
+def render_use_case(session: Session) -> str:
+    """Which use case this run belongs to, and what each one actually has.
+
+    Said as a table rather than three names in a row, because the three are
+    not equally supported and a chooser that hid that would be inviting
+    somebody to pick the one with no profile and find out later.
+    """
+    out = ['<form method="post" action="/usecase" class="usecase">',
+           '<p class="intent">A use case decides three things at once: the '
+           'questions you are asked, the profile the sentinel binds its '
+           'contracts to, and the workflow the run is a turn of.</p>']
+    for name, what in USE_CASES.items():
+        chosen = ' checked' if name == session.use_case else ''
+        has_form = what["form"] == name
+        has_profile = bool(what["profile"])
+        notes = []
+        notes.append("its own questions" if has_form else
+                     "the generic questions, because it has no form of its own")
+        notes.append(f"profile <code>{esc(what['profile'])}</code>"
+                     if has_profile else
+                     '<span class="no">no profile of its own</span> &mdash; '
+                     'the sentinel falls back to bioprospecting, and says so')
+        notes.append(f"workflow <code>{esc(what['workflow'])}</code>")
+        out.append(
+            f'<label class="choice"><input type="radio" name="use_case" '
+            f'value="{esc(name)}"{chosen}> <strong>{esc(what["label"])}'
+            f'</strong><span class="hint">' + " &middot; ".join(notes)
+            + '</span></label>')
+    out.append('<p class="actions"><button type="submit">Use this</button>'
+               '<span class="hint">it swaps the form and the workflow. '
+               'Answers you have already given are kept where the new form '
+               'asks the same question.</span></p></form>')
     return "".join(out)
 
 
@@ -2039,7 +2120,9 @@ def render_view(session: Session, items: list[dict]) -> str:
         return render_phase_card(session, session.phase)
 
     if session.view == "spec":
-        return (f'<p class="intent">{esc(FORM.description)}</p>'
+        return (render_use_case(session)
+                + f'<hr class="between">'
+                + f'<p class="intent">{esc(session.form.description)}</p>'
                 f'<p class="hint">Every field says why it is asked, because '
                 f'that is the whole difference between a form and an open '
                 f'prompt. Nothing is prefilled and no option is '
@@ -2125,7 +2208,7 @@ def render_page(session: Session) -> str:
   <p class="tagline">{esc(theme.TAGLINE)}</p>
   <p class="hint">{_theme_switch(session)} &middot; run
     <code>{esc(session.run_id)}</code> &middot; form from
-    <code>{esc(FORM_SOURCE)}</code></p>
+    <code>{esc(session.form_source)}</code></p>
 </header>
 <main>
 {body}
@@ -2437,6 +2520,57 @@ class Handler(BaseHTTPRequestHandler):
             for line in session.setup.notes[-3:]:
                 session.note(line, kind="note")
             self._redirect("/#setup-panel", new_session=cookie)
+        elif path == "/usecase":
+            wanted = (posted.get("use_case") or [""])[0].strip()
+            if wanted not in USE_CASES:
+                session.note(f"{wanted!r} is not one of "
+                             f"{list(USE_CASES)}", kind="refused",
+                             state="refused")
+            else:
+                what = USE_CASES[wanted]
+                session.use_case = wanted
+                kept = dict(session.filled.values)
+                session.form, session.form_source = load_form(what["form"])
+                # Answers are kept where the new form asks the same question.
+                # Dropping them all would punish somebody for changing their
+                # mind, and carrying over a key the new form does not have
+                # would put an answer where no question was asked.
+                session.filled = Filled(form=session.form)
+                session.filled.values = {
+                    k: v for k, v in kept.items()
+                    if session.form.field(k) is not None}
+                dropped = len(kept) - len(session.filled.values)
+                if what["profile"]:
+                    session.filled.values["profile"] = what["profile"]
+                else:
+                    # A use case with no profile of its own must not inherit
+                    # the last one's. Carrying it over left Directed evolution
+                    # silently answered "biomanufacturing" - a stale answer to
+                    # a question nobody asked, which is the shape of mistake
+                    # this form exists to prevent.
+                    session.filled.values.pop("profile", None)
+                try:
+                    session.workflow = workflows.load(what["workflow"])
+                    session.workflow_source = f"{what['workflow']}.yaml on disk"
+                    session.workflow_problems = []
+                except Exception as exc:                  # noqa: BLE001
+                    session.note(f"no workflow for {wanted}: {exc}",
+                                 kind="flagged", state="accepted_with_flags")
+                session.note(f"use case: {what['label']} &middot; form "
+                             f"{what['form']}.yaml &middot; workflow "
+                             f"{what['workflow']}".replace("&middot;", "·"),
+                             kind="architect")
+                if dropped:
+                    session.note(f"{dropped} answer(s) did not carry over: "
+                                 f"the new form does not ask them",
+                                 kind="note")
+                if not what["profile"]:
+                    session.note(f"{what['label']} has no profile of its own. "
+                                 f"The sentinel will bind its contracts to "
+                                 f"bioprospecting, which is a stand-in and "
+                                 f"not a statement about this science.",
+                                 kind="flagged", state="accepted_with_flags")
+            self._redirect("/?view=spec#view", new_session=cookie)
         elif path == "/workflow":
             picked = (posted.get("pick") or [""])[0].strip()
             written = (posted.get("yaml") or [""])[0]
@@ -2488,7 +2622,7 @@ class Handler(BaseHTTPRequestHandler):
             # log says which came from where. Nothing is hidden behind a
             # button that says "example".
             filled, guessed = {}, []
-            for field in FORM.all_fields():
+            for field in session.form.all_fields():
                 if field.placeholder:
                     filled[field.key] = field.placeholder
                 elif field.options:
@@ -2526,6 +2660,16 @@ class Handler(BaseHTTPRequestHandler):
                 session.note(f"{len(guessed)} field(s) had no example answer "
                              f"and took the first option instead: "
                              f"{', '.join(guessed[:8])}", kind="note")
+            # Some fields cannot be filled from an example at all: a generic
+            # form asks for this laboratory's equipment, and there is no
+            # example answer to that. Naming them is the difference between
+            # a form that looks broken and one that is waiting for you.
+            left = [f.label for f in session.filled.missing()]
+            if left:
+                session.note(f"{len(left)} field(s) the example cannot answer "
+                             f"for you, because they are about your own "
+                             f"laboratory: {'; '.join(left[:4])}",
+                             kind="flagged", state="accepted_with_flags")
             self._redirect("/#form-panel", new_session=cookie)
         elif path == "/restart":
             how = (posted.get("how") or ["keep"])[0].strip()
@@ -2605,7 +2749,7 @@ class Handler(BaseHTTPRequestHandler):
                          state=("refused" if said.startswith("FAILED") else ""))
             self._redirect("/#setup-panel", new_session=cookie)
         elif path == "/save":
-            session.filled.values = values_from_post(posted)
+            session.filled.values = values_from_post(posted, session.form)
             session.filled.provenance = {
                 key: {"source": "web form", "at": now_iso(),
                       "by": str(session.filled.values.get("researcher") or
@@ -2616,7 +2760,8 @@ class Handler(BaseHTTPRequestHandler):
             # The draft is not saved: typing in the form must not quietly
             # become an answer. The count comes from the same `Filled.missing`
             # the page uses, so there is one definition of missing.
-            draft = Filled(form=FORM, values=values_from_post(posted))
+            draft = Filled(form=session.form,
+                           values=values_from_post(posted, session.form))
             items = missing_report(draft)
             self._json({"missing": len(items), "fields": items,
                         "ready": draft.ready()}, new_session=cookie)
