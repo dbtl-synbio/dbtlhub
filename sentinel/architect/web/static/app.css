@@ -427,7 +427,9 @@ form.restart button[disabled] { opacity: 0.45; cursor: not-allowed; }
    page of stacked panels is a page where nothing is beside anything. */
 .overview {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(220px, 1fr);
+  /* The ring gets the larger share. It is the thing a reader looks at
+     first, and at half the band its labels were too small to read. */
+  grid-template-columns: minmax(360px, 1.7fr) minmax(200px, 1fr);
   gap: 1.2rem;
   align-items: center;
   padding: 1rem 1.2rem;
