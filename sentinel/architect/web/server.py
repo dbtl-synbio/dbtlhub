@@ -1780,6 +1780,40 @@ def render_kg(session: Session) -> str:
 
     out.append(f'<p>{len(graph)} entities, {len(links)} internal edges.</p>')
 
+    # ---- what the guards wrote --------------------------------------------
+    # Before the shape and before the landmarks, because it is the part of
+    # this graph nobody else has: a verdict is a node, its findings hang off
+    # it, and each finding points at the entity it is about. Shown without
+    # being asked for, since the question "what did the checks say" is the
+    # one a person opens this view with.
+    acts = kgview.sentinels(crate)
+    if acts:
+        refused = sum(1 for a in acts if a["verdict"] == "refused")
+        out.append(f'<h3>What the sentinels wrote</h3>'
+                   f'<p class="hint">{len(acts)} check(s) in this crate, '
+                   f'{refused} of them refusing. This is not a log beside the '
+                   f'graph - it <em>is</em> the graph: every verdict is an '
+                   f'entity, every finding hangs off one, and a finding that '
+                   f'names a thing points at it. Click a handover for the '
+                   f'sentinel\'s own card, or an entity on the right to land '
+                   f'on it here.</p>')
+        out.append(kgview.draw_sentinels(acts[-6:]))
+        if len(acts) > 6:
+            out.append(f'<p class="hint">The last 6 of {len(acts)}. A crate '
+                       f'is append-only, so a run checked more than once '
+                       f'keeps every verdict it was ever given.</p>')
+        out.append(f'<p class="actions">'
+                   f'<a class="button" href="/sentinels.json">'
+                   f'{icon("crate")}Take the verdicts as JSON</a>'
+                   f'<a class="button" href="/graph.nt">'
+                   f'{icon("graph")}Take the whole graph as N-Triples</a>'
+                   f'<a class="button" href="/crate.json">'
+                   f'{icon("crate")}Take the crate</a></p>')
+    else:
+        out.append('<p class="hint">No sentinel has written into this crate '
+                   'yet. That is not the same as having passed, which is why '
+                   'this says so rather than showing an empty picture.</p>')
+
     out.append('<table class="shape"><caption>what is in it</caption><tbody>')
     for kind, count in kgview.shape(crate)[:12]:
         out.append(f'<tr><td class="n">{count}</td><td>{esc(kind)}</td></tr>')
@@ -2425,17 +2459,48 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"missing": len(items), "fields": items,
                         "ready": session.filled.ready()}, new_session=cookie)
         elif path == "/crate.json":
-            crate = (session.arch.memory.snapshot() if session.arch
-                     else {"@context": None, "@graph": [],
-                           "note": "no run yet: there is no crate"})
+            # The crate ON VIEW, not this session's: the graph panel offers
+            # this button beside the graph and the verdicts, and those two
+            # follow the run picked from disk. One of the three handing back
+            # a different crate would be the worst kind of wrong - silently.
+            crate = _live_crate(session)
+            showing = session.looking_at or session.run_id
+            if not crate.get("@graph"):
+                crate = {"@context": None, "@graph": [],
+                         "note": "no run yet: there is no crate"}
             self._send(json.dumps(crate, indent=1).encode(),
                        "application/json; charset=utf-8",
-                       download=f"{session.run_id}-ro-crate-metadata.json")
+                       download=f"{showing}-ro-crate-metadata.json")
         elif path == "/ledger.jsonl":
             rows = session.arch.ledger if session.arch else []
             body = "".join(json.dumps(row) + "\n" for row in rows)
             self._send(body.encode(), "application/x-ndjson; charset=utf-8",
                        download=f"{session.run_id}-architect.jsonl")
+        elif path == "/sentinels.json":
+            # What the guards wrote, as data. Read out of the crate on view -
+            # this session's run or the one picked from disk - so taking it
+            # never depends on this process having been the one that ran it.
+            crate = _live_crate(session)
+            showing = session.looking_at or session.run_id
+            acts = kgview.sentinels(crate)
+            self._send(json.dumps(
+                {"run": showing,
+                 "checks": len(acts),
+                 "refused": sum(1 for a in acts if a["verdict"] == "refused"),
+                 "note": ("Read from the crate, which is the record. A verdict "
+                          "with no findings means every check it applied was "
+                          "satisfied; `checks_applied` says how many ran, "
+                          "because a verdict after none is a different claim."),
+                 "verdicts": acts}, indent=1).encode(),
+                "application/json; charset=utf-8",
+                download=f"{showing}-sentinels.json")
+        elif path == "/graph.nt":
+            from framework.kg import lift, to_ntriples        # noqa: PLC0415
+            crate = _live_crate(session)
+            showing = session.looking_at or session.run_id
+            self._send(to_ntriples(lift(crate)).encode(),
+                       "application/n-triples; charset=utf-8",
+                       download=f"{showing}-graph.nt")
         elif path == "/transcript.json":
             self._json({"transcript": session.transcript})
         else:

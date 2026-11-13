@@ -342,6 +342,171 @@ def runs_on_disk() -> list[tuple[str, int]]:
     return [(name, size) for name, size, _ in out]
 
 
+# --------------------------------------------------------------------------- #
+#  What the sentinels wrote
+# --------------------------------------------------------------------------- #
+def sentinels(crate: dict) -> list[dict]:
+    """Every sentinel act in this crate, with its findings and their targets.
+
+    A VERDICT IS A NODE, NOT A LOG LINE. The sentinel writes a `CreateAction`
+    into the crate and each finding as an entity hanging off it, pointing with
+    `about` at the thing it is about. That is a subgraph with a shape worth
+    seeing: four verdicts across a cycle, the findings under the ones that
+    refused, and an arrow from each finding to the entity at fault.
+
+    Read from the crate and nothing else, so it works for a run that finished
+    last week exactly as for one going on now, and for a crate somebody else
+    produced - including one a sentinel on the far end of a protocol wrote and
+    handed back.
+    """
+    graph = [e for e in crate.get("@graph") or [] if isinstance(e, dict)]
+    index = {e.get("@id"): e for e in graph if e.get("@id")}
+    out: list[dict] = []
+    for act in graph:
+        ref = str(act.get("@id", ""))
+        if not ref.startswith("#check/") or "CreateAction" not in types_of(act):
+            continue
+        held = act.get("dbtl:heldTo") or act.get("dbtl:contract") or "?"
+        findings = []
+        refs = act.get("object") or []
+        for one in ([refs] if isinstance(refs, dict) else refs):
+            found = index.get(one.get("@id") if isinstance(one, dict) else one)
+            if found is None:
+                continue
+            about = found.get("about")
+            if not isinstance(about, dict):
+                # Older crates carry the entity only inside the path -
+                # `crate.@graph[#sample/SAMP-001].dbtl:storageContainer` -
+                # because `about` was added later. Read it back out so a run
+                # from before that still has clickable findings, and only
+                # when the id is really in this crate: a guess that leads
+                # nowhere is worse than no link.
+                guess = str(found.get("dbtl:path", ""))
+                guess = guess.rsplit("[", 1)[-1].split("]", 1)[0]
+                about = {"@id": guess} if guess in index else None
+            findings.append({
+                "id": found.get("@id", ""),
+                "code": found.get("name", ""),
+                "severity": str(found.get("dbtl:severity", "")),
+                "said": str(found.get("value", "")),
+                "why": str(found.get("description", "")),
+                "path": str(found.get("dbtl:path", "")),
+                # The entity at fault, when the finding names one. A finding
+                # about a missing thing has nothing to point at, and saying so
+                # is better than inventing a target.
+                "about": (about.get("@id") if isinstance(about, dict) else None),
+            })
+        out.append({
+            "id": ref,
+            "handover": ref[len("#check/"):].rsplit("-", 1)[0],
+            "verdict": str(act.get("dbtl:verdict", "?")),
+            "held_to": [held] if isinstance(held, str) else list(held),
+            "checks_applied": act.get("dbtl:checksApplied"),
+            "profile": act.get("dbtl:profile"),
+            "when": act.get("endTime") or act.get("startTime") or "",
+            "by": act.get("agent", {}).get("@id")
+                  if isinstance(act.get("agent"), dict) else act.get("agent"),
+            "findings": findings,
+        })
+    out.sort(key=lambda row: row["when"])
+    return out
+
+
+def draw_sentinels(acts: list[dict], width: int = 820,
+                   per_act: int = 4) -> str:
+    """The guards' own subgraph: verdict, its findings, what each is about.
+
+    One row per verdict, in the order they happened, which is the order of the
+    cycle. Every node is a link into the neighbourhood view, so a refusal is
+    two clicks from the entity that caused it rather than a sentence about it.
+
+    Deliberately NOT the whole graph. This draws what the sentinels wrote and
+    nothing else: it is the answer to "what did the checks say about this run",
+    which is a different question from "what is in this crate".
+    """
+    if not acts:
+        return ""
+    ink = {"accepted": "var(--fg)", "accepted_with_flags": "var(--flag)",
+           "refused": "var(--refuse)"}
+    row_height, block = 26, 96
+    height = 46 + len(acts) * block
+    left_x, mid_x, right_x = 128, 430, width - 150
+
+    body = []
+    for i, act in enumerate(acts):
+        top = 56 + i * block
+        colour = ink.get(act["verdict"], "var(--fg_dim)")
+        shown = act["findings"][:per_act]
+
+        body.append(
+            f'<a href="/?sentinel={_url(act["handover"])}#view">'
+            f'<title>{_attr(act["id"])} — {_attr(act["verdict"])}, '
+            f'held to {_attr(", ".join(act["held_to"]))}</title>'
+            f'<circle cx="{left_x}" cy="{top}" r="15" fill="var(--bg_panel)" '
+            f'stroke="{colour}" stroke-width="2.4"/>'
+            f'<text x="{left_x - 26}" y="{top - 2}" text-anchor="end" '
+            f'font-size="11.5" fill="var(--fg_bright)">'
+            f'{_attr(act["handover"][:26])}</text>'
+            f'<text x="{left_x - 26}" y="{top + 11}" text-anchor="end" '
+            f'font-size="9.5" fill="{colour}">{_attr(act["verdict"])}'
+            + (f' · {act["checks_applied"]} checks'
+               if act.get("checks_applied") is not None else "")
+            + '</text></a>')
+
+        if not shown:
+            body.append(
+                f'<text x="{mid_x}" y="{top + 4}" font-size="10.5" '
+                f'fill="var(--fg_dim)">nothing to report</text>')
+            continue
+
+        first = top - (len(shown) - 1) * row_height / 2
+        for j, found in enumerate(shown):
+            y = first + j * row_height
+            tone = ("var(--refuse)" if found["severity"] == "error"
+                    else "var(--flag)")
+            body.append(
+                f'<path d="M{left_x + 17},{top} C{(left_x + mid_x) / 2:.0f},'
+                f'{top} {(left_x + mid_x) / 2:.0f},{y:.0f} {mid_x - 8},{y:.0f}" '
+                f'fill="none" stroke="var(--fg_dim)" stroke-width="1" '
+                f'marker-end="url(#stip)"/>')
+            body.append(
+                f'<text x="{mid_x}" y="{y + 3:.0f}" font-size="10.5" '
+                f'fill="{tone}">{_attr(found["code"][:30])}</text>')
+            if found["about"]:
+                body.append(
+                    f'<path d="M{mid_x + 190},{y:.0f} L{right_x - 14},{y:.0f}" '
+                    f'stroke="var(--fg_dim)" stroke-width="1" '
+                    f'marker-end="url(#stip)"/>'
+                    f'<a href="/?focus={_url(found["about"])}&amp;view=graph#view">'
+                    f'<title>{_attr(found["about"])}</title>'
+                    f'<circle cx="{right_x}" cy="{y:.0f}" r="9" '
+                    f'fill="var(--bg_panel)" stroke="{tone}" '
+                    f'stroke-width="1.6"/>'
+                    f'<text x="{right_x + 16}" y="{y + 3:.0f}" font-size="10" '
+                    f'fill="var(--fg_bright)">'
+                    f'{_attr(found["about"][:22])}</text></a>')
+        if len(act["findings"]) > per_act:
+            body.append(
+                f'<text x="{mid_x}" y="{top + block / 2 - 6:.0f}" '
+                f'font-size="9.5" fill="var(--fg_dim)">and '
+                f'{len(act["findings"]) - per_act} more</text>')
+
+    return (
+        f'<svg class="kg" viewBox="0 0 {width} {height}" '
+        f'xmlns="http://www.w3.org/2000/svg" role="img" '
+        f'aria-label="what the sentinels wrote into this crate">'
+        f'<defs><marker id="stip" viewBox="0 0 10 10" refX="9" refY="5" '
+        f'markerWidth="6" markerHeight="6" orient="auto">'
+        f'<path d="M0,0 L10,5 L0,10 z" fill="var(--fg_dim)"/></marker></defs>'
+        f'<text x="18" y="26" font-size="10.5" fill="var(--fg_dim)">'
+        f'the handover</text>'
+        f'<text x="{mid_x}" y="26" font-size="10.5" fill="var(--fg_dim)">'
+        f'what it found</text>'
+        f'<text x="{width - 18}" y="26" font-size="10.5" text-anchor="end" '
+        f'fill="var(--fg_dim)">the entity it is about</text>'
+        f'{"".join(body)}</svg>')
+
+
 def load(run_id: str) -> dict:
     path = RUNS / run_id / "crate" / "ro-crate-metadata.json"
     if not path.is_file():                     # older runs wrote it flat

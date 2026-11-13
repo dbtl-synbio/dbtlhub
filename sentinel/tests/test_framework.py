@@ -729,6 +729,66 @@ class TestWorkflows(unittest.TestCase):
         # no raw `&` that is not the start of an entity
         self.assertNotIn("& ", svg)
 
+    def test_the_sentinels_own_subgraph_can_be_read_and_drawn(self):
+        """A verdict is a node, and what it is about is an edge.
+
+        The guards write into the same crate as everything else, so what they
+        said is readable without this process: a run that finished last week,
+        or one a sentinel at the far end of a protocol handed back.
+        """
+        from architect.web import kgview                             # noqa: PLC0415
+        crate = {"@graph": [
+            {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+             "about": {"@id": "./"}},
+            {"@id": "./", "@type": "Dataset"},
+            {"@id": "#sample/S1", "@type": "bioschemas:BioSample"},
+            {"@id": "#check/design_to_build-1", "@type": "CreateAction",
+             "dbtl:verdict": "refused", "dbtl:checksApplied": 13,
+             "dbtl:heldTo": ["dbtl:design_to_build/0.1.0"],
+             "endTime": "2026-11-13T10:00:00Z",
+             "object": [{"@id": "#check/design_to_build-1/finding-1"},
+                        {"@id": "#check/design_to_build-1/finding-2"}]},
+            {"@id": "#check/design_to_build-1/finding-1",
+             "@type": "PropertyValue", "name": "missing_provenance",
+             "dbtl:severity": "error", "about": {"@id": "#sample/S1"},
+             "dbtl:path": "crate.@graph[#sample/S1].dbtl:storageContainer"},
+            # No `about`: written before that field existed. The entity has to
+            # be recovered from the path, or every old run loses its links.
+            {"@id": "#check/design_to_build-1/finding-2",
+             "@type": "PropertyValue", "name": "missing_provenance",
+             "dbtl:severity": "error",
+             "dbtl:path": "crate.@graph[#sample/S1].dbtl:storagePosition"},
+        ]}
+        acts = kgview.sentinels(crate)
+        self.assertEqual(1, len(acts))
+        self.assertEqual("refused", acts[0]["verdict"])
+        self.assertEqual(13, acts[0]["checks_applied"])
+        self.assertEqual("design_to_build", acts[0]["handover"])
+        self.assertEqual(["#sample/S1", "#sample/S1"],
+                         [f["about"] for f in acts[0]["findings"]],
+                         "a finding lost the entity it is about")
+
+        svg = kgview.draw_sentinels(acts)
+        self.assertIn("<svg", svg)
+        self.assertIn("?sentinel=design_to_build", svg)
+        self.assertIn("%23sample%2FS1", svg)
+        self.assertNotIn("?focus=#", svg, "an id starting with # is a fragment")
+
+    def test_a_finding_never_points_at_something_absent(self):
+        """A link that leads nowhere is worse than no link."""
+        from architect.web import kgview                             # noqa: PLC0415
+        crate = {"@graph": [
+            {"@id": "#check/build_to_test-1", "@type": "CreateAction",
+             "dbtl:verdict": "refused",
+             "object": [{"@id": "#check/build_to_test-1/finding-1"}]},
+            {"@id": "#check/build_to_test-1/finding-1",
+             "@type": "PropertyValue", "name": "unknown_design_item",
+             "dbtl:severity": "error",
+             "dbtl:path": "crate.@graph[#item/NEVER-WRITTEN].name"},
+        ]}
+        acts = kgview.sentinels(crate)
+        self.assertIsNone(acts[0]["findings"][0]["about"])
+
     def test_the_graph_view_finds_both_directions(self):
         """Provenance is read backwards, so one direction is not enough."""
         from architect.web import kgview                            # noqa: PLC0415
