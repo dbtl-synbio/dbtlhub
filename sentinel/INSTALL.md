@@ -81,6 +81,8 @@ DBTLHUB=/path/to/dbtlhub python3 scripts/compare_sentinels.py
 | change what the run asks the researcher | `architect/forms/` — `template.yaml` is the question set, `bioprospecting.yaml` an instance of it |
 | change the steps a phase has | `architect/workflows/*.yaml`, or edit the workflow in the interface |
 | see what a contract checks, in words | `python3 scripts/show_agents.py --handover 1` |
+| plug **your own** sentinel or phase agent into this Architect, in any language | [`architect/MCP.md`](architect/MCP.md) — the two sockets speak the Model Context Protocol, so you write a server, not Python in this repository |
+| drive **our** agents from your own coordinator | `python3 architect/mcp_server.py` — four tools, three of them named as `sentinel-oo` names them |
 
 **If you edit any YAML file here, run `python3 scripts/make_twins.py`.** Every
 YAML file has a JSON twin, because YAML is not in the Python standard library

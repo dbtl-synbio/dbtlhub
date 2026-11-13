@@ -697,6 +697,36 @@ What is behind REC-001
 
 32 nodes, from a recommendation about what to make next back to a sediment core. This is the claim the framework puts on its slides, and at HEAD it holds **on disk** as well as in memory.
 
+### 5.9 The two sockets, and the protocol for reaching them
+
+*Added 13 November 2026.*
+
+The Architect reaches everything around it through exactly two callables, fixed in `architect/contract.py` and `architect/architect.py`:
+
+```python
+Runner  = Callable[[phase, Architect], PhaseResult]            # does the work
+Checker = Callable[[handover, package, Architect], Checked]    # checks it
+```
+
+That is why a phase run by a person and a phase run by a program are the same object to it. What those sockets were not is **reachable from outside this process**: to plug an agent in you had to write Python in this repository and import it, which makes the Architect the owner of everybody's code — the opposite of what this project is for.
+
+They now also speak the Model Context Protocol: JSON-RPC 2.0, one object per line, on standard input and output, protocol `2025-06-18`. No port, no daemon, no authentication; the coordinator starts the process, owns it for the run, and ends it. In-process stays the default and stays fastest — the protocol is chosen, per phase or per handover.
+
+| File | What it is |
+|---|---|
+| `architect/mcp.py` | the client: `Server`, `checker_over_mcp()`, `runner_over_mcp()`, and a `Spec` for `sentinel-oo` and for ourselves |
+| `architect/mcp_server.py` | this framework's four sentinels and four phase agents **as** a server |
+| `architect/MCP.md` | the picture, the four tools, what is proven and what is not |
+
+`check_handover`, `list_handovers` and `read_contract` are named and shaped as `sentinel-oo` names them, so a coordinator written for his service drives ours without knowing. Where he returns a field we have no equivalent for, we leave it out rather than invent one. **`run_phase` is ours**: nothing outside this project defines a tool for running a phase of a DBTL cycle, so it is published as a proposal rather than dressed up as a standard. A phase agent reached this way works on a **copy** of the crate and only what it *added* comes back — a phase at the end of a pipe must not be able to rewrite the coordinator's record of the run.
+
+**It was proven against somebody else's server.** `python3 architect/mcp.py` drives Anil Wipat's agent interface and returns the same six verdicts `scripts/compare_sentinels.py` gets in process, with nothing of his imported. His `docs/API_MANUAL.md` states that interface is *"Not yet tested against a real Model Context Protocol client"*. On 13 November 2026 it was, by this client, and it answered correctly at the first attempt.
+
+Two faults the seam exposed, both ours:
+
+- **A crate passed by value loses the files it names.** His `hold data` demand asks whether the file an entity stands for exists and is not empty, which is a question about a folder. Writing our in-memory crate into an empty scratch directory and pointing him at it **refused his own `valid` example** for files it could not see. The checker now sends the run's real crate directory, flushed first.
+- **Our contracts need more than a crate.** His rules are about entities in a crate; ours are about paths in a package — `order.items`, `bindings`, `produced_by`. Sent a crate alone, every such rule reported that it matched nothing and a sound handover came back REFUSED. The client now reads each server's `tools/list` schema and sends `package` only to a server that declares it. Our own server did not declare it at first, and the schema check is what caught that.
+
 ---
 
 ## 6. The templates, and how to reproduce everything
@@ -775,7 +805,12 @@ Three categories, kept strictly apart.
 | The provenance chain reaches a physical sample **from the files on disk**, 32 nodes | `ask.py cycle --behind REC-001`; `TestEndToEnd` |
 | The framework runs with no network, no API key and no third-party package | every command above |
 | The scaffolder produces a correct envelope and refuses to overwrite | `new_handover.py` |
-| 15 tests pass in 0.542 s | `tests/test_framework.py` |
+| 61 tests pass, on Python 3.12 and on 3.9 with no PyYAML installed | `tests/test_framework.py` (15 when this report was first written) |
+| The Architect drives **somebody else's sentinel** over the Model Context Protocol, and gets the same six verdicts as the in-process comparison | `architect/mcp.py`; `TestTheUniformSocket` |
+| A handover checked by a sentinel in another process, with its act landing in the crate that grows | `TestTheUniformSocket.test_the_architect_accepts_a_sentinel_at_the_end_of_a_pipe` |
+| A phase of the cycle run by another process, and a phase with no server falling back in-process | `architect/mcp_server.py --self-test`; `TestTheUniformSocket` |
+| A contract drafted by the contract wizard runs here unchanged, and a sixth demand is refused by name rather than ignored | `TestAContractTheWizardWrote` |
+| Which requirements of a contract **could not fire** against a crate — 0 of 20 for `design_to_build/0.11.0` on all six example crates | `scripts/compare_sentinels.py`; `oo_contract.silent()` |
 
 ### 7.2 Written but never executed
 
@@ -957,6 +992,10 @@ Stated plainly.
 13. **Plate randomisation, the fourth of the four Test→Learn conditions the project was argued from, is required by nothing.**
 
 14. **Scale, multi-run panels, and the per-tool-step crate** are all acknowledged limitations with no work against them.
+
+15. **`runner_over_mcp` has no outside witness.** The checker socket was proven against a server somebody else wrote; the runner socket could not be, because no phase agent anywhere speaks MCP yet. `run_phase` is tested only against our own server, and the containerised form of `sentinel-oo` (`docker run -i --rm sentinel-oo:dev --agent-interface`) is one `Spec` with a different argv that has not been run here — the image is not built on this machine. *(Added 13 November 2026.)*
+
+16. **The interface is single-user.** Sessions are per browser and runs are per session, but the run id comes from the form and the worked example gives every browser the same one, there is no lock on a crate two sessions may share, and an API key pasted into the setup screen goes into the **process** environment, so it is used by everyone on that server. Measured, not inferred: two concurrent sessions wrote into one crate, and one was refused over a sample left by the other's earlier run. One server per person, sharing crates rather than a GUI, is the shape this framework is actually for. *(Added 13 November 2026.)*
 
 ---
 

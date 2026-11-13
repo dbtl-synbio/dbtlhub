@@ -35,6 +35,35 @@ python3 architect/interface.py        # the questions put to a person, scripted
 python3 architect/wiring.py           # the real phase agents and sentinels, under it
 ```
 
+## Two sockets, and one protocol for reaching them
+
+Everything around the Architect arrives through one of two callables, fixed
+in `contract.py` and `architect.py`:
+
+```python
+Runner  = Callable[[phase, Architect], PhaseResult]            # does the work
+Checker = Callable[[handover, package, Architect], Checked]    # checks it
+```
+
+That is why a phase run by a person and a phase run by a program are the same
+object to it. What those sockets were not, until 13 November 2026, is
+reachable from outside this process: to plug an agent in you had to write
+Python here and import it.
+
+| | |
+|---|---|
+| [`mcp.py`](mcp.py) | the client — `Server`, `checker_over_mcp()`, `runner_over_mcp()` |
+| [`mcp_server.py`](mcp_server.py) | this framework's sentinels and phase agents **as** a server |
+| [`MCP.md`](MCP.md) | the picture, the four tools, what is proven and what is not |
+
+```bash
+python3 architect/mcp.py                     # this Architect drives sentinel-oo
+python3 architect/mcp_server.py --self-test  # our agents, driven over a pipe
+```
+
+In-process stays the default and stays fastest. The protocol is chosen, per
+phase or per handover.
+
 ## The rules worth knowing before reading the code
 
 **A phase agent may be a person.** `run_phase` takes a callable. In a real
