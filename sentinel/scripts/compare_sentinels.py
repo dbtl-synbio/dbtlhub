@@ -124,6 +124,23 @@ def main() -> int:
             print(f"      only ours: {sorted(set(our_names) - set(his_names))}")
 
     print(f"\n  {matched}/{len(folders())} agree finding for finding.\n")
+
+    # ---- the check nobody thinks to do ------------------------------------
+    # A requirement naming a type the crate has not got matches nothing and
+    # passes, and a pass reads as approval. His contract wizard reports this
+    # per rule on what it drafts; this is the same question asked of the
+    # hand-written contract, which is the one the room is relying on.
+    print(f"{'=' * 88}\nREQUIREMENTS THAT COULD NOT FIRE\n{'=' * 88}\n")
+    print("  Not a fault in a crate. A rule that matches nothing in it says\n"
+          "  nothing, and silence is indistinguishable from approval.\n")
+    for folder in folders():
+        crate = json.loads((folder / "ro-crate-metadata.json").read_text())
+        quiet = adapter.silent(read_by_us, crate)
+        print(f"  {folder.name:<28}{len(quiet)} of "
+              f"{len(read_by_us.requirements)}")
+        for name, why in quiet:
+            print(f"      {name}: {why}")
+    print()
     return 0 if matched == len(folders()) else 1
 
 

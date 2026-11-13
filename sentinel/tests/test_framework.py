@@ -750,6 +750,175 @@ class TestWorkflows(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+class TestAContractTheWizardWrote(unittest.TestCase):
+    """A contract drafted by Anil Wipat's wizard has to run on this side.
+
+    `dbtlhub/contract-wizard/` drafts a sentinel-oo contract from a crate and
+    six paragraphs of English, with a model held to the language by a schema.
+    The whole claim of two sentinels is that such a file runs here unchanged,
+    so the shape it emits is pinned here: those keys, those five demands,
+    those two severities, and nothing else.
+
+    The contract below is in exactly that shape, written by hand rather than
+    by a model, so this test needs no Ollama and no network.
+    """
+
+    DRAFTED = {
+        "contract": "wizard_shaped", "version": "0.1.0",
+        "description": "the shape the wizard emits, run by this reader",
+        "expects": ["bioschemas:BioSample"],
+        "requires": [
+            {"name": "the_sample_says_where_it_came_from",
+             "applies_to": "type:bioschemas:BioSample",
+             "property": "location", "must": "be recorded",
+             "severity": "refuse",
+             "message": "a sample with no site cannot be re-collected"},
+            {"name": "that_site_is_in_the_crate",
+             "applies_to": "type:bioschemas:BioSample",
+             "property": "location",
+             "must": "point at something in the crate",
+             "severity": "refuse",
+             "message": "a reference to a site that is not here is a dead end"},
+            {"name": "the_aliquot_count_is_sane",
+             "applies_to": "type:bioschemas:BioSample",
+             "property": "dbtl:aliquotCount",
+             "must": "be a number between", "between": [1, 96],
+             "severity": "flag",
+             "message": "zero aliquots, or hundreds, is a typing mistake"},
+        ],
+    }
+
+    def contract(self):
+        from framework import oo_contract as oo                  # noqa: PLC0415
+        import tempfile                                          # noqa: PLC0415
+        folder = Path(tempfile.mkdtemp())
+        path = folder / "wizard_shaped.json"     # load() reads the JSON twin too
+        path.write_text(json.dumps(self.DRAFTED, indent=1))
+        return oo, oo.load(path)
+
+    @staticmethod
+    def crate():
+        """The sample from the worked bioprospecting cycle, as handed over."""
+        return {"@graph": [
+            {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+             "about": {"@id": "./"}},
+            {"@id": "./", "@type": "Dataset"},
+            {"@id": "#site/NS-01", "@type": "Place", "name": "North Sea NS-01"},
+            {"@id": "#sample/SAMP-001",
+             "@type": ["bioschemas:BioSample", "prov:Entity"],
+             "name": "sediment core NS-01 / 0-5 cm",
+             "location": {"@id": "#site/NS-01"},
+             "dbtl:aliquotCount": 4}]}
+
+    def test_the_shape_it_emits_loads_here(self):
+        oo, contract = self.contract()
+        self.assertEqual("wizard_shaped", contract.name)
+        self.assertEqual(3, len(contract.requirements))
+        self.assertEqual([], oo.check(contract, self.crate()),
+                         "a sound crate must come back with nothing to report")
+
+    def test_it_refuses_what_it_should_refuse(self):
+        oo, contract = self.contract()
+        crate = self.crate()
+        crate["@graph"][3]["location"] = {"@id": "#site/NOWHERE"}
+        crate["@graph"][3]["dbtl:aliquotCount"] = 0
+        found = {e.code.split(":")[0] for e in oo.check(contract, crate)}
+        self.assertIn("that_site_is_in_the_crate", found)
+        self.assertIn("the_aliquot_count_is_sane", found)
+
+    def test_a_sixth_demand_is_refused_and_named(self):
+        """The wizard imports the five demands from his code, not ours.
+
+        The day a sixth is added there, a contract using it must stop here
+        loudly. Silently ignoring an unknown demand would mean a requirement
+        nobody checks and a crate that passes for the wrong reason.
+        """
+        oo, _ = self.contract()
+        import tempfile                                          # noqa: PLC0415
+        drafted = json.loads(json.dumps(self.DRAFTED))
+        drafted["requires"][0]["must"] = "be plausible"
+        path = Path(tempfile.mkdtemp()) / "later_dialect.json"
+        path.write_text(json.dumps(drafted))
+        with self.assertRaises(oo.ForeignContractError) as caught:
+            oo.load(path)
+        self.assertIn("be plausible", str(caught.exception))
+
+    def test_a_requirement_that_can_never_fire_is_reported(self):
+        """His check 2, on this side: silence is not approval."""
+        oo, _ = self.contract()
+        import tempfile                                          # noqa: PLC0415
+        drafted = json.loads(json.dumps(self.DRAFTED))
+        drafted["requires"].append(
+            {"name": "about_a_type_this_crate_has_not_got",
+             "applies_to": "type:schema:MolecularEntity",
+             "property": "schema:inChIKey", "must": "be unique",
+             "severity": "refuse", "message": "two constructs, one key"})
+        drafted["requires"].append(
+            {"name": "about_a_property_nobody_wrote",
+             "applies_to": "type:bioschemas:BioSample",
+             "property": "dbtl:massGrams", "must": "be a number between",
+             "between": [0, 1000], "severity": "flag",
+             "message": "a mass outside this range is a typing mistake"})
+        path = Path(tempfile.mkdtemp()) / "thin.json"
+        path.write_text(json.dumps(drafted))
+        contract = oo.load(path)
+        quiet = dict(oo.silent(contract, self.crate()))
+        self.assertIn("about_a_type_this_crate_has_not_got", quiet)
+        self.assertIn("about_a_property_nobody_wrote", quiet)
+        self.assertNotIn("the_aliquot_count_is_sane", quiet,
+                         "a requirement that does fire was reported as silent")
+
+    def test_a_yaml_contract_still_opens_without_pyyaml(self):
+        """The wizard hands a person a YAML file. A clone may have no PyYAML.
+
+        This reader needed it to open anything at all, so a contract from the
+        wizard - or any of his - could not be read on a plain clone. A JSON
+        twin beside the file is now read instead, and when there is none the
+        error names both files rather than saying "not installed".
+        """
+        oo, _ = self.contract()
+        import tempfile                                          # noqa: PLC0415
+        folder = Path(tempfile.mkdtemp())
+        (folder / "drafted.yaml").write_text("contract: unreadable-by-design\n")
+        had = sys.modules.get("yaml", "absent")
+        sys.modules["yaml"] = None          # exactly what a clone without it sees
+        try:
+            with self.assertRaises(oo.ForeignContractError) as caught:
+                oo.load(folder / "drafted.yaml")
+            self.assertIn("drafted.json", str(caught.exception))
+
+            (folder / "drafted.json").write_text(json.dumps(self.DRAFTED))
+            contract = oo.load(folder / "drafted.yaml")
+        finally:
+            if had == "absent":
+                del sys.modules["yaml"]
+            else:
+                sys.modules["yaml"] = had
+        self.assertEqual("wizard_shaped", contract.name)
+        self.assertEqual([], oo.check(contract, self.crate()))
+
+    def test_his_own_contract_has_nothing_silent_in_it(self):
+        """20 requirements, and every one of them has something to say."""
+        from framework import oo_contract as oo                  # noqa: PLC0415
+        hub = oo.dbtlhub()
+        if hub is None:                                # pragma: no cover
+            raise unittest.SkipTest("needs the dbtlhub checkout for his "
+                                    "contract and his crate")
+        try:
+            import yaml                                    # noqa: F401,PLC0415
+        except ImportError:                                # pragma: no cover
+            raise unittest.SkipTest(
+                "his contracts are YAML only and this reader will not write "
+                "a JSON twin into his folder; reading them needs PyYAML")
+        path = hub / "sentinel-oo" / "examples" / "contracts" / "design_to_build.yaml"
+        crate = (hub / "bioprospecting" / "exampleROcrates" / "design-to-build"
+                 / "valid" / "ro-crate-metadata.json")
+        if not path.is_file() or not crate.is_file():  # pragma: no cover
+            raise unittest.SkipTest(f"{path} or {crate} is not here")
+        self.assertEqual([], oo.silent(oo.load(path),
+                                       json.loads(crate.read_text())))
+
+
 class TestItRunsWithoutPyYAML(unittest.TestCase):
     """The claim that a clone needs no install step.
 

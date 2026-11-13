@@ -145,6 +145,34 @@ class ForeignContract:
 # --------------------------------------------------------------------------- #
 #  Reading one
 # --------------------------------------------------------------------------- #
+def _read_either(path: Path) -> dict:
+    """A contract file, as JSON or as YAML, whichever this machine can read.
+
+    His contracts are YAML only, and the wizard hands a person a YAML file,
+    so this reader used to need PyYAML to open anything at all - which broke
+    the same promise the rest of the framework keeps: clone it and run it.
+    A `.json` path is read with the standard library, and for a `.yaml` path
+    without PyYAML a `.json` twin beside it is read instead.
+
+    No silent fallback: when neither can be read, the error names both files
+    and the one install that would fix it.
+    """
+    if path.suffix == ".json":
+        return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        import yaml                                        # noqa: PLC0415
+    except ImportError:
+        twin = path.with_suffix(".json")
+        if twin.is_file():
+            return json.loads(twin.read_text(encoding="utf-8"))
+        raise ForeignContractError(
+            f"{path.name} is YAML, PyYAML is not installed, and there is no "
+            f"{twin.name} beside it. Either `pip install 'PyYAML>=5.1'`, or "
+            f"write the twin - `python3 scripts/make_twins.py` does it for "
+            f"the contracts in this repository") from None
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
 def load(path: Path | str) -> ForeignContract:
     """Read a contract file. Unknown keys are refused, never ignored.
 
@@ -152,13 +180,7 @@ def load(path: Path | str) -> ForeignContract:
     quietly dropped sits in a file looking effective for years.
     """
     path = Path(path)
-    try:
-        import yaml                                        # noqa: PLC0415
-    except ImportError as exc:                             # pragma: no cover
-        raise ForeignContractError(
-            "a sentinel-oo contract is YAML and PyYAML is not installed"
-        ) from exc
-    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    raw = _read_either(path) or {}
     if not isinstance(raw, dict):
         raise ForeignContractError(f"{path.name} is not a mapping")
 
@@ -477,6 +499,45 @@ def available(folder: Path | str) -> dict[str, Path]:
             out[load(path).name] = path
         except Exception:                          # noqa: BLE001
             continue
+    return out
+
+
+def silent(contract: ForeignContract, crate: dict) -> list[tuple[str, str]]:
+    """Which requirements matched nothing in this crate, with the reason.
+
+    A requirement naming a type the crate does not hold checks nothing and
+    passes, and a pass reads as approval. A contract made entirely of those
+    reports `accepted` on every crate forever while appearing to work, which
+    is worse than having no contract: `expects` catches the whole-contract
+    case and says nothing about one rule among twenty.
+
+    Anil Wipat's contract wizard
+    (`dbtlhub/contract-wizard/`) reports this per rule on the contracts it
+    drafts and calls it the check nobody thinks to do. It is right, and it
+    belongs on this side too - a contract written there is meant to run here
+    unchanged, and a contract written by hand can be just as empty.
+
+    Returned, not raised: a rule that cannot fire is a question for the
+    author, not a refusal. `[]` means every requirement had something to say
+    about this crate.
+    """
+    graph = [e for e in crate.get("@graph") or [] if isinstance(e, dict)]
+    index = {e.get("@id"): e for e in graph if e.get("@id")}
+    out: list[tuple[str, str]] = []
+    for requirement in contract.requirements:
+        targets = _targets(requirement.applies_to, graph, index)
+        if not targets:
+            out.append((requirement.name,
+                        f"nothing in the crate is {requirement.applies_to}"))
+            continue
+        if requirement.must == "be recorded":
+            continue        # it fires precisely when the value is absent
+        reads = requirement.property or requirement.named_value
+        if reads and not any(_read(requirement, entity, index)
+                             for entity in targets):
+            out.append((requirement.name,
+                        f"no {requirement.applies_to} carries {reads!r}, and "
+                        f"{requirement.must!r} says nothing when it is absent"))
     return out
 
 
