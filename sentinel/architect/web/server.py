@@ -68,6 +68,7 @@ from architect.architect import Architect                             # noqa: E4
 from architect.contract import Move, PHASES, Question                 # noqa: E402
 from architect.interface import (SKIPPED, STOPPED, Interface,         # noqa: E402
                                  Stopped)
+from architect.web import glossary                                    # noqa: E402
 from architect.web import kgview                                      # noqa: E402
 from architect.web import ring                                        # noqa: E402
 from architect.web import setup as setup_mod                          # noqa: E402
@@ -2134,7 +2135,45 @@ def render_overview(session: Session, items: list[dict]) -> str:
                + '</span></form>')
     out.append('<p class="hint">Click a phase or a sentinel on the ring to '
                'see what it did.</p>')
+    out.append(render_glossary())
     out.append('</div></div>')
+    return "".join(out)
+
+
+def render_glossary() -> str:
+    """The words, as a card that opens where you are.
+
+    In the band rather than as a seventh view, and collapsed. A glossary is
+    something a person needs WHILE looking at something else: made a view of
+    its own it would replace the thing that raised the question, and the
+    interface shows one view at a time on purpose.
+
+    `<details>` rather than a script, so it opens with JavaScript off - the
+    same rule the rest of this interface follows.
+
+    Every term says what it is NOT, because every confusion worth writing
+    down here is a confusion between two things in this system: a phase agent
+    with a sentinel, a contract with a profile, a crate with a graph.
+    """
+    out = ['<details class="glossary"><summary>'
+           f'{icon("researcher")}What the words mean</summary>'
+           '<p class="hint">Everyone says &ldquo;agent&rdquo; and means four '
+           'different things by it. Each entry says what the word is, what it '
+           'is <em>not</em>, and which file or crate property it lives in &mdash; '
+           'so it can be checked rather than believed.</p>']
+    for title, why, group in glossary.GROUPS:
+        out.append(f'<h4>{esc(title)}</h4><p class="hint">{esc(why)}</p>'
+                   '<dl class="terms">')
+        for word, mark, is_, not_, where, link in group:
+            name = f'{icon(mark) if mark else ""}{esc(word)}'
+            out.append(f'<dt>'
+                       + (f'<a href="{esc(link)}">{name}</a>' if link else name)
+                       + f'</dt><dd>{esc(is_)}'
+                       f'<span class="said">{esc(not_)}</span>'
+                       f'<span class="hint"><code>{esc(where)}</code></span>'
+                       f'</dd>')
+        out.append('</dl>')
+    out.append('</details>')
     return "".join(out)
 
 
@@ -2207,9 +2246,12 @@ def render_page(session: Session) -> str:
     title, title_icon = _view_title(session)
 
     if not session.setup.answered and not session.looking_at:
+        # The glossary belongs on this screen too, and this is the screen
+        # where it matters most: somebody meeting the system for the first
+        # time is here, with no ring and no views to read the words off.
         body = (f'<section class="card" id="view">'
                 f'<h2>{icon("architect")}Before anything runs</h2>'
-                f'{render_setup(session)}</section>')
+                f'{render_setup(session)}{render_glossary()}</section>')
         nav = ""
     else:
         here = (session.sentinel or session.phase or session.view)

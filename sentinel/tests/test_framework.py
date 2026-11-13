@@ -729,6 +729,41 @@ class TestWorkflows(unittest.TestCase):
         # no raw `&` that is not the start of an entity
         self.assertNotIn("& ", svg)
 
+    def test_the_glossary_cannot_lie_about_where_a_word_lives(self):
+        """Every file the glossary names exists.
+
+        A glossary that drifts from the code is worse than none, because it
+        is believed. Each entry points at a file or a crate property; the
+        files are cheap to check, so they are checked.
+        """
+        from architect.web import glossary                           # noqa: PLC0415
+        missing = [(word, str(path))
+                   for word, path in glossary.files_named()
+                   if not path.exists()]
+        self.assertEqual([], missing,
+                         "the glossary names a file that is not there")
+        self.assertGreaterEqual(len(glossary.files_named()), 20,
+                                "almost nothing is being checked")
+
+    def test_every_term_says_what_it_is_not(self):
+        """The half that stops the confusion is the half worth requiring."""
+        from architect.web import glossary                           # noqa: PLC0415
+        for word, _icon, is_, not_, where, _link in glossary.terms():
+            with self.subTest(term=word):
+                self.assertTrue(is_.strip(), "no definition")
+                self.assertTrue(not_.lstrip().startswith("Not "),
+                                f"{word}: 'what it is not' must begin with "
+                                f"'Not ', and says {not_[:40]!r}")
+                self.assertTrue(where.strip(), "nowhere to check it")
+
+    def test_the_four_agent_words_are_all_in_it(self):
+        """The confusion this exists for is the one between these."""
+        from architect.web import glossary                           # noqa: PLC0415
+        words = {word for word, *_ in glossary.terms()}
+        for needed in ("the Architect", "a phase agent", "a sentinel",
+                       "a contract", "a profile", "the crate", "a verdict"):
+            self.assertIn(needed, words)
+
     def test_the_sentinels_own_subgraph_can_be_read_and_drawn(self):
         """A verdict is a node, and what it is about is an edge.
 

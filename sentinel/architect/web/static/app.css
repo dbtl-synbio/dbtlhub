@@ -496,6 +496,60 @@ details.setup-again {
 
 details.setup-again summary { cursor: pointer; color: var(--fg_dim); }
 
+/* ---- the glossary ------------------------------------------------------- */
+/* In the band, closed, and it opens in place. A reader needs a word WHILE
+   looking at something else, so this must not replace the view that raised
+   the question. Bounded and scrollable for the same reason: twenty terms
+   open would push the whole interface off the screen. */
+details.glossary {
+  margin-top: 0.9rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px dotted var(--grid);
+}
+
+details.glossary summary {
+  cursor: pointer;
+  color: var(--fg_bright);
+}
+
+details[open].glossary {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+details.glossary h4 {
+  margin: 1rem 0 0.2rem;
+  color: var(--fg);
+  font-size: 0.95rem;
+}
+
+details.glossary h4:first-of-type { margin-top: 0.6rem; }
+
+dl.terms { margin: 0.4rem 0 0; }
+
+dl.terms dt {
+  margin-top: 0.7rem;
+  color: var(--fg_bright);
+}
+
+dl.terms dt a { color: var(--fg_bright); text-decoration: none; }
+dl.terms dt a:hover { text-decoration: underline; }
+
+dl.terms dd {
+  margin: 0.1rem 0 0 1.2rem;
+  border-left: 1px solid var(--grid);
+  padding-left: 0.7rem;
+}
+
+/* What it is NOT, which is the half that stops the confusion. */
+dl.terms dd .said {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--flag);
+}
+
+dl.terms dd .hint { display: block; margin-top: 0.2rem; }
+
 /* ---- a verdict, and what was found -------------------------------------- */
 .verdict-card {
   margin: 0.9rem 0;
