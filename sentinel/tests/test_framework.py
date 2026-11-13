@@ -750,6 +750,213 @@ class TestWorkflows(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+class TestTheUniformSocket(unittest.TestCase):
+    """Phase agents and sentinels reaching the Architect over one protocol.
+
+    The Architect has two sockets, `Runner` and `Checker`, and until now you
+    had to write Python in this repository to plug anything into either. These
+    tests hold the protocol version of them: a real child process, a real
+    pipe, and no import between the two sides.
+
+    Against `sentinel-oo` as well, when that checkout is here - the point of
+    an interoperability project is the agent somebody else wrote.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from architect import mcp                               # noqa: PLC0415
+        cls.mcp = mcp
+        cls.server = mcp.Server(mcp.ours(lab="newcastle"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.close()
+
+    def test_it_says_who_it_is_and_what_it_can_do(self):
+        info = self.server.info
+        self.assertEqual("2025-06-18", info.get("protocolVersion"))
+        self.assertEqual("dbtl-sentinel", info["serverInfo"]["name"])
+        self.assertEqual(
+            {"check_handover", "list_handovers", "read_contract", "run_phase"},
+            {t["name"] for t in self.server.tools()})
+
+    def test_every_tool_declares_what_it_takes(self):
+        """A schema is how a coordinator calls a tool it has never seen."""
+        for tool in self.server.tools():
+            with self.subTest(tool=tool["name"]):
+                self.assertIn("inputSchema", tool)
+                self.assertEqual("object", tool["inputSchema"].get("type"))
+                self.assertTrue(tool.get("description"))
+
+    def test_a_phase_and_its_handover_both_come_over_the_pipe(self):
+        made = self.server.call("run_phase", {"phase": "design",
+                                              "run_id": "test-socket"})
+        self.assertTrue(made["entities"], "the phase produced nothing")
+        self.assertIsInstance(made.get("package"), dict,
+                              f"no handover package came back: {made['notes']}")
+        seen = self.server.call("check_handover",
+                                {"handover": "design_to_build",
+                                 "package": made["package"],
+                                 "crate": made["package"].get("crate", {})})
+        self.assertEqual("ACCEPTED", seen["verdict"], seen["findings"])
+
+    def test_a_refusal_is_a_verdict_and_not_an_error(self):
+        """A client that reads a refusal as a failure retries for ever."""
+        crate = {"@graph": [
+            {"@id": "ro-crate-metadata.json", "@type": "CreativeWork",
+             "about": {"@id": "./"}},
+            {"@id": "./", "@type": "Dataset"}]}
+        seen = self.server.call("check_handover",
+                                {"handover": "design_to_build", "crate": crate})
+        self.assertEqual("REFUSED", seen["verdict"])
+        self.assertTrue(seen["findings"])
+
+    def test_an_unknown_tool_is_an_error_and_says_what_there_is(self):
+        with self.assertRaises(self.mcp.McpError) as caught:
+            self.server.call("do_the_science", {})
+        self.assertIn("run_phase", str(caught.exception))
+
+    def test_the_architect_accepts_a_sentinel_at_the_end_of_a_pipe(self):
+        """The whole point: a real run, checked by another process.
+
+        Not the pipe in isolation - the Architect's own `run_phase`, with a
+        checker that happens to be a protocol away, and the sentinel's act
+        landing in the crate that grows just as it does in process.
+        """
+        import shutil as _shutil                               # noqa: PLC0415
+        from architect.architect import Architect              # noqa: PLC0415
+        from architect.contract import Verdict                 # noqa: PLC0415
+        from architect.wiring import phase_runner              # noqa: PLC0415
+
+        run_id = "test-over-mcp"
+        _shutil.rmtree(ROOT / "runs" / run_id, ignore_errors=True)
+        arch = Architect(run_id, researcher="tests")
+        arch.consult(objective="a handover checked by another process")
+
+        before = len(arch.memory.store.crate["@graph"])
+        over_the_pipe = self.mcp.checker_over_mcp(self.server)
+        seen = []
+
+        def checker(handover, package, a):
+            answer = over_the_pipe(handover, package, a)
+            seen.append(answer)
+            return answer
+
+        decision = arch.run_phase(
+            "design",
+            phase_runner(profile="bioprospecting", lab="newcastle"),
+            checker)
+        step = arch.history[-1]
+
+        self.assertEqual(Verdict.ACCEPTED, step.verdict, step.notes)
+        self.assertTrue(seen, "the Architect never called the checker")
+        trace = " ".join(seen[-1].trace)
+        self.assertIn("dbtl-sentinel", trace)
+        self.assertIn("over MCP", trace)
+        self.assertIn("merged", trace, f"nothing came back into the crate: {trace}")
+        self.assertGreater(len(arch.memory.store.crate["@graph"]), before)
+        acts = [e for e in arch.memory.store.crate["@graph"]
+                if str(e.get("@id", "")).startswith("#check/")
+                and e.get("@type") == "CreateAction"]
+        self.assertTrue(acts, "the sentinel's act never reached our crate")
+        self.assertEqual("accepted", acts[-1].get("dbtl:verdict"))
+        self.assertIsNotNone(decision.move)
+        _shutil.rmtree(ROOT / "runs" / run_id, ignore_errors=True)
+
+    def test_the_architect_runs_a_phase_at_the_end_of_a_pipe(self):
+        """The other socket: the work itself done by another process.
+
+        A phase agent reached this way may be in another language, in another
+        laboratory, or a person pressing a button four months from now. What
+        the Architect sees is the same `PhaseResult` either way, which is the
+        only reason this substitution is allowed to be invisible.
+        """
+        import shutil as _shutil                               # noqa: PLC0415
+        from architect.architect import Architect              # noqa: PLC0415
+        from architect.contract import Verdict                 # noqa: PLC0415
+        from architect.wiring import sentinel_checker          # noqa: PLC0415
+
+        run_id = "test-phase-over-mcp"
+        _shutil.rmtree(ROOT / "runs" / run_id, ignore_errors=True)
+        arch = Architect(run_id, researcher="tests")
+        arch.consult(objective="a phase run by another process")
+
+        runner = self.mcp.runner_over_mcp({"design": self.server})
+        arch.run_phase("design", runner,
+                       sentinel_checker(profile="bioprospecting"))
+        step = arch.history[-1]
+
+        self.assertEqual("phase_design", step.actor,
+                         "the Architect did not record who did the work")
+        self.assertTrue(any("over MCP" in n for n in step.notes), step.notes)
+        self.assertIn(step.verdict, (Verdict.ACCEPTED,
+                                     Verdict.ACCEPTED_WITH_FLAGS,
+                                     Verdict.REFUSED))
+        self.assertGreater(len(arch.memory.store.crate["@graph"]), 2,
+                           "nothing the remote phase produced reached the crate")
+        _shutil.rmtree(ROOT / "runs" / run_id, ignore_errors=True)
+
+    def test_a_phase_with_no_server_falls_back(self):
+        """One phase moved to a protocol must not strand the other three."""
+        asked = []
+
+        def in_process(phase, arch):
+            asked.append(phase)
+            from architect.architect import PhaseResult         # noqa: PLC0415
+            return PhaseResult(entities=[], by="in-process")
+
+        runner = self.mcp.runner_over_mcp({"design": self.server},
+                                          fallback=in_process)
+
+        class Bare:
+            run_id = "test-fallback"
+            memory = None
+            spec = None
+
+        self.assertEqual("in-process", runner("build", Bare()).by)
+        self.assertEqual(["build"], asked)
+
+    def test_it_also_drives_the_sentinel_somebody_else_wrote(self):
+        """`sentinel-oo` over the same client, on his own example crates."""
+        from framework.oo_contract import dbtlhub               # noqa: PLC0415
+        hub = dbtlhub()
+        crates = (hub / "bioprospecting" / "exampleROcrates" / "design-to-build"
+                  if hub else None)
+        if hub is None or not (hub / "sentinel-oo" / "src").is_dir() \
+                or not crates.is_dir():                        # pragma: no cover
+            raise unittest.SkipTest("needs the dbtlhub checkout beside this one")
+        try:
+            import yaml                                    # noqa: F401,PLC0415
+        except ImportError:                                # pragma: no cover
+            raise unittest.SkipTest(
+                "his service imports PyYAML at startup, and it is started "
+                "with this interpreter; nothing of ours needs it")
+
+        class Nowhere:
+            run_id = "test-oo"
+            memory = None
+            spec = None
+
+        with self.mcp.Server(self.mcp.sentinel_oo()) as his:
+            self.assertEqual("sentinel-oo",
+                             his.info["serverInfo"]["name"])
+            check = self.mcp.checker_over_mcp(his, merge_back=False)
+            good = json.loads((crates / "valid"
+                               / "ro-crate-metadata.json").read_text())
+            seen = check("design_to_build",
+                         {"crate": good, "crate_dir": crates / "valid"},
+                         Nowhere())
+            self.assertEqual("accepted", seen.verdict.value, seen.findings)
+
+            folder = crates / "invalid" / "mode-in-prose"
+            bad = json.loads((folder / "ro-crate-metadata.json").read_text())
+            seen = check("design_to_build",
+                         {"crate": bad, "crate_dir": folder}, Nowhere())
+            self.assertEqual("refused", seen.verdict.value)
+            self.assertIn("edge_handling_is_recorded",
+                          [f.code for f in seen.findings])
+
+
 class TestAContractTheWizardWrote(unittest.TestCase):
     """A contract drafted by Anil Wipat's wizard has to run on this side.
 

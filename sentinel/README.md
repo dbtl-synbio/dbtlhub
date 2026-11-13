@@ -42,6 +42,27 @@ python3 architect/architect.py
 [`architect/README.md`](architect/README.md) says what each is for and what is
 not done yet.
 
+## One way in, for anybody's agent
+
+The Architect has exactly two sockets — *run this phase* and *check this
+handover* — and they now speak the Model Context Protocol, so plugging an
+agent in no longer means writing Python in this repository.
+
+```bash
+python3 architect/mcp.py                     # this Architect drives sentinel-oo
+python3 architect/mcp_server.py --self-test  # our agents, driven over a pipe
+```
+
+The first one checks all six example crates through Anil Wipat's
+`sentinel-oo` agent interface and gets the same six verdicts as the
+in-process comparison, with nothing of his imported. His manual said that
+interface had never been tried against a real client; on 13 November 2026 it
+was, and it answered correctly first time.
+
+[`architect/MCP.md`](architect/MCP.md) is the whole picture: the four tools,
+how to be driven by somebody else's coordinator, what is proven and what is
+not.
+
 ## Start here
 
 | | |

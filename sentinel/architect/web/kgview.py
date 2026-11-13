@@ -321,7 +321,11 @@ def runs_on_disk() -> list[tuple[str, int]]:
     if not RUNS.is_dir():
         return []
     for folder in RUNS.iterdir():
-        if not folder.is_dir():
+        # A hidden folder is not a run. `runs/.mcp/` holds the scratch crates
+        # of phase agents driven over the protocol, and listing those as runs
+        # would put another process's working copy in front of a researcher
+        # as though it were their own.
+        if not folder.is_dir() or folder.name.startswith("."):
             continue
         for spot in (folder / "crate" / "ro-crate-metadata.json",
                      folder / "ro-crate-metadata.json"):
