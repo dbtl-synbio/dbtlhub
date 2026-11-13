@@ -60,7 +60,17 @@
   -->
   <footer class="site-footer">
     <div class="footer-inner">
-      <p class="funding">{{ site.acknowledgement }}</p>
+      <!--
+        The band carries the funding acknowledgement only, because a funder
+        has to be visible wherever a visitor arrives. Everything else that
+        is acknowledged, including the standards and software this work is
+        built upon, is on the acknowledgements page rather than repeated at
+        the foot of every page.
+      -->
+      <p class="funding">
+        {{ site.acknowledgement }}
+        <a href="{{ '/acknowledgements.html' | relative_url }}">Acknowledgements</a>.
+      </p>
 
       <ul class="funder-logos">
         {% for logo in site.funders %}

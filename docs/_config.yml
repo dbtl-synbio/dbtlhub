@@ -51,6 +51,8 @@ nav:
     url: /use-cases.html
   - name: Get started
     url: /get-started.html
+  - name: Acknowledgements
+    url: /acknowledgements.html
 
 # Nothing outside the docs folder is published. Without this, every README
 # in the repository would be turned into a page of its own.
