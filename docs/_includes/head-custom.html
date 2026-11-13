@@ -57,11 +57,56 @@
     margin-top: -0.4rem;
   }
 
+  /*
+    The band at the foot of every page. It runs the full width of the
+    window, with its contents held to the same column as the text above.
+  */
   .site-footer {
-    margin-top: 3rem;
-    padding-top: 1.2rem;
+    margin-top: 3.5rem;
+    padding: 2rem 0 2.5rem;
+    background: #f4f6f8;
     border-top: 1px solid #dfe3e8;
-    font-size: 0.9rem;
+    color: #4a545e;
+  }
+  .footer-inner {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 0 6%;
+    text-align: center;
+  }
+  .funding {
+    margin: 0 auto;
+    max-width: 44rem;
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+
+  /*
+    The logos. They are given the same height rather than the same width,
+    so that a wide logo and a square one appear equally weighted, and the
+    row wraps onto a second line on a narrow screen.
+  */
+  .funder-logos {
+    list-style: none;
+    margin: 1.4rem 0 1.6rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1.6rem 2.4rem;
+  }
+  .funder-logos li { margin: 0; }
+  .funder-logos img {
+    display: block;
+    height: 52px;
+    width: auto;
+    max-width: 230px;
+  }
+
+  .colophon {
+    margin: 0;
+    font-size: 0.85rem;
     color: #6a737d;
   }
 

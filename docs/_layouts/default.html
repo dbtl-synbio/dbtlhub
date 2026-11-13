@@ -48,15 +48,37 @@
     {% if page.standfirst %}<p class="standfirst">{{ page.standfirst }}</p>{% endif %}
 
     {{ content }}
+  </main>
 
-    <footer class="site-footer">
-      <p>
+  <!--
+    The band across the foot of every page. It carries the funding
+    acknowledgement and the logos of those being acknowledged, and it sits
+    outside the main column so that it runs the full width of the window.
+
+    The logos are listed in _config.yml, so adding one is a line there and a
+    file beside this one rather than an edit to this layout.
+  -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p class="funding">{{ site.acknowledgement }}</p>
+
+      <ul class="funder-logos">
+        {% for logo in site.funders %}
+        <li>
+          {% if logo.url %}<a href="{{ logo.url }}">{% endif %}
+          <img src="{{ logo.image | relative_url }}" alt="{{ logo.name }}">
+          {% if logo.url %}</a>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+
+      <p class="colophon">
         {{ site.title }} is developed by the institutions listed on the
         <a href="{{ '/project.html' | relative_url }}">project page</a>.
-        The source for this site and for everything described on it is in the
-        <a href="{{ site.repository_url }}">project repository</a>.
+        The source for this site, and for everything described on it, is in
+        the <a href="{{ site.repository_url }}">project repository</a>.
       </p>
-    </footer>
-  </main>
+    </div>
+  </footer>
 </body>
 </html>

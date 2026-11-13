@@ -18,6 +18,24 @@ show_downloads: false
 
 repository_url: https://github.com/dbtl-synbio/dbtlhub
 
+# The acknowledgement shown in the band at the foot of every page.
+#
+# PLACEHOLDER WORDING. It says that the work is supported rather than
+# naming a funding instrument, because the exact sentence and any grant
+# reference have not yet been supplied. Replace it with the wording the
+# project is required to use.
+acknowledgement: >-
+  This work is supported by ELIXIR, the European research infrastructure
+  for life science data.
+
+# The logos shown beside the acknowledgement. Each needs an image file in
+# this folder, a name for anybody who cannot see the image, and optionally
+# an address to link to.
+funders:
+  - name: ELIXIR
+    image: /elixir-logo.png
+    url: https://elixir-europe.org/
+
 # The navigation bar. Listed once here rather than written into every page,
 # so that adding a page means adding one line.
 nav:
