@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>{% if page.title %}{{ page.title }} &middot; {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+
+  <!--
+    The stylesheet is the theme's own, so the typography, tables and code
+    blocks match what the theme provides. Only the arrangement of the page
+    is set here, because the theme has no navigation and a site of several
+    pages needs one.
+  -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  {% include head-custom.html %}
+</head>
+
+<body>
+  <header class="page-header" role="banner">
+    <img class="site-logo" src="{{ '/dbtlhub-logo.png' | relative_url }}"
+         alt="DBTLHub">
+    <h1 class="project-name">{{ site.title }}</h1>
+    <h2 class="project-tagline">{{ site.description }}</h2>
+    <a class="btn" href="{{ site.repository_url }}">View on GitHub</a>
+  </header>
+
+  <!--
+    The navigation is written once here and its entries are listed in
+    _config.yml, so adding a page does not mean editing every other page.
+  -->
+  <nav class="site-nav" aria-label="Site">
+    <ul>
+      {% for item in site.nav %}
+      <li>
+        <a href="{{ item.url | relative_url }}"
+           {% if page.url == item.url %}class="here" aria-current="page"{% endif %}>
+          {{ item.name }}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <main class="main-content" role="main">
+    {% if page.title %}<h1 class="page-title">{{ page.title }}</h1>{% endif %}
+    {% if page.standfirst %}<p class="standfirst">{{ page.standfirst }}</p>{% endif %}
+
+    {{ content }}
+
+    <footer class="site-footer">
+      <p>
+        {{ site.title }} is developed by the institutions listed on the
+        <a href="{{ '/project.html' | relative_url }}">project page</a>.
+        The source for this site and for everything described on it is in the
+        <a href="{{ site.repository_url }}">project repository</a>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>

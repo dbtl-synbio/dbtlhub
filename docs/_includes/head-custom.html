@@ -1,25 +1,73 @@
 <!--
-  The logo, placed in the banner at the top of the page.
-
-  The theme's banner is a blue gradient and the logo file has a solid white
-  background of its own, with no transparency anywhere in it. Drawn
-  directly on the gradient it would appear as a white rectangle with hard
-  edges, so it is drawn on a white panel with rounded corners, which reads
-  as deliberate.
+  Styling for the parts of the page the theme does not provide: the logo in
+  the banner, the navigation bar, and a few typographic adjustments. The
+  theme's own stylesheet does everything else.
 -->
 <style>
-  .page-header::before {
-    content: "";
+  /*
+    The logo file has a solid white background with no transparency
+    anywhere in it. Drawn directly on the banner's gradient it would appear
+    as a white rectangle with hard edges, so it is given a white panel with
+    rounded corners, which reads as deliberate.
+  */
+  .site-logo {
     display: block;
-    width: 215px;
-    height: 160px;
-    margin: 0 auto 24px;
+    width: 200px;
+    max-width: 70%;
+    margin: 0 auto 1.4rem;
+    padding: 0.7rem 1rem;
+    background: #ffffff;
     border-radius: 14px;
-    background: #ffffff url("{{ '/dbtlhub-logo.png' | relative_url }}")
-                center / 185px auto no-repeat;
     box-shadow: 0 2px 12px rgba(0, 0, 0, .2);
   }
+
+  .site-nav {
+    background: #f4f6f8;
+    border-bottom: 1px solid #dfe3e8;
+  }
+  .site-nav ul {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 0 6%;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.6rem;
+  }
+  .site-nav li { margin: 0; }
+  .site-nav a {
+    display: inline-block;
+    padding: 0.85rem 0;
+    color: #3c4650;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+  }
+  .site-nav a:hover { color: #1f2933; border-bottom-color: #c3cbd3; }
+  /* The page being read, marked so that a visitor knows where they are. */
+  .site-nav a.here { color: #155799; border-bottom-color: #155799; }
+
+  .page-title { margin-top: 1.6rem; }
+  /* The sentence under a page title, which says what the page is for. */
+  .standfirst {
+    font-size: 1.12rem;
+    line-height: 1.5;
+    color: #4a545e;
+    margin-top: -0.4rem;
+  }
+
+  .site-footer {
+    margin-top: 3rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid #dfe3e8;
+    font-size: 0.9rem;
+    color: #6a737d;
+  }
+
   @media screen and (max-width: 42em) {
-    .page-header::before { width: 170px; height: 126px; background-size: 145px auto; }
+    .site-logo { width: 160px; }
+    .site-nav ul { gap: 0 1.1rem; }
+    .site-nav a { font-size: 0.88rem; padding: 0.7rem 0; }
   }
 </style>

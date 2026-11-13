@@ -1,15 +1,38 @@
-# The settings for the published page. GitHub Pages reads this file and
+# The settings for the published site. GitHub Pages reads this file and
 # builds https://dbtl-synbio.github.io/dbtlhub/ from the docs folder.
 #
-# The title and description below are drawn by the theme into the banner at
-# the top of the page, so they are not repeated in index.md.
+# The title and description are drawn into the banner at the top of every
+# page by the layout in _layouts/default.html, so they are not repeated in
+# the pages themselves.
 title: DBTLHub
 description: Interoperability contracts for the Design, Build, Test, Learn cycle
+
+# The theme supplies the stylesheet. The arrangement of each page comes from
+# _layouts/default.html, which this site provides itself, because the theme
+# has no navigation and a site of several pages needs one.
 theme: jekyll-theme-cayman
 
-# The theme otherwise offers visitors a zip of the repository, which is not
-# how anybody should obtain this.
+# Offered by the theme as a zip of the repository, which is not how anybody
+# should obtain this.
 show_downloads: false
+
+repository_url: https://github.com/dbtl-synbio/dbtlhub
+
+# The navigation bar. Listed once here rather than written into every page,
+# so that adding a page means adding one line.
+nav:
+  - name: Home
+    url: /
+  - name: The project
+    url: /project.html
+  - name: Interoperability contracts
+    url: /contracts.html
+  - name: Software
+    url: /software.html
+  - name: Use cases
+    url: /use-cases.html
+  - name: Get started
+    url: /get-started.html
 
 # Nothing outside the docs folder is published. Without this, every README
 # in the repository would be turned into a page of its own.
