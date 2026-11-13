@@ -1,5 +1,3 @@
-<img src="dbtlhub-logo.png" width="190" align="right" alt="DBTLHub">
-
 Development in synthetic biology is organised as a **Design, Build, Test,
 Learn** cycle. A construct is designed, built, characterised
 experimentally, and the results obtained inform the next design. The four

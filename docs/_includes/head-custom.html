@@ -1,0 +1,25 @@
+<!--
+  The logo, placed in the banner at the top of the page.
+
+  The theme's banner is a blue gradient and the logo file has a solid white
+  background of its own, with no transparency anywhere in it. Drawn
+  directly on the gradient it would appear as a white rectangle with hard
+  edges, so it is drawn on a white panel with rounded corners, which reads
+  as deliberate.
+-->
+<style>
+  .page-header::before {
+    content: "";
+    display: block;
+    width: 215px;
+    height: 160px;
+    margin: 0 auto 24px;
+    border-radius: 14px;
+    background: #ffffff url("{{ '/dbtlhub-logo.png' | relative_url }}")
+                center / 185px auto no-repeat;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .2);
+  }
+  @media screen and (max-width: 42em) {
+    .page-header::before { width: 170px; height: 126px; background-size: 145px auto; }
+  }
+</style>
