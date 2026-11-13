@@ -67,5 +67,13 @@ testing is Qwen 2.5, released by Alibaba under the Apache 2.0 licence.
 | Newcastle University, and Prozomix Ltd, Newcastle | United Kingdom |
 | Wageningen University and Research, Wageningen | Netherlands |
 
+<ul class="funder-logos institutions">
+  <li>
+    <a href="https://prozomix.com/">
+      <img src="{{ '/prozomix-logo.svg' | relative_url }}" alt="Prozomix Ltd">
+    </a>
+  </li>
+</ul>
+
 The project is described in more detail, with the people leading each part,
 on the [project page]({{ '/project.html' | relative_url }}).

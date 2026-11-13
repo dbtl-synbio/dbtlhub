@@ -22,7 +22,7 @@ example packages for each handover: one that satisfies its contract, and
 several which violate it in a single respect each, so that a checking
 service has something to accept and something to refuse.
 
-Lead: Anil Wipat, Newcastle University.
+Lead: Anil Wipat, Newcastle University and Prozomix.
 
 [Materials]({{ site.repository_url }}/tree/main/bioprospecting)
 

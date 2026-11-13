@@ -55,12 +55,19 @@ adoptable by existing tools through straightforward adapters.
 | Newcastle University, and Prozomix Ltd, Newcastle | United Kingdom |
 | Wageningen University and Research, Wageningen | Netherlands |
 
-The project is led by Óscar Dias of the University of Minho, with Vítor
-Martins dos Santos of Wageningen University and Research, Anil Wipat of
-Newcastle University, and Pablo Carbonell of CSIC. The collaboration spans
-the Systems Biology and Microbial Biotechnology communities and connects
-tools experts, workflow engineers and domain specialists across four
-countries.
+The collaboration spans the Systems Biology and Microbial Biotechnology
+communities, and connects tools experts, workflow engineers and domain
+specialists across four countries.
+
+## People
+
+| | Institution |
+|---|---|
+| **Óscar Dias**, project lead | Centre of Biological Engineering, University of Minho |
+| **Vítor Martins dos Santos** | Wageningen University and Research |
+| **Anil Wipat** | Newcastle University and Prozomix |
+| **Pablo Carbonell** | CSIC |
+| **Gizem Buldum** | Newcastle University |
 
 ## Context
 
