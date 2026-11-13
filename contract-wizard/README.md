@@ -1,5 +1,11 @@
 # The Sentinel Contract Wizard
 
+<img src="keymaker.png" width="130" align="right" alt="The Keymaker">
+
+**Also known as the Keymaker.** A contract is what lets a handover pass
+from one phase of the cycle to the next, and what stops it when it should
+be stopped. This tool makes those.
+
 Developed by Neil Wipat, Newcastle University, and Claude, with Prozomix
 Ltd. The bioprospecting handover it is built around comes from work with
 Prozomix Ltd, and the example crate holds simulated data only: no sequence
@@ -19,6 +25,7 @@ of the draft can be trusted, and the person corrects it.
 |---|---|
 | `sentinel_contract_wizard.ipynb` | The notebook, run on Google Colab |
 | `build_sentinel_contract_wizard.py` | The script that writes that notebook. The notebook is generated, so change this and run it rather than editing the notebook by hand |
+| `keymaker.png` | The logo. It is read at build time and written into the notebook as a data URI, so the notebook carries its own image rather than linking to one |
 
 ## What it asks for
 

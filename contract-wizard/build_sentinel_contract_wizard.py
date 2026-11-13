@@ -31,8 +31,12 @@ qwen2.5:14b running on a laptop. The measurements that shaped the design:
     instead of guessing.
 """
 
+import base64
 import json
 from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+LOGO = HERE / "keymaker.png"
 
 OUT = Path(__file__).resolve().parent / "sentinel_contract_wizard.ipynb"
 
@@ -66,11 +70,20 @@ def code(text, title=None):
 
 # ---------------------------------------------------------------- the opening
 
-md("""
+md(f"""
+<img src="data:image/png;base64,{base64.b64encode(LOGO.read_bytes()).decode()}"
+     width="150" align="right" alt="The Keymaker">
+
 # The Sentinel Contract Wizard
+
+**Also known as the Keymaker.**
 
 **Write an interoperability contract from a crate and a description of what
 you need, without learning the contract language first.**
+
+A contract is what lets a handover pass from one phase of the cycle to the
+next, and what stops it when it should be stopped. This tool makes those,
+which is why it has the name.
 
 **ELIXIR BioHackathon Europe 2026, Project 25.**
 
