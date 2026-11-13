@@ -24,6 +24,10 @@ test = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# PROTOTYPE, 12 November 2026: the page for people travels with the package.
+[tool.setuptools.package-data]
+sentinel_oo = ["page/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "tests", "."]

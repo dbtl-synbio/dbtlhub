@@ -57,6 +57,27 @@ def _looks_like_a_zip(body: bytes) -> bool:
     return body[:2] == b"PK"
 
 
+# PROTOTYPE, 12 November 2026: the page for people. Exploratory, on its own
+# branch so the version on main is unchanged. The page is one HTML file plus
+# the drawing library beside it, both inside the package so they travel with
+# it, and the page reads only the JSON addresses this service already answers.
+PAGE_DIR = Path(__file__).parent / "page"
+
+PAGE_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+}
+
+
+@dataclass(frozen=True)
+class Page:
+    """A reply that is a file for a browser rather than JSON."""
+
+    body: bytes
+    content_type: str
+
+
 @dataclass(frozen=True)
 class Zipped:
     """A reply that is a crate rather than JSON.
@@ -79,6 +100,17 @@ class Api:
         self.sentinel = sentinel
         self.runs = runs
         self.routes = [
+            Route("GET", r"^/$", "page",
+                  "A page for people: what this instance holds, what it has "
+                  "checked recently, and a picture of each check.",
+                  self.page, returns="text/html"),
+            # Any name is accepted by the pattern, kept simple so the
+            # OpenAPI path is written correctly, and `_page_file` then
+            # refuses everything that is not a shipped file by exact name.
+            Route("GET", r"^/page/(?P<file>[\w.-]+)$",
+                  "page_file",
+                  "A file the page needs, such as its drawing library.",
+                  self.page_file, returns="text/javascript"),
             Route("POST", r"^/check/(?P<contract>[\w.-]+)$", "check",
                   "Check a crate against one handover's contract and return "
                   "the crate with the record written into it.",
@@ -279,11 +311,58 @@ class Api:
             ],
         }
 
+    def page(self, params, body):
+        return self._page_file("index.html")
+
+    def page_file(self, params, body):
+        return self._page_file(params["file"])
+
+    def _page_file(self, name: str):
+        """Only a file that is actually in the page folder, by exact name.
+
+        The address pattern already refuses slashes, and this refuses
+        anything else that is not one of the files shipped with the page.
+        """
+        shipped = {p.name: p for p in PAGE_DIR.iterdir() if p.is_file()} \
+            if PAGE_DIR.is_dir() else {}
+        found = shipped.get(name)
+        if found is None:
+            return 404, {"error": "no such page file", "known": sorted(shipped)}
+        kind = PAGE_TYPES.get(found.suffix, "application/octet-stream")
+        return 200, Page(body=found.read_bytes(), content_type=kind)
+
     def run_list(self, params, body):
         if self.runs is None:
-            return 200, {"runs": [], "held": 0, "limit": 0}
+            return 200, {"runs": [], "recent": [], "held": 0, "limit": 0}
+        recent = []
+        for run_id in self.runs.list():
+            run = self.runs.get(run_id)
+            if run is None:
+                continue
+            b = run.blessing
+            # The crate's own name for itself, from its root entity, so a
+            # person can tell one row from another.
+            crate_name = next(
+                (str(e.get("name")) for e in run.crate
+                 if str(e.get("@id", "")) == "./" and e.get("name")),
+                None,
+            )
+            recent.append({
+                "run": run_id,
+                "crate": crate_name,
+                "verdict": b.verdict_text(),
+                "contract": b.contract_name,
+                "contract_version": b.contract_version,
+                "started": b.started,
+                "ended": b.ended,
+                "findings": len(b.violations),
+                "model": b.model_text(),
+            })
         return 200, {
+            # Kept as a plain list of identifiers so anything already
+            # reading it still works. `recent` is the prototype's addition.
             "runs": self.runs.list(),
+            "recent": recent,
             "held": len(self.runs),
             "limit": self.runs.limit,
         }
@@ -468,6 +547,16 @@ def make_handler(api: Api):
                     "error": "the service failed while answering",
                     "detail": f"{type(exc).__name__}: {exc}",
                 }
+            if isinstance(payload, Page):
+                self.send_response(status)
+                self.send_header("Content-Type", payload.content_type)
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(payload.body)))
+                self.end_headers()
+                self.wfile.write(payload.body)
+                return
+
             if isinstance(payload, Zipped):
                 # The reply is the crate itself, to hand to the next
                 # process. The verdict travels in headers so a pipeline can

@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sentinel-oo</title>
+<link rel="icon" href="data:,">
+<!--
+  PROTOTYPE, 12 November 2026. A throwaway exploratory page for the copy of
+  sentinel-oo in outputs/sentinel-oo-web-prototype. It reads only the JSON
+  addresses the service already answers and changes nothing on the service.
+  Everything taken from a crate is inserted as text, never as HTML, because a
+  crate is data from somebody else.
+-->
+<style>
+:root {
+  --bg: #f4f5f7; --panel: #ffffff; --ink: #18202a; --muted: #5f6b78; --faint: #8a95a2;
+  --line: #e2e6eb; --soft: #f0f2f5; --accent: #2b5fd9;
+  --ok: #157a3c; --ok-bg: #e2f5e8;
+  --flag: #8a5a00; --flag-bg: #fcf0d4;
+  --bad: #c0362c; --bad-bg: #fde7e5;
+  --check: #2b5fd9; --model: #7b3fb5; --file: #11807f;
+  --handover: #7a8593; --meta: #a3acb7;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418; --panel: #1a1f25; --ink: #e8ebee; --muted: #a0aab5; --faint: #77828e;
+    --line: #2a3139; --soft: #222830; --accent: #7aa2f7;
+    --ok: #63d08b; --ok-bg: #16331f; --flag: #e9b949; --flag-bg: #372c11;
+    --bad: #f47c72; --bad-bg: #3b1c1a;
+    --check: #7aa2f7; --model: #c49af0; --file: #4ec5c4;
+    --handover: #9aa4b0; --meta: #5f6a76;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 64px; }
+
+header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+header .logo { flex: none; filter: drop-shadow(0 2px 6px rgba(200, 30, 20, .25)); }
+header h1 { font-size: 26px; letter-spacing: -0.01em; margin: 0; }
+header p { margin: 2px 0 0; color: var(--muted); max-width: 70ch; }
+.spacer { flex: 1; }
+
+.statusline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.dot.off { background: var(--flag); }
+.dot.bad { background: var(--bad); }
+
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px; margin-top: 18px; box-shadow: var(--shadow); }
+h2 { font-size: 17px; margin: 0; }
+.sub { color: var(--muted); font-size: 14px; margin: 2px 0 14px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 600; color: var(--faint); font-size: 12px; text-transform: uppercase;
+  letter-spacing: .04em; padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr.pick { cursor: pointer; }
+tr.pick:hover td { background: var(--soft); }
+tr.pick.on td { background: var(--soft); }
+tr.pick.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.when { color: var(--muted); white-space: nowrap; }
+.num { white-space: nowrap; }
+
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 650;
+  font-size: 12px; letter-spacing: .03em; white-space: nowrap; }
+.ACCEPTED { color: var(--ok); background: var(--ok-bg); }
+.ACCEPTED_WITH_FLAGS { color: var(--flag); background: var(--flag-bg); }
+.REFUSED { color: var(--bad); background: var(--bad-bg); }
+.OTHER { color: var(--muted); background: var(--soft); }
+
+button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+button:hover { background: var(--soft); }
+button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+
+.verdict-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.verdict-head .big { font-size: 22px; font-weight: 700; }
+.verdict-head .big.REFUSED { color: var(--bad); background: none; }
+.verdict-head .big.ACCEPTED { color: var(--ok); background: none; }
+.verdict-head .big.ACCEPTED_WITH_FLAGS { color: var(--flag); background: none; }
+.crate-name { color: var(--muted); margin: 2px 0 0; }
+
+.problems { display: grid; gap: 10px; margin: 16px 0 4px; }
+.problem { border: 1px solid var(--line); border-left: 4px solid var(--bad); border-radius: 8px;
+  padding: 10px 14px; cursor: pointer; background: var(--panel); }
+.problem:hover { background: var(--soft); }
+.problem.change { border-left-color: var(--model); }
+.problem .title { font-weight: 650; }
+.problem .where { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.good { color: var(--ok); background: var(--ok-bg); border-radius: 8px; padding: 10px 14px; margin-top: 14px; }
+
+.picture-bar { display: flex; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.picture-bar .hint { color: var(--muted); font-size: 13px; }
+.picture { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; margin-top: 10px; }
+@media (max-width: 860px) { .picture { grid-template-columns: 1fr; } }
+#cy { height: 520px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.side { border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 14px;
+  max-height: 520px; overflow: auto; }
+.side h3 { font-size: 15px; margin: 0 0 4px; }
+.side .role { color: var(--muted); margin-bottom: 8px; }
+.side dt { color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin-top: 12px; }
+.side dd { margin: 2px 0 0; word-break: break-word; }
+.side table td { padding: 4px 6px 4px 0; border: none; vertical-align: top; }
+.side table td:first-child { color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px;
+  border-radius: 50%; margin-right: 6px; vertical-align: 0; background: var(--c); }
+
+details.contracts summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; }
+details.contracts summary::-webkit-details-marker { display: none; }
+details.contracts summary::before { content: "▸"; color: var(--faint); }
+details.contracts[open] summary::before { content: "▾"; }
+.muted { color: var(--muted); }
+pre { white-space: pre-wrap; background: var(--soft); padding: 12px; border-radius: 8px; font-size: 13px; }
+code { font-size: 13px; }
+.warn { background: var(--flag-bg); color: var(--flag); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
+footer { color: var(--faint); font-size: 12px; margin-top: 28px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg class="logo" viewBox="0 0 64 64" width="56" height="56" role="img" aria-label="sentinel-oo emblem: a watching machine eye">
+      <defs>
+        <radialGradient id="eye" cx="45%" cy="42%" r="60%">
+          <stop offset="0" stop-color="#ffb3a8"/>
+          <stop offset="0.25" stop-color="#ff4a3a"/>
+          <stop offset="0.7" stop-color="#b8160c"/>
+          <stop offset="1" stop-color="#3d0503"/>
+        </radialGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- three sensor spines, one from each lower and the top vertex -->
+      <path d="M32 1v8M5 50l7-4M59 50l-7-4" stroke="#56606c" stroke-width="2.4" stroke-linecap="round"/>
+      <!-- the hexagonal head -->
+      <polygon points="32,6 54,19 54,45 32,58 10,45 10,19" fill="#1b2027" stroke="#3b4550" stroke-width="2"/>
+      <polygon points="32,12 49,22 49,42 32,52 15,42 15,22" fill="none" stroke="#2a313a" stroke-width="1.2"/>
+      <!-- small status lights along the lower edges -->
+      <circle cx="20" cy="44" r="1.4" fill="#e0372b"/><circle cx="25" cy="47.5" r="1.4" fill="#e0372b"/>
+      <circle cx="44" cy="44" r="1.4" fill="#e0372b"/><circle cx="39" cy="47.5" r="1.4" fill="#e0372b"/>
+      <!-- the eye -->
+      <circle cx="32" cy="31" r="12.5" fill="#0c0f13" stroke="#56606c" stroke-width="1.6"/>
+      <circle cx="32" cy="31" r="7.5" fill="url(#eye)" filter="url(#glow)"/>
+      <circle cx="29.6" cy="28.6" r="1.8" fill="#ffe3de" opacity=".85"/>
+    </svg>
+    <div>
+      <h1>sentinel-oo</h1>
+      <p>Checks what one phase of a Design, Build, Test, Learn cycle hands to the next,
+        against a written contract, and says whether it can be accepted.</p>
+    </div>
+    <div class="spacer"></div>
+    <button id="refresh" type="button">Refresh</button>
+  </header>
+  <div class="statusline" id="status"></div>
+  <div id="status-warn"></div>
+
+  <section>
+    <h2>Recent checks</h2>
+    <p class="sub">Click a check to see what was found.</p>
+    <div id="runs"></div>
+  </section>
+
+  <section id="picture-section" hidden>
+    <div class="verdict-head">
+      <span id="verdict-big" class="big"></span>
+      <div class="spacer"></div>
+      <span class="muted" id="verdict-meta"></span>
+    </div>
+    <p class="crate-name" id="crate-name"></p>
+    <div id="problems"></div>
+
+    <div class="picture-bar">
+      <button id="view-problem" type="button" class="on">The problem</button>
+      <button id="view-all" type="button">The whole crate</button>
+      <button id="fit" type="button">Fit</button>
+      <span class="hint" id="picture-hint"></span>
+    </div>
+    <div class="picture">
+      <div id="cy"></div>
+      <div class="side" id="side"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section>
+    <details class="contracts" id="contracts-box">
+      <summary><h2>Contracts</h2><span class="muted" id="contracts-count"></span></summary>
+      <p class="sub" style="margin-top:10px">What a crate must contain to be accepted. Click one to read it.</p>
+      <div id="contracts"></div>
+      <div id="contract-detail"></div>
+    </details>
+  </section>
+
+  <footer>Prototype. This page and the service ask for no password, and are reachable from this computer only.</footer>
+</main>
+
+<script src="/page/cytoscape.min.js"></script>
+<script>
+"use strict";
+
+// ---------------------------------------------------------------- helpers
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") node.className = v;
+    else if (k === "onclick") node.addEventListener("click", v);
+    else node.setAttribute(k, v);
+  }
+  for (const kid of kids) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+}
+
+async function getJSON(path) {
+  const reply = await fetch(path, { headers: { Accept: "application/json" } });
+  const body = await reply.json();
+  if (!reply.ok) throw new Error(body.error ? `${body.error}: ${body.detail || ""}` : reply.status);
+  return body;
+}
+
+const VERDICT_WORDS = { ACCEPTED: "Accepted", ACCEPTED_WITH_FLAGS: "Accepted with flags", REFUSED: "Refused" };
+function verdictBadge(text) {
+  const cls = VERDICT_WORDS[text] ? text : "OTHER";
+  return el("span", { class: `badge ${cls}` }, VERDICT_WORDS[text] || text || "Unknown");
+}
+
+function when(iso) {
+  const d = new Date(iso);
+  if (!iso || isNaN(d)) return "time not recorded";
+  const mins = Math.round((Date.now() - d) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  return d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+}
+function exact(iso) { const d = new Date(iso); return isNaN(d) ? "" : d.toISOString().slice(0, 19).replace("T", " ") + " UTC"; }
+
+// "refuse: edge_handling_is_recorded" -> { severity: "refuse", words: "Edge handling is recorded" }
+function ruleWords(name) {
+  const [sev, rule] = String(name).includes(": ") ? String(name).split(": ", 2) : ["", String(name)];
+  const words = rule.replace(/_/g, " ");
+  return { severity: sev, words: words.charAt(0).toUpperCase() + words.slice(1) };
+}
+
+// ---------------------------------------------------------------- status
+async function loadStatus() {
+  const box = $("status"), warn = $("status-warn");
+  let health, contracts;
+  try {
+    [health, contracts] = await Promise.all([getJSON("/health"), getJSON("/contracts")]);
+  } catch (e) {
+    box.replaceChildren(el("span", { class: "pill" }, el("span", { class: "dot bad" }), "Not answering"));
+    warn.replaceChildren(el("div", { class: "warn" }, `The service did not answer: ${e.message}`));
+    return;
+  }
+  const model = health.model.state;
+  const modelText = model === "reachable" ? `Model ${health.model.engine}`
+    : model === "none configured" ? "No model" : "Model not answering";
+  box.replaceChildren(
+    el("span", { class: "pill" }, el("span", { class: "dot" }), `Running, version ${health.version}`),
+    el("span", { class: "pill", title: model === "none configured"
+      ? "Without a model, a value written only in free text (for example inside a command line) cannot be recovered, so a crate that needs one is refused."
+      : (health.model.detail || "") },
+      el("span", { class: model === "reachable" ? "dot" : model === "none configured" ? "dot off" : "dot bad" }), modelText),
+    el("span", { class: "pill" }, contracts.holds_nothing ? "No contracts" :
+      `${contracts.contracts.length} contract${contracts.contracts.length === 1 ? "" : "s"}`),
+  );
+  warn.replaceChildren();
+  if (health.holds_nothing) warn.append(el("div", { class: "warn" }, health.warning));
+  if (model === "configured but not answering") {
+    warn.append(el("div", { class: "warn" }, `The model cannot be reached. ${health.model.effect}`));
+  }
+  renderContractList(contracts);
+}
+
+// ---------------------------------------------------------------- runs
+let shownRun = null, recentById = new Map();
+
+async function loadRuns() {
+  const box = $("runs");
+  let data;
+  try { data = await getJSON("/runs"); }
+  catch (e) { box.replaceChildren(el("div", { class: "warn" }, `Could not read the checks: ${e.message}`)); return; }
+
+  recentById = new Map((data.recent || []).map(r => [r.run, r]));
+  if (!data.recent || data.recent.length === 0) {
+    box.replaceChildren(el("p", { class: "muted" }, "No checks yet. Send a crate to POST /check/{contract} and it appears here."));
+    return;
+  }
+  const head = el("tr", {}, ...["Verdict", "Crate", "Contract", "Problems", "When"].map(h => el("th", {}, h)));
+  const rows = data.recent.map(r => {
+    const tr = el("tr", { class: "pick" + (r.run === shownRun ? " on" : ""), onclick: () => showRun(r.run) },
+      el("td", {}, verdictBadge(r.verdict)),
+      el("td", {}, r.crate || el("span", { class: "muted" }, "no name given")),
+      el("td", { class: "muted" }, r.contract ? r.contract.replace(/_/g, " ") : "none"),
+      el("td", { class: "num" }, r.findings ? `${r.findings}` : el("span", { class: "muted" }, "none")),
+      el("td", { class: "when", title: exact(r.started) }, when(r.started)),
+    );
+    tr.dataset.run = r.run;
+    return tr;
+  });
+  box.replaceChildren(el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows)),
+    el("p", { class: "muted", style: "font-size:13px;margin:10px 0 0" },
+      `The last ${data.limit} checks are kept here. The lasting record of each is written inside the crate it returned.`));
+}
+
+// ---------------------------------------------------------------- picture
+// Roles come from the service (graph.py).
+const FOLDED = new Set(["a recorded value", "what was checked"]);
+const ALWAYS_DRAW_FROM = new Set(["a finding", "a change made"]);
+const KEY = new Set(["the check", "the verdict", "a finding", "a change made", "a value a model recovered", "missing"]);
+const NEVER_IN_PROBLEM_VIEW = new Set(["the service", "who asked", "elsewhere", "an earlier check", "part of the check"]);
+
+const ROLE_STYLE = {
+  "the check":                 { c: "--check", size: 30 },
+  "the verdict":               { c: "--check", size: 30 },
+  "a finding":                 { c: "--bad",   size: 30 },
+  "a change made":             { c: "--model", size: 30 },
+  "a value a model recovered": { c: "--model", size: 30 },
+  "missing":                   { c: "--bad",   size: 24, hollow: true },
+  "a file":                    { c: "--file",  size: 20 },
+  "the handover":              { c: "--handover", size: 20 },
+  "a recorded value":          { c: "--meta",  size: 12 },
+  "what was checked":          { c: "--meta",  size: 12 },
+  "elsewhere":                 { c: "--meta",  size: 12, hollow: true },
+  "the service":               { c: "--meta",  size: 16 },
+  "who asked":                 { c: "--meta",  size: 16 },
+  "part of the check":         { c: "--meta",  size: 16 },
+  "an earlier check":          { c: "--meta",  size: 16 },
+};
+const LEGEND = [
+  ["the check", "the check"], ["a finding", "a problem found"], ["a value a model recovered", "changed by the model"],
+  ["the handover", "something in the crate"], ["a file", "a data file"], ["missing", "named but missing"],
+];
+
+let cy = null, graph = null, view = "problem", folded = new Map(), nodeIndex = new Map();
+
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function short(text, n) { text = String(text || ""); return text.length > n ? text.slice(0, n - 1) + "…" : text; }
+
+async function showRun(runId) {
+  shownRun = runId;
+  history.replaceState(null, "", `#run=${encodeURIComponent(runId)}`);
+  document.querySelectorAll("tr.pick").forEach(tr => tr.classList.toggle("on", tr.dataset.run === runId));
+  $("picture-section").hidden = false;
+  try { graph = await getJSON(`/graph/${encodeURIComponent(runId)}`); }
+  catch (e) { $("problems").replaceChildren(el("div", { class: "warn" }, `Could not read this check: ${e.message}`)); return; }
+
+  const r = recentById.get(runId) || {};
+  const big = $("verdict-big");
+  big.className = `big ${graph.verdict || ""}`;
+  big.textContent = VERDICT_WORDS[graph.verdict] || graph.verdict || "Unknown";
+  $("verdict-meta").textContent = [r.contract && `against ${r.contract.replace(/_/g, " ")} ${r.contract_version || ""}`, r.started && when(r.started)]
+    .filter(Boolean).join(", ");
+  $("crate-name").textContent = r.crate || "";
+  renderProblems();
+  // A crate with nothing wrong has no problem to focus on: show it whole.
+  setView(hasProblems() ? "problem" : "all");
+  $("picture-section").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function hasProblems() { return graph.nodes.some(n => KEY.has(n.role) && !["the check", "the verdict"].includes(n.role)); }
+
+function aboutOf(id) {
+  const e = graph.edges.find(e => e.from === id && e.property === "about");
+  return e ? e.to : null;
+}
+
+function renderProblems() {
+  const box = $("problems");
+  const findings = graph.nodes.filter(n => n.role === "a finding");
+  const changes = graph.nodes.filter(n => n.role === "a change made" || n.role === "a value a model recovered");
+  const missing = graph.nodes.filter(n => n.role === "missing");
+  const byId = new Map(graph.nodes.map(n => [n.id, n]));
+  const cards = [];
+  for (const f of findings) {
+    const { severity, words } = ruleWords(f.name);
+    const target = aboutOf(f.id), t = byId.get(target);
+    cards.push(el("div", { class: "problem", onclick: () => focusOn(target || f.id) },
+      el("div", { class: "title" }, words, severity && severity !== "refuse" ? ` (${severity})` : ""),
+      el("div", {}, f.value || ""),
+      t ? el("div", { class: "where" }, `In: ${t.name}`) : null));
+  }
+  for (const c of changes) {
+    cards.push(el("div", { class: "problem change", onclick: () => focusOn(c.id) },
+      el("div", { class: "title" }, "Changed by the model: ", c.name), el("div", {}, c.value || "")));
+  }
+  if (!findings.length && !changes.length) {
+    box.replaceChildren(el("div", { class: "good" }, "Nothing in this crate broke the contract."));
+  } else {
+    box.replaceChildren(el("div", { class: "problems" }, ...cards));
+  }
+  if (missing.length) {
+    box.append(el("p", { class: "muted", style: "font-size:13px" },
+      `Named in the crate but described nowhere: ${missing.map(m => m.name).join(", ")}.`));
+  }
+}
+
+function setView(which) {
+  view = which;
+  $("view-problem").classList.toggle("on", which === "problem");
+  $("view-all").classList.toggle("on", which === "all");
+  $("view-problem").disabled = !hasProblems();
+  draw();
+}
+
+function buildElements() {
+  const byId = new Map(graph.nodes.map(n => [n.id, n]));
+  const foldInto = new Map(), foldedUnder = new Map();
+  for (const e of graph.edges) {
+    const from = byId.get(e.from), to = byId.get(e.to);
+    if (!from || !to) continue;
+    if (FOLDED.has(to.role) && !FOLDED.has(from.role) && !foldInto.has(to.id)) {
+      foldInto.set(to.id, from.id);
+      if (!foldedUnder.has(from.id)) foldedUnder.set(from.id, []);
+      foldedUnder.get(from.id).push(to);
+    }
+  }
+  // Lines worth drawing: not packaging, except the ones that say where a
+  // finding or a change points. Folded boxes are redirected to their parent.
+  const lines = [], seen = new Set();
+  for (const e of graph.edges) {
+    const fromRole = (byId.get(e.from) || {}).role;
+    if (e.packaging && !ALWAYS_DRAW_FROM.has(fromRole)) continue;
+    const a = foldInto.get(e.from) || e.from, b = foldInto.get(e.to) || e.to;
+    if (a === b) continue;
+    const key = `${a}\u0000${b}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    lines.push({ source: a, target: b, property: e.property, important: ALWAYS_DRAW_FROM.has(fromRole), fromRole });
+  }
+
+  let keep;
+  if (view === "problem") {
+    // The problem and its surroundings: every key box, what each finding
+    // or change is about, and the boxes directly joined to those.
+    const focus = new Set(graph.nodes.filter(n => KEY.has(n.role)).map(n => n.id));
+    for (const l of lines) if (l.important) focus.add(l.target);
+    keep = new Set(focus);
+    for (const l of lines) {
+      const s = byId.get(l.source), t = byId.get(l.target);
+      if (!s || !t) continue;
+      const near = (focus.has(l.source) && !["the check", "the verdict"].includes(s.role)) ? l.target
+                 : (focus.has(l.target) && !["the check", "the verdict"].includes(t.role)) ? l.source : null;
+      if (near && !NEVER_IN_PROBLEM_VIEW.has(byId.get(near).role)) keep.add(near);
+    }
+    for (const id of [...keep]) if (foldInto.has(id) || NEVER_IN_PROBLEM_VIEW.has((byId.get(id) || {}).role)) keep.delete(id);
+  } else {
+    keep = new Set(graph.nodes.filter(n => !foldInto.has(n.id)).map(n => n.id));
+  }
+
+  const nodes = graph.nodes.filter(n => keep.has(n.id)).map(n => {
+    const s = ROLE_STYLE[n.role] || { c: "--handover", size: 20 };
+    let label = n.role === "a finding" ? ruleWords(n.name).words : n.name;
+    if (n.role === "the verdict") label = VERDICT_WORDS[n.value] || n.name;
+    return { data: { id: n.id, label: short(label, view === "problem" ? 44 : 26), role: n.role,
+      color: cssVar(s.c), size: view === "all" ? Math.max(10, s.size - 6) : s.size, hollow: s.hollow ? 1 : 0 } };
+  });
+  const edges = lines.filter(l => keep.has(l.source) && keep.has(l.target)).map((l, i) => ({
+    data: { id: `e${i}`, source: l.source, target: l.target, label: l.property,
+      color: l.important ? cssVar(l.fromRole === "a finding" ? "--bad" : "--model") : cssVar("--meta"),
+      width: l.important ? 2.5 : 1.2 } }));
+  return { nodes, edges, foldedUnder, byId };
+}
+
+function draw() {
+  const { nodes, edges, foldedUnder, byId } = buildElements();
+  folded = foldedUnder; nodeIndex = byId;
+  $("picture-hint").textContent = view === "problem"
+    ? `${nodes.length} of ${graph.counts.nodes} boxes: the problem and what it touches. Click a box for details.`
+    : `${nodes.length} boxes. Small recorded values are folded into the box they describe. Scroll to zoom, drag to move.`;
+
+  if (cy) cy.destroy();
+  const checkNode = nodes.find(n => n.data.role === "the check");
+  const layout = view === "problem"
+    ? { name: "breadthfirst", directed: true, spacingFactor: 1.1, padding: 30, avoidOverlap: true,
+        roots: checkNode ? [checkNode.data.id] : undefined,
+        // Left to right rather than top to bottom: the check, then what it
+        // found, then what that is about.
+        transform: (node, pos) => ({ x: pos.y * 2.1, y: pos.x * 0.7 }) }
+    : { name: "cose", animate: false, nodeRepulsion: () => 12000, idealEdgeLength: () => 80,
+        nodeOverlap: 16, padding: 24, randomize: true, componentSpacing: 80 };
+  cy = cytoscape({
+    container: $("cy"),
+    elements: { nodes, edges },
+    minZoom: 0.2, maxZoom: 3,
+    style: [
+      { selector: "node", style: {
+        "background-color": "data(color)", "width": "data(size)", "height": "data(size)",
+        "label": "data(label)", "font-size": view === "problem" ? 13 : 10, "color": cssVar("--ink"),
+        "text-valign": "bottom", "text-margin-y": 5, "text-wrap": "wrap", "text-max-width": view === "problem" ? 170 : 110,
+        "text-background-color": cssVar("--bg"), "text-background-opacity": 0.85, "text-background-padding": 2,
+        "border-width": 0 } },
+      { selector: "node[hollow = 1]", style: { "background-opacity": 0.12, "border-width": 2,
+        "border-style": "dashed", "border-color": "data(color)" } },
+      { selector: "node:selected", style: { "border-width": 4, "border-color": cssVar("--ink"), "border-style": "solid" } },
+      { selector: "edge", style: {
+        "width": "data(width)", "line-color": "data(color)", "target-arrow-color": "data(color)",
+        "target-arrow-shape": "triangle", "curve-style": "bezier", "arrow-scale": 0.8, "opacity": 0.9 } },
+      { selector: "edge:selected", style: { "label": "data(label)", "font-size": 10, "color": cssVar("--muted") } },
+    ],
+    layout,
+  });
+  cy.on("tap", "node", (evt) => describe(evt.target.id()));
+  cy.on("tap", (evt) => { if (evt.target === cy) sideSummary(); });
+  $("legend").replaceChildren(...LEGEND.map(([role, text]) =>
+    el("span", { style: `--c: ${cssVar(ROLE_STYLE[role].c)}` }, text)));
+  sideSummary();
+}
+
+function sideSummary() {
+  $("side").replaceChildren(el("h3", {}, "Details"),
+    el("p", { class: "muted" }, "Click a box in the picture to see what it is, its values, and what it is joined to. Click a problem above to find it in the picture."));
+}
+
+function focusOn(id) {
+  if (!cy) return;
+  let node = cy.getElementById(id);
+  if (node.empty()) for (const [parent, list] of folded) if (list.some(n => n.id === id)) node = cy.getElementById(parent);
+  if (node.empty() && view !== "all") { setView("all"); node = cy.getElementById(id); }
+  if (node.empty()) return;
+  cy.elements().unselect(); node.select();
+  cy.animate({ center: { eles: node }, zoom: Math.max(cy.zoom(), 1.1) }, { duration: 300 });
+  describe(node.id());
+}
+
+const ROLE_WORDS = {
+  "the check": "The check sentinel-oo ran", "the verdict": "The verdict", "a finding": "A problem found",
+  "a change made": "A change the model made", "a value a model recovered": "A value the model recovered from text",
+  "the handover": "Something the crate describes", "a file": "A data file in the crate",
+  "missing": "Named in the crate but described nowhere", "elsewhere": "Something outside the crate, named by web address",
+  "the service": "The service that ran the check", "a recorded value": "A recorded value",
+};
+
+function describe(id) {
+  const n = nodeIndex.get(id);
+  if (!n) return;
+  const names = (ids) => ids.map(x => (nodeIndex.get(x) || { name: x }).name);
+  const out = graph.edges.filter(e => e.from === id && !e.packaging);
+  const inc = graph.edges.filter(e => e.to === id && !e.packaging);
+  const values = folded.get(id) || [];
+  const title = n.role === "a finding" ? ruleWords(n.name).words : n.name;
+  const kids = [el("h3", {}, title), el("div", { class: "role" }, ROLE_WORDS[n.role] || n.role)];
+  const dl = el("dl", {});
+  if (n.value) dl.append(el("dt", {}, "Value"), el("dd", {}, n.value));
+  if (values.length) {
+    dl.append(el("dt", {}, "Recorded values"), el("dd", {}, el("table", {}, el("tbody", {},
+      ...values.map(v => el("tr", {}, el("td", {}, v.name), el("td", {}, v.value ?? "")))))));
+  }
+  if (out.length) dl.append(el("dt", {}, "Points to"), el("dd", {}, el("table", {}, el("tbody", {},
+    ...out.map(e => el("tr", {}, el("td", {}, e.property), el("td", {}, names([e.to])[0])))))));
+  if (inc.length) dl.append(el("dt", {}, "Pointed to by"), el("dd", {}, el("table", {}, el("tbody", {},
+    ...inc.map(e => el("tr", {}, el("td", {}, e.property), el("td", {}, names([e.from])[0])))))));
+  dl.append(el("dt", {}, "Type"), el("dd", {}, n.type), el("dt", {}, "Identifier"), el("dd", {}, el("code", {}, n.id)));
+  kids.push(dl);
+  $("side").replaceChildren(...kids);
+}
+
+// ---------------------------------------------------------------- contracts
+function renderContractList(data) {
+  const box = $("contracts");
+  if (data.holds_nothing) { $("contracts-count").textContent = "none held"; box.replaceChildren(el("p", { class: "warn" }, data.warning)); return; }
+  $("contracts-count").textContent = data.contracts.map(c => `${c.name.replace(/_/g, " ")} ${c.version}`).join(", ");
+  const head = el("tr", {}, el("th", {}, "Contract"), el("th", {}, "Version"), el("th", {}, "Requirements"));
+  const rows = data.contracts.map(c => el("tr", { class: "pick", onclick: () => showContract(c.name) },
+    el("td", {}, c.name.replace(/_/g, " ")), el("td", { class: "muted" }, c.version), el("td", {}, `${c.requirements}`)));
+  box.replaceChildren(el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows)));
+}
+
+async function showContract(name) {
+  const box = $("contract-detail");
+  let c;
+  try { c = await getJSON(`/contracts/${encodeURIComponent(name)}`); }
+  catch (e) { box.replaceChildren(el("div", { class: "warn" }, e.message)); return; }
+  const allowed = (r) => r.one_of ? `one of ${r.one_of.join(", ")}` : r.between ? `${r.between[0]} to ${r.between[1]}` : "";
+  const head = el("tr", {}, ...["Requirement", "Applies to", "Must", "If broken", "Model may fix"].map(h => el("th", {}, h)));
+  const rows = c.requirements.map(r => el("tr", {},
+    el("td", {}, el("div", { style: "font-weight:600" }, ruleWords(r.name).words), el("div", { class: "muted" }, r.message || "")),
+    el("td", {}, r.applies_to || ""),
+    el("td", {}, [r.reads, r.must, allowed(r)].filter(Boolean).join(", ")),
+    el("td", {}, r.severity || ""), el("td", {}, r.repairable ? "yes" : "no")));
+  box.replaceChildren(
+    el("h3", { style: "margin:20px 0 4px" }, `${c.name.replace(/_/g, " ")}, version ${c.version}`),
+    el("p", { class: "muted", style: "margin-top:0" }, c.description || ""),
+    el("div", { style: "overflow-x:auto" }, el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows))),
+    el("details", { style: "margin-top:12px" }, el("summary", {}, "The whole contract in plain words"), el("pre", {}, c.summary || "")),
+  );
+}
+
+// ---------------------------------------------------------------- start
+async function refresh() { await Promise.all([loadStatus(), loadRuns()]); }
+$("refresh").addEventListener("click", refresh);
+$("view-problem").addEventListener("click", () => graph && setView("problem"));
+$("view-all").addEventListener("click", () => graph && setView("all"));
+$("fit").addEventListener("click", () => cy && cy.fit(undefined, 30));
+// Re-read the list of checks every 10 seconds, so a check sent from
+// elsewhere appears without reloading. The picture is not redrawn.
+setInterval(loadRuns, 10000);
+
+// Open a check straight away, so the page is never just a list. The one
+// named in the address if the service still holds it, otherwise the newest.
+refresh().then(() => {
+  const m = /run=([\w-]+)/.exec(location.hash);
+  const named = m && decodeURIComponent(m[1]);
+  const pick = recentById.has(named) ? named : recentById.keys().next().value;
+  if (pick) showRun(pick);
+});
+</script>
+</body>
+</html>
