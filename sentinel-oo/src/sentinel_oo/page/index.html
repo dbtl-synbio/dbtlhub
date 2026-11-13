@@ -6,8 +6,8 @@
 <title>sentinel-oo</title>
 <link rel="icon" href="data:,">
 <!--
-  PROTOTYPE, 12 November 2026. A throwaway exploratory page for the copy of
-  sentinel-oo in outputs/sentinel-oo-web-prototype. It reads only the JSON
+  PROTOTYPE, 12 November 2026, restyled 13 November 2026. Exploratory, on its
+  own branch so the version on main is unchanged. It reads only the JSON
   addresses the service already answers and changes nothing on the service.
   Everything taken from a crate is inserted as text, never as HTML, because a
   crate is data from somebody else.
@@ -21,7 +21,10 @@
   --bad: #c0362c; --bad-bg: #fde7e5;
   --check: #2b5fd9; --model: #7b3fb5; --file: #11807f;
   --handover: #7a8593; --meta: #a3acb7;
-  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .06);
+  --edge: #8a95a2; --missing: #c56a00;
+  --brand: #e0372b; --brand-deep: #8f150c;
+  --mast-a: #161b22; --mast-b: #23140f; --mast-ink: #f3f4f6; --mast-muted: #aab3bd;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 14px rgba(16, 24, 40, .06);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -31,6 +34,8 @@
     --bad: #f47c72; --bad-bg: #3b1c1a;
     --check: #7aa2f7; --model: #c49af0; --file: #4ec5c4;
     --handover: #9aa4b0; --meta: #5f6a76;
+    --edge: #6b7683; --missing: #f0a04b;
+    --mast-a: #0b0e12; --mast-b: #1d0f0b;
     --shadow: none;
   }
 }
@@ -39,22 +44,39 @@ body { margin: 0; background: var(--bg); color: var(--ink);
   font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
 main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 64px; }
 
-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-header .logo { flex: none; filter: drop-shadow(0 2px 6px rgba(200, 30, 20, .25)); }
-header h1 { font-size: 26px; letter-spacing: -0.01em; margin: 0; }
-header p { margin: 2px 0 0; color: var(--muted); max-width: 70ch; }
+/* The masthead: dark in both themes, lit by the logo's red eye. */
+.masthead { position: relative; overflow: hidden; border-radius: 16px; padding: 22px 24px 20px;
+  color: var(--mast-ink);
+  background:
+    radial-gradient(420px 220px at 60px 40px, rgba(224, 55, 43, .28), transparent 70%),
+    linear-gradient(120deg, var(--mast-a) 0%, var(--mast-a) 55%, var(--mast-b) 100%);
+  box-shadow: 0 10px 30px rgba(16, 24, 40, .18); }
+.masthead::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-deep) 40%, transparent); }
+header { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+header .logo { flex: none; filter: drop-shadow(0 0 14px rgba(255, 60, 40, .45)); }
+header h1 { font-size: 28px; letter-spacing: -0.02em; margin: 0; font-weight: 750; }
+header h1 .oo { color: var(--brand); }
+header p { margin: 4px 0 0; color: var(--mast-muted); max-width: 70ch; }
 .spacer { flex: 1; }
+.masthead button { background: rgba(255, 255, 255, .08); color: var(--mast-ink);
+  border-color: rgba(255, 255, 255, .18); }
+.masthead button:hover { background: rgba(255, 255, 255, .16); }
 
-.statusline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.pill { display: inline-flex; align-items: center; gap: 6px; background: var(--panel);
+.statusline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.pill { display: inline-flex; align-items: center; gap: 7px; background: var(--panel);
   border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.masthead .pill { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .14);
+  color: var(--mast-ink); font-size: 13px; }
+.masthead .dot { width: 9px; height: 9px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .dot.off { background: var(--flag); }
 .dot.bad { background: var(--bad); }
 
-section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 20px; margin-top: 18px; box-shadow: var(--shadow); }
-h2 { font-size: 17px; margin: 0; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 22px; margin-top: 20px; box-shadow: var(--shadow); }
+h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 9px; }
+h2::before { content: ""; width: 4px; height: 17px; border-radius: 2px; background: var(--brand); }
 .sub { color: var(--muted); font-size: 14px; margin: 2px 0 14px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -62,12 +84,22 @@ th { text-align: left; font-weight: 600; color: var(--faint); font-size: 12px; t
   letter-spacing: .04em; padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
 td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
-tr.pick { cursor: pointer; }
+tr.pick { cursor: pointer; transition: background .12s; }
 tr.pick:hover td { background: var(--soft); }
-tr.pick.on td { background: var(--soft); }
-tr.pick.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+tr.pick.on td { background: var(--soft); font-weight: 600; }
+/* A coloured bar down the left of each check, in the colour of its verdict. */
+tr.pick td:first-child { box-shadow: inset 4px 0 0 var(--vbar, transparent); padding-left: 16px; }
+tr.v-REFUSED { --vbar: var(--bad); }
+tr.v-ACCEPTED { --vbar: var(--ok); }
+tr.v-ACCEPTED_WITH_FLAGS { --vbar: var(--flag); }
+.nowrap { white-space: nowrap; }
 .when { color: var(--muted); white-space: nowrap; }
-.num { white-space: nowrap; }
+.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.runno { color: var(--faint); font-variant-numeric: tabular-nums; width: 1%; white-space: nowrap; }
+.runid { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted);
+  background: var(--soft); border-radius: 5px; padding: 1px 6px; margin-left: 8px; }
+.count { display: inline-block; min-width: 22px; text-align: center; border-radius: 6px; padding: 0 6px;
+  font-weight: 650; background: var(--bad-bg); color: var(--bad); }
 
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 650;
   font-size: 12px; letter-spacing: .03em; white-space: nowrap; }
@@ -81,17 +113,30 @@ button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 8px;
 button:hover { background: var(--soft); }
 button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
 
-.verdict-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.verdict-head .big { font-size: 22px; font-weight: 700; }
-.verdict-head .big.REFUSED { color: var(--bad); background: none; }
-.verdict-head .big.ACCEPTED { color: var(--ok); background: none; }
-.verdict-head .big.ACCEPTED_WITH_FLAGS { color: var(--flag); background: none; }
-.crate-name { color: var(--muted); margin: 2px 0 0; }
+/* The verdict banner: the answer to "did this pass?", in its own colour. */
+.banner { --vc: var(--muted); --vbg: var(--soft);
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  margin: -22px -22px 0; padding: 20px 22px; border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, var(--vbg), var(--panel));
+  border-bottom: 1px solid var(--line); box-shadow: inset 6px 0 0 var(--vc); }
+.banner.REFUSED { --vc: var(--bad); --vbg: var(--bad-bg); }
+.banner.ACCEPTED { --vc: var(--ok); --vbg: var(--ok-bg); }
+.banner.ACCEPTED_WITH_FLAGS { --vc: var(--flag); --vbg: var(--flag-bg); }
+.banner-icon { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--vc); color: var(--panel); font-size: 28px; font-weight: 800; line-height: 1;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--vc) 18%, transparent); }
+.banner .big { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--vc); line-height: 1.1; }
+.crate-name { color: var(--ink); margin: 4px 0 0; }
+.facts { display: flex; gap: 8px; flex-wrap: wrap; }
+.fact { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px;
+  font-size: 13px; color: var(--muted); }
+.fact b { display: block; font-size: 15px; color: var(--ink); }
+.problems-head { font-weight: 650; margin: 20px 0 0; }
 
-.problems { display: grid; gap: 10px; margin: 16px 0 4px; }
-.problem { border: 1px solid var(--line); border-left: 4px solid var(--bad); border-radius: 8px;
-  padding: 10px 14px; cursor: pointer; background: var(--panel); }
-.problem:hover { background: var(--soft); }
+.problems { display: grid; gap: 10px; margin: 10px 0 4px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.problem { border: 1px solid var(--line); border-left: 4px solid var(--bad); border-radius: 10px;
+  padding: 12px 16px; cursor: pointer; background: var(--panel); transition: transform .12s, box-shadow .12s; }
+.problem:hover { background: var(--soft); transform: translateY(-1px); box-shadow: var(--shadow); }
 .problem.change { border-left-color: var(--model); }
 .problem .title { font-weight: 650; }
 .problem .where { color: var(--muted); font-size: 13px; margin-top: 2px; }
@@ -101,9 +146,17 @@ button.on { background: var(--ink); color: var(--panel); border-color: var(--ink
 .picture-bar .hint { color: var(--muted); font-size: 13px; }
 .picture { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; margin-top: 10px; }
 @media (max-width: 860px) { .picture { grid-template-columns: 1fr; } }
-#cy { height: 520px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
-.side { border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 14px;
-  max-height: 520px; overflow: auto; }
+#cy { height: 460px; border: 1px solid var(--line); border-radius: 12px;
+  background-color: var(--bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--faint) 35%, transparent) 1px, transparent 1.2px);
+  background-size: 18px 18px; }
+.side { border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 14px;
+  max-height: 460px; overflow: auto; background: var(--panel); }
+.glance { list-style: none; padding: 0; margin: 10px 0 14px; display: grid; gap: 8px; }
+.glance li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px;
+  border-radius: 8px; background: var(--soft); }
+.glance li span:first-child { color: var(--muted); }
+.glance li span:last-child { font-weight: 650; text-align: right; }
 .side h3 { font-size: 15px; margin: 0 0 4px; }
 .side .role { color: var(--muted); margin-bottom: 8px; }
 .side dt { color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin-top: 12px; }
@@ -113,6 +166,8 @@ button.on { background: var(--ink); color: var(--panel); border-color: var(--ink
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 10px; }
 .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px;
   border-radius: 50%; margin-right: 6px; vertical-align: 0; background: var(--c); }
+.legend span.square::before { border-radius: 3px; }
+.legend span.hollow::before { background: transparent; border: 2px dashed var(--c); width: 7px; height: 7px; }
 
 details.contracts summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; }
 details.contracts summary::-webkit-details-marker { display: none; }
@@ -122,11 +177,14 @@ details.contracts[open] summary::before { content: "▾"; }
 pre { white-space: pre-wrap; background: var(--soft); padding: 12px; border-radius: 8px; font-size: 13px; }
 code { font-size: 13px; }
 .warn { background: var(--flag-bg); color: var(--flag); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
-footer { color: var(--faint); font-size: 12px; margin-top: 28px; text-align: center; }
+footer { color: var(--faint); font-size: 12px; margin-top: 32px; text-align: center; }
+footer::before { content: ""; display: block; width: 40px; height: 3px; border-radius: 2px;
+  background: var(--brand); margin: 0 auto 12px; opacity: .7; }
 </style>
 </head>
 <body>
 <main>
+  <div class="masthead">
   <header>
     <svg class="logo" viewBox="0 0 64 64" width="56" height="56" role="img" aria-label="sentinel-oo emblem: a watching machine eye">
       <defs>
@@ -155,7 +213,7 @@ footer { color: var(--faint); font-size: 12px; margin-top: 28px; text-align: cen
       <circle cx="29.6" cy="28.6" r="1.8" fill="#ffe3de" opacity=".85"/>
     </svg>
     <div>
-      <h1>sentinel-oo</h1>
+      <h1>sentinel-<span class="oo">oo</span></h1>
       <p>Checks what one phase of a Design, Build, Test, Learn cycle hands to the next,
         against a written contract, and says whether it can be accepted.</p>
     </div>
@@ -163,6 +221,7 @@ footer { color: var(--faint); font-size: 12px; margin-top: 28px; text-align: cen
     <button id="refresh" type="button">Refresh</button>
   </header>
   <div class="statusline" id="status"></div>
+  </div>
   <div id="status-warn"></div>
 
   <section>
@@ -172,12 +231,15 @@ footer { color: var(--faint); font-size: 12px; margin-top: 28px; text-align: cen
   </section>
 
   <section id="picture-section" hidden>
-    <div class="verdict-head">
-      <span id="verdict-big" class="big"></span>
+    <div class="banner" id="verdict-banner">
+      <div class="banner-icon" id="verdict-icon" aria-hidden="true"></div>
+      <div>
+        <div id="verdict-big" class="big"></div>
+        <p class="crate-name" id="crate-name"></p>
+      </div>
       <div class="spacer"></div>
-      <span class="muted" id="verdict-meta"></span>
+      <div class="facts" id="verdict-meta"></div>
     </div>
-    <p class="crate-name" id="crate-name"></p>
     <div id="problems"></div>
 
     <div class="picture-bar">
@@ -303,13 +365,17 @@ async function loadRuns() {
     box.replaceChildren(el("p", { class: "muted" }, "No checks yet. Send a crate to POST /check/{contract} and it appears here."));
     return;
   }
-  const head = el("tr", {}, ...["Verdict", "Crate", "Contract", "Problems", "When"].map(h => el("th", {}, h)));
-  const rows = data.recent.map(r => {
-    const tr = el("tr", { class: "pick" + (r.run === shownRun ? " on" : ""), onclick: () => showRun(r.run) },
+  const head = el("tr", {}, ...["#", "Verdict", "Crate", "Contract", "Problems", "When"].map(h => el("th", {}, h)));
+  const total = data.recent.length;
+  const rows = data.recent.map((r, i) => {
+    // Numbered oldest first, so a check keeps its number as newer ones arrive.
+    const tr = el("tr", { class: `pick v-${r.verdict}` + (r.run === shownRun ? " on" : ""), onclick: () => showRun(r.run),
+                          title: `Check ${r.run}` },
+      el("td", { class: "runno" }, `${total - i}`),
       el("td", {}, verdictBadge(r.verdict)),
-      el("td", {}, r.crate || el("span", { class: "muted" }, "no name given")),
-      el("td", { class: "muted" }, r.contract ? r.contract.replace(/_/g, " ") : "none"),
-      el("td", { class: "num" }, r.findings ? `${r.findings}` : el("span", { class: "muted" }, "none")),
+      el("td", {}, r.crate || el("span", { class: "muted" }, "no name given"), el("span", { class: "runid" }, String(r.run).slice(0, 6))),
+      el("td", { class: "muted nowrap" }, r.contract ? r.contract.replace(/_/g, " ") : "none"),
+      el("td", { class: "num" }, r.findings ? el("span", { class: "count" }, `${r.findings}`) : el("span", { class: "muted" }, "none")),
       el("td", { class: "when", title: exact(r.started) }, when(r.started)),
     );
     tr.dataset.run = r.run;
@@ -327,13 +393,16 @@ const ALWAYS_DRAW_FROM = new Set(["a finding", "a change made"]);
 const KEY = new Set(["the check", "the verdict", "a finding", "a change made", "a value a model recovered", "missing"]);
 const NEVER_IN_PROBLEM_VIEW = new Set(["the service", "who asked", "elsewhere", "an earlier check", "part of the check"]);
 
+// Every role in the key has its own colour or shape, so no two key entries
+// look alike. The verdict is a square in the colour of what it decided.
+const VERDICT_COLOUR = { ACCEPTED: "--ok", ACCEPTED_WITH_FLAGS: "--flag", REFUSED: "--bad" };
 const ROLE_STYLE = {
-  "the check":                 { c: "--check", size: 30 },
-  "the verdict":               { c: "--check", size: 30 },
+  "the check":                 { c: "--check", size: 34 },
+  "the verdict":               { c: "--muted", size: 34, shape: "round-rectangle" },
   "a finding":                 { c: "--bad",   size: 30 },
   "a change made":             { c: "--model", size: 30 },
   "a value a model recovered": { c: "--model", size: 30 },
-  "missing":                   { c: "--bad",   size: 24, hollow: true },
+  "missing":                   { c: "--missing", size: 24, hollow: true },
   "a file":                    { c: "--file",  size: 20 },
   "the handover":              { c: "--handover", size: 20 },
   "a recorded value":          { c: "--meta",  size: 12 },
@@ -345,7 +414,8 @@ const ROLE_STYLE = {
   "an earlier check":          { c: "--meta",  size: 16 },
 };
 const LEGEND = [
-  ["the check", "the check"], ["a finding", "a problem found"], ["a value a model recovered", "changed by the model"],
+  ["the check", "the check"], ["the verdict", "the verdict (green accepted, amber flagged, red refused)"],
+  ["a finding", "a problem found"], ["a value a model recovered", "changed by the model"],
   ["the handover", "something in the crate"], ["a file", "a data file"], ["missing", "named but missing"],
 ];
 
@@ -363,12 +433,18 @@ async function showRun(runId) {
   catch (e) { $("problems").replaceChildren(el("div", { class: "warn" }, `Could not read this check: ${e.message}`)); return; }
 
   const r = recentById.get(runId) || {};
-  const big = $("verdict-big");
-  big.className = `big ${graph.verdict || ""}`;
-  big.textContent = VERDICT_WORDS[graph.verdict] || graph.verdict || "Unknown";
-  $("verdict-meta").textContent = [r.contract && `against ${r.contract.replace(/_/g, " ")} ${r.contract_version || ""}`, r.started && when(r.started)]
-    .filter(Boolean).join(", ");
+  const v = VERDICT_WORDS[graph.verdict] ? graph.verdict : "";
+  $("verdict-banner").className = `banner ${v}`;
+  $("verdict-icon").textContent = { ACCEPTED: "✓", ACCEPTED_WITH_FLAGS: "!", REFUSED: "✕" }[v] || "?";
+  $("verdict-big").textContent = VERDICT_WORDS[graph.verdict] || graph.verdict || "Unknown";
   $("crate-name").textContent = r.crate || "";
+  const nProblems = graph.nodes.filter(n => n.role === "a finding").length;
+  const fact = (label, value) => el("div", { class: "fact" }, el("b", {}, value), label);
+  $("verdict-meta").replaceChildren(
+    fact("contract", r.contract ? `${r.contract.replace(/_/g, " ")} ${r.contract_version || ""}`.trim() : "none"),
+    fact(nProblems === 1 ? "problem found" : "problems found", nProblems === 0 ? "None" : `${nProblems}`),
+    fact("checked", r.started ? exact(r.started).slice(0, 16) + " UTC" : "not recorded"),
+  );
   renderProblems();
   // A crate with nothing wrong has no problem to focus on: show it whole.
   setView(hasProblems() ? "problem" : "all");
@@ -404,7 +480,8 @@ function renderProblems() {
   if (!findings.length && !changes.length) {
     box.replaceChildren(el("div", { class: "good" }, "Nothing in this crate broke the contract."));
   } else {
-    box.replaceChildren(el("div", { class: "problems" }, ...cards));
+    box.replaceChildren(el("p", { class: "problems-head" }, "What was found"),
+      el("div", { class: "problems" }, ...cards));
   }
   if (missing.length) {
     box.append(el("p", { class: "muted", style: "font-size:13px" },
@@ -468,14 +545,19 @@ function buildElements() {
   const nodes = graph.nodes.filter(n => keep.has(n.id)).map(n => {
     const s = ROLE_STYLE[n.role] || { c: "--handover", size: 20 };
     let label = n.role === "a finding" ? ruleWords(n.name).words : n.name;
-    if (n.role === "the verdict") label = VERDICT_WORDS[n.value] || n.name;
+    let colour = s.c;
+    if (n.role === "the verdict") {
+      label = VERDICT_WORDS[n.value] || n.name;
+      colour = VERDICT_COLOUR[n.value] || VERDICT_COLOUR[graph.verdict] || s.c;
+    }
     return { data: { id: n.id, label: short(label, view === "problem" ? 44 : 26), role: n.role,
-      color: cssVar(s.c), size: view === "all" ? Math.max(10, s.size - 6) : s.size, hollow: s.hollow ? 1 : 0 } };
+      color: cssVar(colour), size: view === "all" ? Math.max(10, s.size - 6) : s.size, hollow: s.hollow ? 1 : 0,
+      shape: s.shape || "ellipse" } };
   });
   const edges = lines.filter(l => keep.has(l.source) && keep.has(l.target)).map((l, i) => ({
     data: { id: `e${i}`, source: l.source, target: l.target, label: l.property,
-      color: l.important ? cssVar(l.fromRole === "a finding" ? "--bad" : "--model") : cssVar("--meta"),
-      width: l.important ? 2.5 : 1.2 } }));
+      color: l.important ? cssVar(l.fromRole === "a finding" ? "--bad" : "--model") : cssVar("--edge"),
+      width: l.important ? 2.5 : 1.5 } }));
   return { nodes, edges, foldedUnder, byId };
 }
 
@@ -493,7 +575,9 @@ function draw() {
         roots: checkNode ? [checkNode.data.id] : undefined,
         // Left to right rather than top to bottom: the check, then what it
         // found, then what that is about.
-        transform: (node, pos) => ({ x: pos.y * 2.1, y: pos.x * 0.7 }) }
+        // Stretched sideways so the picture fills the wide box instead of
+        // standing as a narrow column in the middle of it.
+        transform: (node, pos) => ({ x: pos.y * 3.4, y: pos.x * 0.6 }) }
     : { name: "cose", animate: false, nodeRepulsion: () => 12000, idealEdgeLength: () => 80,
         nodeOverlap: 16, padding: 24, randomize: true, componentSpacing: 80 };
   cy = cytoscape({
@@ -502,30 +586,47 @@ function draw() {
     minZoom: 0.2, maxZoom: 3,
     style: [
       { selector: "node", style: {
-        "background-color": "data(color)", "width": "data(size)", "height": "data(size)",
+        "background-color": "data(color)", "width": "data(size)", "height": "data(size)", "shape": "data(shape)",
         "label": "data(label)", "font-size": view === "problem" ? 13 : 10, "color": cssVar("--ink"),
-        "text-valign": "bottom", "text-margin-y": 5, "text-wrap": "wrap", "text-max-width": view === "problem" ? 170 : 110,
-        "text-background-color": cssVar("--bg"), "text-background-opacity": 0.85, "text-background-padding": 2,
-        "border-width": 0 } },
+        "font-weight": view === "problem" ? 600 : 400,
+        "text-valign": "bottom", "text-margin-y": 6, "text-wrap": "wrap", "text-max-width": view === "problem" ? 170 : 110,
+        "text-background-color": cssVar("--panel"), "text-background-opacity": 0.92, "text-background-padding": 3,
+        "text-background-shape": "roundrectangle",
+        "border-width": 3, "border-color": cssVar("--panel") } },
       { selector: "node[hollow = 1]", style: { "background-opacity": 0.12, "border-width": 2,
         "border-style": "dashed", "border-color": "data(color)" } },
       { selector: "node:selected", style: { "border-width": 4, "border-color": cssVar("--ink"), "border-style": "solid" } },
       { selector: "edge", style: {
         "width": "data(width)", "line-color": "data(color)", "target-arrow-color": "data(color)",
-        "target-arrow-shape": "triangle", "curve-style": "bezier", "arrow-scale": 0.8, "opacity": 0.9 } },
+        "target-arrow-shape": "triangle", "curve-style": "bezier", "arrow-scale": 1, "opacity": 0.95 } },
       { selector: "edge:selected", style: { "label": "data(label)", "font-size": 10, "color": cssVar("--muted") } },
     ],
     layout,
   });
   cy.on("tap", "node", (evt) => describe(evt.target.id()));
   cy.on("tap", (evt) => { if (evt.target === cy) sideSummary(); });
-  $("legend").replaceChildren(...LEGEND.map(([role, text]) =>
-    el("span", { style: `--c: ${cssVar(ROLE_STYLE[role].c)}` }, text)));
+  $("legend").replaceChildren(...LEGEND.map(([role, text]) => {
+    const s = ROLE_STYLE[role];
+    const c = role === "the verdict" ? (VERDICT_COLOUR[graph.verdict] || s.c) : s.c;
+    return el("span", { class: [s.shape ? "square" : "", s.hollow ? "hollow" : ""].join(" ").trim(),
+                        style: `--c: ${cssVar(c)}` }, text);
+  }));
   sideSummary();
 }
 
 function sideSummary() {
-  $("side").replaceChildren(el("h3", {}, "Details"),
+  const r = recentById.get(shownRun) || {};
+  const count = (role) => graph ? graph.nodes.filter(n => n.role === role).length : 0;
+  const nProblems = count("a finding"), nMissing = count("missing"), nFiles = count("a file");
+  const item = (label, value) => el("li", {}, el("span", {}, label), el("span", {}, value));
+  $("side").replaceChildren(el("h3", {}, "At a glance"),
+    el("ul", { class: "glance" },
+      item("Verdict", VERDICT_WORDS[graph && graph.verdict] || "Unknown"),
+      item("Problems found", nProblems ? `${nProblems}` : "none"),
+      item("Named but missing", nMissing ? `${nMissing}` : "none"),
+      item("Data files in the crate", nFiles ? `${nFiles}` : "none"),
+      item("Boxes in the whole crate", graph ? `${graph.counts.nodes}` : "unknown"),
+      item("Check identifier", r.run ? String(r.run).slice(0, 12) : "unknown")),
     el("p", { class: "muted" }, "Click a box in the picture to see what it is, its values, and what it is joined to. Click a problem above to find it in the picture."));
 }
 
