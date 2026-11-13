@@ -21,8 +21,15 @@
   <header class="page-header" role="banner">
     <img class="site-logo" src="{{ '/dbtlhub-logo.png' | relative_url }}"
          alt="DBTLHub">
-    <h1 class="project-name">{{ site.title }}</h1>
-    <h2 class="project-tagline">{{ site.description }}</h2>
+    <!--
+      The name and the line beneath it are wrapped together so that the
+      banner can place the logo, the words and the button in one row rather
+      than stacking four things down the page.
+    -->
+    <div class="banner-text">
+      <h1 class="project-name">{{ site.title }}</h1>
+      <h2 class="project-tagline">{{ site.description }}</h2>
+    </div>
     <a class="btn" href="{{ site.repository_url }}">View on GitHub</a>
   </header>
 
