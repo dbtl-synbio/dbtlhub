@@ -218,8 +218,14 @@ def draw(state: dict, focus: str = "", width: int = 640,
             f'stroke="var(--{ink})" stroke-width="1.8" '
             f'marker-end="url(#verdict)"/>')
         label = f"V{HANDOVER_NUMBER[handover]}"
-        lx, ly = x + ux * 56, y + uy * 56
-        out.append(f'<text x="{lx:.0f}" y="{ly:.0f}" text-anchor="middle" '
+        # Beside the arrow, not on it. Sitting on the line the glyph was cut
+        # through by its own stroke - legible enough on a screen at 640px and
+        # plainly wrong in a figure rendered at three times that, which is
+        # where it was seen. The offset is perpendicular to the arrow, so it
+        # stays clear of it whichever way the arrow runs.
+        px, py = -uy, ux
+        lx, ly = x + ux * 56 + px * 11, y + uy * 56 + py * 11
+        out.append(f'<text x="{lx:.0f}" y="{ly + 3:.0f}" text-anchor="middle" '
                    f'font-size="11" font-weight="bold" fill="var(--{ink})">'
                    f'{label}</text>')
 
